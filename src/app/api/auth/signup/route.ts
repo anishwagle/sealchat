@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 import bcrypt from "bcryptjs";
 import { users } from "@/lib/mockData";
-import { userService } from "@/services/serviceProvicer";
+import { userService } from "@/services/serviceProvider";
 import { Logger } from "@/lib/logger";
 import { ValidationError, ApiError } from "@/lib/errors";
 
@@ -28,7 +28,8 @@ export async function POST(request: Request) {
     }
 
     Logger.time(COMPONENT,FUNCTION,'createUser');
-    const newUser = await userService.createUser(email, username, password);
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const newUser = await userService.createUser(email, username, hashedPassword);
     Logger.timeEnd(COMPONENT,FUNCTION,'createUser');
     Logger.log(COMPONENT,FUNCTION,'info','User Created', {userId:newUser.id})
     Logger.timeEnd(COMPONENT,FUNCTION,'total');

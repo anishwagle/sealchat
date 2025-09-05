@@ -2,6 +2,7 @@
 import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Logger } from "@/lib/logger";
+import Link from "next/link";
 
 
 
@@ -107,12 +108,12 @@ export default function Signup(){
                 <div className="text-center pt-4">
                     <p className="text-sm text-gray-600">
                         Already have an account?{' '}
-                        <a 
+                        <Link 
                             href="/login" 
                             className="font-semibold text-blue-600 hover:text-blue-800 transition-colors duration-200 ease-in-out underline-offset-2 hover:underline"
                         >
                             Sign in
-                        </a>
+                        </Link>
                     </p>
                 </div>
             </div>
