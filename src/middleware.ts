@@ -5,7 +5,7 @@ import { Logger } from "./lib/logger";
 const COMPONENT = "AuthMiddleware";
 const FUNCTION = "middleware";
 const JWT_SECRET = process.env.JWT_SECRET;
-
+export const runtime = 'nodejs';
 export async function middleware(request: NextRequest) {
   Logger.log(COMPONENT, FUNCTION, 'info', 'Checking authentication', { path: request.nextUrl.pathname });
 
@@ -32,8 +32,16 @@ export async function middleware(request: NextRequest) {
   }
 
   try {
-    jwt.verify(accessToken, JWT_SECRET);
-    return NextResponse.next();
+    const decoded = jwt.verify(accessToken, JWT_SECRET) as { userId: string; email: string };
+    // Attach user details to request headers for downstream use
+    const modifiedRequest = NextResponse.next({
+      request: {
+        headers: new Headers(request.headers),
+      },
+    });
+    modifiedRequest.headers.set('x-user-id', decoded.userId);
+    modifiedRequest.headers.set('x-user-email', decoded.email);
+    return modifiedRequest;
   } catch (error: any) {
     Logger.log(COMPONENT, FUNCTION, 'error', 'Invalid token', { error: error.message });
     return NextResponse.json(
