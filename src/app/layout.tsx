@@ -1,19 +1,7 @@
-'use client';
-import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { useEffect } from "react";
-import { usePathname, useSearchParams } from 'next/navigation';
-import NProgress from "nprogress";
 import "nprogress/nprogress.css";
-
-// Configure NProgress
-NProgress.configure({
-  minimum: 0.3,
-  easing: 'ease',
-  speed: 500,
-  showSpinner: false,
-});
+import Progressbar from "@/components/Progressbar";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -25,20 +13,12 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export default function RootLayout({
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-
-  useEffect(() => {
-    NProgress.done();
-    return () => {
-      NProgress.start();
-    };
-  }, [pathname, searchParams]);
 
   return (
     <html lang="en">
@@ -51,6 +31,7 @@ export default function RootLayout({
         `}</style>
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        <Progressbar/>
         {children}
       </body>
     </html>

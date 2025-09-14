@@ -28,7 +28,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <Navbar />
+      <Navbar/>
       <main className="pt-16"> {/* Add padding-top to account for fixed navbar */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="bg-white p-6 rounded shadow-md">

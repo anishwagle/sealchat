@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 
 import { useAuth } from '@/lib/auth/useAuth';
+import Navbar from '@/components/Navbar';
 
 interface Profile {
   username: string;
@@ -58,6 +59,7 @@ export default function UserProfile() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
+      <Navbar/>
       <div className="bg-white p-6 rounded shadow-md w-full max-w-md">
         <h2 className="text-2xl font-bold mb-4 text-center">{profile.username}&apos;s Profile</h2>
         <div className="mb-4">

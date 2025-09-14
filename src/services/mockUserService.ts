@@ -9,7 +9,7 @@ import { LoginResponse } from "@/types/loginResponse";
 const COMPONENT = "MockUserService";
 export class MockUserService implements IUserService {
   async findUserById(userId: string): Promise<User | undefined> {
-    const FUNCTION = "findUserByEmailOrUsername";
+    const FUNCTION = "findUserById";
     Logger.log(COMPONENT, FUNCTION, "debug", "Checking for existing user", {
       userId,
     });
@@ -63,7 +63,7 @@ export class MockUserService implements IUserService {
   async createUser(
     email: string,
     username: string,
-    password: string
+    password: string,
   ): Promise<User> {
     const FUNCTION = "createUser";
     const newUser: User = {
