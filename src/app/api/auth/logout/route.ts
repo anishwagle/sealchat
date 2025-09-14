@@ -4,7 +4,7 @@ import { Logger } from '../../../../lib/logger';
 import { userService } from '../../../../services/serviceProvider';
 import { ApiError } from '../../../../lib/errors';
 
-const COMPONENT = 'LogoutApi';
+const COMPONENT = 'api/auth/logout';
 const FUNCTION = 'POST';
 const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET;
 

@@ -6,7 +6,7 @@ import { userService } from "@/services/serviceProvider";
 import { Logger } from "@/lib/logger";
 import { ValidationError, ApiError } from "@/lib/errors";
 
-const COMPONENT = "SignupApi";
+const COMPONENT = "api/auth/signup";
 const FUNCTION = "POST";
 export async function POST(request: Request) {
   Logger.time(COMPONENT, FUNCTION, 'total');

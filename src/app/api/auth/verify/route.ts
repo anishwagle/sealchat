@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import { Logger } from '../../../../lib/logger';
 
-const COMPONENT = 'VerifyApi';
+const COMPONENT = 'api/auth/verify';
 const FUNCTION = 'POST';
 const JWT_SECRET = process.env.JWT_SECRET;
 

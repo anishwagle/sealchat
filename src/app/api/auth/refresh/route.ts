@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 import { Logger } from '../../../../lib/logger';
 import { userService } from '@/services/serviceProvider';
 
-const COMPONENT = 'RefreshApi';
+const COMPONENT = 'api/auth/refresh';
 const FUNCTION = 'POST';
 const JWT_SECRET = process.env.JWT_SECRET;
 const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET;

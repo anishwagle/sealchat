@@ -6,7 +6,7 @@ import { ValidationError, ApiError } from "@/lib/errors";
 import { LoginResponse } from "@/types/loginResponse";
 import jwt from 'jsonwebtoken';
 
-const COMPONENT = "LoginApi";
+const COMPONENT = "api/auth/login";
 const FUNCTION = "POST";
 const JWT_SECRET = process.env.JWT_SECRET;
 const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET;
