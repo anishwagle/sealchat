@@ -3,15 +3,18 @@ import { refreshTokens, users } from "@/lib/mockData";
 import { User } from "@/types/user";
 import { IUserService } from "./IUserService";
 import { Logger } from "@/lib/logger";
-
-const COMPONENT = "MockUserService";
-export class MockUserService implements IUserService {
+import pool from "@/db";
+const COMPONENT = "UserService";
+export class UserService implements IUserService {
   async findUserById(userId: string): Promise<User | undefined> {
     const FUNCTION = "findUserById";
     Logger.log(COMPONENT, FUNCTION, "debug", "Checking for existing user", {
       userId,
     });
-    const result = users.find((user) => user.id === userId);
+    const queryResult = await pool.query('SELECT id,username,email,password FROM users WHERE id=?',
+        [userId]
+    );
+    const result:User = (queryResult as any[])[0][0];
     Logger.log(COMPONENT, FUNCTION, "debug", "User check complete", {
       found: !!result,
     });
@@ -23,7 +26,10 @@ export class MockUserService implements IUserService {
     Logger.log(COMPONENT, FUNCTION, "debug", "Checking for existing user", {
       username,
     });
-    const result = users.find((user) => user.username === username);
+    const queryResult = await pool.query('SELECT id,username,email,password FROM users WHERE username=?',
+        [username]
+    );
+    const result:User = (queryResult as any[])[0][0];
     Logger.log(COMPONENT, FUNCTION, "debug", "User check complete", {
       found: !!result,
     });
@@ -34,7 +40,10 @@ export class MockUserService implements IUserService {
     Logger.log(COMPONENT, FUNCTION, "debug", "Checking for existing user", {
       email,
     });
-    const result = users.find((user) => user.email === email);
+    const queryResult = await pool.query('SELECT id,username,email,password FROM users WHERE email=?',
+        [email]
+    );
+    const result:User = (queryResult as any)[0][0];
     Logger.log(COMPONENT, FUNCTION, "debug", "User check complete", {
       found: !!result,
     });
@@ -49,9 +58,10 @@ export class MockUserService implements IUserService {
       email,
       username,
     });
-    const result = users.find(
-      (user) => user.email === email || user.username === username
+    const queryResult = await pool.query('SELECT id,username,email,password FROM users WHERE email=? OR username=?',
+        [email,username]
     );
+    const result:User = (queryResult as any)[0][0];
     Logger.log(COMPONENT, FUNCTION, "debug", "User check complete", {
       found: !!result,
     });
@@ -64,13 +74,15 @@ export class MockUserService implements IUserService {
     password: string,
   ): Promise<User> {
     const FUNCTION = "createUser";
-    const newUser: User = {
-      id: v4(),
-      email,
-      username,
-      password,
-    };
-    users.push(newUser);
+
+    const [result] = await pool.query('INSERT INTO users (id,username,email,password) VALUES(?,?,?,?)',
+        [v4(),username,email,password]);
+    const newUser:User ={
+        id:(result as any).insertId,
+        email,
+        username,
+        password:''
+    } ;
     Logger.log(COMPONENT, FUNCTION, "info", "New User Created", {
       userId: newUser.id,
     });
@@ -82,7 +94,9 @@ export class MockUserService implements IUserService {
     Logger.log(COMPONENT, FUNCTION, "debug", "Storing refresh token", {
       userId,
     });
-    refreshTokens[userId] = refreshToken;
+    await pool.query('INSERT INTO refresh_tokens (user_id,token) VALUES(?,?)',
+        [userId,refreshToken]
+    );
   }
 
   async validateRefreshToken(
@@ -93,7 +107,10 @@ export class MockUserService implements IUserService {
     Logger.log(COMPONENT, FUNCTION, "debug", "Validating refresh token", {
       userId,
     });
-    return refreshTokens[userId] === refreshToken;
+    const queryResult = await pool.query('SELECT user_id,token FROM refresh_tokens WHERE user_id=?',
+        [userId]);
+    const token = (queryResult as any)[0][0].token;
+    return token === refreshToken;
   }
 
   async removeRefreshToken(userId: string): Promise<void> {
@@ -101,7 +118,9 @@ export class MockUserService implements IUserService {
     Logger.log(COMPONENT, FUNCTION, "debug", "Removing refresh token", {
       userId,
     });
-    delete refreshTokens[userId];
+    await pool.query('DELETE FROM refresh_tokens WHERE user_id=?',
+        [userId]
+    );
   }
 }
-export const mockUserService = new MockUserService();
+export const userService = new UserService();

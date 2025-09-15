@@ -1,7 +1,10 @@
 import { mockUserService } from "./mockUserService";
+import { userService as uService } from "./userService";
+import { friendService as fService } from "./friendService";
 import { IUserService } from "./IUserService";
 import { IFriendService } from "./IFriendService";
 import { mockFriendService } from "./mockFriendService";
-
-export const userService: IUserService = mockUserService;
-export const friendService:IFriendService = mockFriendService;
+import {config} from 'dotenv';
+config();
+export const userService: IUserService = process.env.USE_MOCK==='true'? mockUserService: uService;
+export const friendService:IFriendService =process.env.USE_MOCK==='true'? mockFriendService:fService;

@@ -1,5 +1,3 @@
-const { hostname } = require("os");
-
 require("dotenv").config();
 module.exports = {
     dev:{

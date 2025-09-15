@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS seal_chat.refresh_tokens;

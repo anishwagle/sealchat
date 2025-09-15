@@ -3,7 +3,6 @@ import bcrypt from "bcryptjs";
 import { userService } from "@/services/serviceProvider";
 import { Logger } from "@/lib/logger";
 import { ValidationError, ApiError } from "@/lib/errors";
-import { LoginResponse } from "@/types/loginResponse";
 import jwt from 'jsonwebtoken';
 
 const COMPONENT = "api/auth/login";
@@ -32,14 +31,14 @@ export async function POST(request: Request) {
         Logger.log(COMPONENT,FUNCTION,'error','User Not Found',{username});
         throw new ApiError('User not found',400,'USER_NOT_FOUND',{username})
     }
-
+    Logger.log(COMPONENT,FUNCTION,'info','User found',{user})
     const isMatch = await bcrypt.compare(password, user.password);
     if(!isMatch){
         const error = new ValidationError('Invalid username/email or password', { username });
       Logger.log(COMPONENT, FUNCTION, 'error', error.message, error.details);
       throw new ApiError(error.message, 401, 'INVALID_CREDENTIALS', error.details);
     }
-
+    Logger.log(COMPONENT,FUNCTION,'debug','username and pw match');
     const accessToken = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, {
       expiresIn: ACCESS_TOKEN_EXPIRES_IN,
     });
