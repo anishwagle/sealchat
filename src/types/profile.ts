@@ -4,6 +4,9 @@ export interface Profile {
   userId:string;
   username: string;
   friendshipStatus:FriendshipStatus;
+  profileLikeCount:number;
+  profileFriendCount?:number;
+  profileLikeStatus:boolean;
   fullName?: string;
   bio?: string;
   location?: string;

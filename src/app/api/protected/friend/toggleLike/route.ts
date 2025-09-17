@@ -3,10 +3,10 @@ import { Logger } from "@/lib/logger";
 import { friendService } from "@/services/serviceProvider";
 import { NextResponse } from "next/server";
 
-const COMPONENT = "api/protected/friend/unfriend";
+const COMPONENT = "api/protected/friend/toggleLike";
 const FUNCTION = "POST";
 export async function POST(request: Request) {
-  Logger.log(COMPONENT, FUNCTION, "info", "Un-friend user");
+  Logger.log(COMPONENT, FUNCTION, "info", "Toggle profile like for User");
   try {
     const userId1 = request.headers.get("x-user-id");
     const { userId2 } = await request.json();
@@ -17,14 +17,14 @@ export async function POST(request: Request) {
         { status: 404 }
       );
     }
-    await friendService.unfriendRequest(userId1, userId2);
-    Logger.log(COMPONENT, FUNCTION, "info", "Unfriend Successful");
+    await friendService.toggleProfileLike(userId1, userId2);
+    Logger.log(COMPONENT, FUNCTION, "info", "profile like toggled Successful");
     return NextResponse.json(
-      { message: "Un-friend Successful" },
+      { message: "Like Toggled Successful" },
       { status: 200 }
     );
   } catch (error: any) {
-    const apiError = new ApiError("Failed to unFriend", 500, "INTERNAL_ERROR", {
+    const apiError = new ApiError("Failed to Toggle Profile Like", 500, "INTERNAL_ERROR", {
       error: error.message,
     });
     Logger.log(COMPONENT, FUNCTION, 'error', apiError.message, { details: apiError.details });

@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import { Logger } from '@/lib/logger';
-import { userService } from '@/services/serviceProvider';
+import { friendService, userService } from '@/services/serviceProvider';
 import { ApiError } from '@/lib/errors';
 import { Profile } from '@/types/profile';
-import { friendService } from '@/services/friendService';
+
 
 const COMPONENT = 'api/protected/profile/[username]';
 const FUNCTION = 'GET';
@@ -31,7 +31,10 @@ export async function GET(request: Request, { params }: { params: { username: st
       userId:user.id,
       username:username,
       joinedAt: `${user.createdAt?.toDateString()}`,
-      friendshipStatus:await friendService.getFriendShipStatus(currentUserId,user.id)
+      friendshipStatus:await friendService.getFriendShipStatus(currentUserId,user.id),
+      profileLikeCount:await friendService.getProfileLikeCount(user.id),
+      profileLikeStatus:await friendService.getProfileLikeStatus(currentUserId,user.id)
+
     }
     return NextResponse.json(response, { status: 200 });
   } catch (error: any) {
