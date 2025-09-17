@@ -4,22 +4,21 @@ import { Logger } from '@/lib/logger';
 import { friendService } from '@/services/serviceProvider';
 import { ApiError } from '@/lib/errors';
 
-const COMPONENT = 'api/protected/findfriend/[searchQuery]';
+const COMPONENT = 'api/protected/friend/findfriend/';
 const FUNCTION = 'GET';
 
-export async function GET(request: Request, { params }: { params: { searchQuery: string } }) {
-  const p = await params;
-  Logger.log(COMPONENT, FUNCTION, 'info', 'Fetching users', { searchQuery: p.searchQuery });
+export async function GET(request: Request) {
+  Logger.log(COMPONENT, FUNCTION, 'info', 'Fetching users');
 
   try {
     
-    const users = await friendService.findFriends(p.searchQuery);
+    const users = await friendService.findFriends('');
     if (!users) {
-      Logger.log(COMPONENT, FUNCTION, 'error', 'Users not found', { searchQuery: p.searchQuery });
+      Logger.log(COMPONENT, FUNCTION, 'error', 'Users not found');
       return NextResponse.json({ message: 'Users not found', code: 'USERS_NOT_FOUND' }, { status: 404 });
     }
 
-    Logger.log(COMPONENT, FUNCTION, 'info', 'Users fetched', { searchQuery: p.searchQuery });
+    Logger.log(COMPONENT, FUNCTION, 'info', 'Users fetched');
     return NextResponse.json({users:users }, { status: 200 });
   } catch (error: any) {
     const apiError = new ApiError('Failed to fetch users', 500, 'INTERNAL_ERROR', { error: error.message });

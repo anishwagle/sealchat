@@ -11,10 +11,10 @@ export class UserService implements IUserService {
     Logger.log(COMPONENT, FUNCTION, "debug", "Checking for existing user", {
       userId,
     });
-    const queryResult = await pool.query('SELECT id,username,email,password FROM users WHERE id=?',
+    const [queryResult] = await pool.query('SELECT id,username,email,password,created_at FROM users WHERE id=?',
         [userId]
     );
-    const result:User = (queryResult as any[])[0][0];
+    const result:User = (queryResult as any[])[0];
     Logger.log(COMPONENT, FUNCTION, "debug", "User check complete", {
       found: !!result,
     });
@@ -26,10 +26,10 @@ export class UserService implements IUserService {
     Logger.log(COMPONENT, FUNCTION, "debug", "Checking for existing user", {
       username,
     });
-    const queryResult = await pool.query('SELECT id,username,email,password FROM users WHERE username=?',
+    const [queryResult] = await pool.query('SELECT id,username,email,password,created_at FROM users WHERE username=?',
         [username]
     );
-    const result:User = (queryResult as any[])[0][0];
+    const result:User = (queryResult as any[])[0];
     Logger.log(COMPONENT, FUNCTION, "debug", "User check complete", {
       found: !!result,
     });
@@ -40,10 +40,10 @@ export class UserService implements IUserService {
     Logger.log(COMPONENT, FUNCTION, "debug", "Checking for existing user", {
       email,
     });
-    const queryResult = await pool.query('SELECT id,username,email,password FROM users WHERE email=?',
+    const [queryResult] = await pool.query('SELECT id,username,email,password,created_at FROM users WHERE email=?',
         [email]
     );
-    const result:User = (queryResult as any)[0][0];
+    const result:User = (queryResult as any)[0];
     Logger.log(COMPONENT, FUNCTION, "debug", "User check complete", {
       found: !!result,
     });
@@ -58,10 +58,10 @@ export class UserService implements IUserService {
       email,
       username,
     });
-    const queryResult = await pool.query('SELECT id,username,email,password FROM users WHERE email=? OR username=?',
+    const [queryResult] = await pool.query('SELECT id,username,email,password,created_at FROM users WHERE email=? OR username=?',
         [email,username]
     );
-    const result:User = (queryResult as any)[0][0];
+    const result:User = (queryResult as any)[0];
     Logger.log(COMPONENT, FUNCTION, "debug", "User check complete", {
       found: !!result,
     });
@@ -81,7 +81,7 @@ export class UserService implements IUserService {
         id:(result as any).insertId,
         email,
         username,
-        password:''
+        password:'',
     } ;
     Logger.log(COMPONENT, FUNCTION, "info", "New User Created", {
       userId: newUser.id,
@@ -107,9 +107,9 @@ export class UserService implements IUserService {
     Logger.log(COMPONENT, FUNCTION, "debug", "Validating refresh token", {
       userId,
     });
-    const queryResult = await pool.query('SELECT user_id,token FROM refresh_tokens WHERE user_id=?',
+    const [queryResult] = await pool.query('SELECT user_id,token FROM refresh_tokens WHERE user_id=?',
         [userId]);
-    const token = (queryResult as any)[0][0].token;
+    const token = (queryResult as any)[0].token;
     return token === refreshToken;
   }
 

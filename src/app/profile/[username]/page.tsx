@@ -4,62 +4,38 @@ import { useRouter, useParams } from 'next/navigation';
 
 import { useAuth } from '@/lib/auth/useAuth';
 import Navbar from '@/components/Navbar';
-
-interface Profile {
-  username: string;
-  fullName?: string;
-  bio?: string;
-  location?: string;
-  profession?: string;
-  education?: Array<{
-    school: string;
-    degree?: string;
-    year?: string;
-  }>;
-  work?: Array<{
-    company: string;
-    position: string;
-    period?: string;
-  }>;
-  skills?: string[];
-  interests?: string[];
-  links?: Array<{
-    title: string;
-    url: string;
-  }>;
-  joinedAt: string;
-}
+import { Profile } from '@/types/profile';
 
 export default function UserProfile() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [error, setError] = useState('');
-  const { isAuthenticated, isLoading, error: authError } = useAuth();
+  const [loadingActionType, setLoadingActionType] = useState<null | "accept" | "decline" | "send" | "cancel" | "unfriend">(null);
+  const { isAuthenticated, userId, isLoading, error: authError } = useAuth();
   const router = useRouter();
   const { username } = useParams();
 
+  // fetchProfile now defined outside useEffect for reuse
+  const fetchProfile = async () => {
+    try {
+      const profileResponse = await fetch(`/api/protected/profile/${username}`, {
+        method: 'GET',
+      });
+      const profileData = await profileResponse.json();
+      if (profileResponse.ok) {
+        setProfile(profileData);
+      } else {
+        setError(profileData.message || 'Failed to load profile');
+      }
+    } catch (err: any) {
+      console.error('Profile fetch failed:', err.message);
+      setError('Something went wrong. Please try again.');
+    }
+  };
+
   useEffect(() => {
     if (!isAuthenticated || authError) return;
-
-    const fetchProfile = async () => {
-      try {
-        const profileResponse = await fetch(`/api/protected/profile/${username}`, {
-          method: 'GET',
-        });
-        const profileData = await profileResponse.json();
-
-        if (profileResponse.ok) {
-          setProfile(profileData);
-        } else {
-          setError(profileData.message || 'Failed to load profile');
-        }
-      } catch (err: any) {
-        console.error('Profile fetch failed:', err.message);
-        setError('Something went wrong. Please try again.');
-      }
-    };
-
     fetchProfile();
-  }, [isAuthenticated, authError, username, router]);
+  }, [isAuthenticated, authError, userId, username, router]);
 
   if (isLoading) {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
@@ -107,20 +83,128 @@ export default function UserProfile() {
                 {profile.bio || 'Passionate about building great software and contributing to open source projects.'}
               </p>
             </div>
-            <div className="flex gap-3">
+            {profile.userId !== userId ? (
+              <div className="flex gap-3">
+                {profile.friendshipStatus === "none" ? (
+                  <button
+                    className="px-6 py-2 bg-blue-500 text-white font-medium rounded-lg hover:bg-blue-600 transition-colors"
+                    onClick={async () => {
+                      setLoadingActionType("send");
+                      try {
+                        await fetch("/api/protected/friend/sendRequest", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ userId2: profile.userId }),
+                        });
+                        await fetchProfile();
+                      } finally {
+                        setLoadingActionType(null);
+                      }
+                    }}
+                    disabled={loadingActionType !== null}
+                  >
+                    {loadingActionType === "send" ? "Loading..." : "Add Friend"}
+                  </button>
+                ) : null}
+                {profile.friendshipStatus === "sent" ? (
+                  <button
+                    className="px-6 py-2 bg-blue-500 text-white font-medium rounded-lg hover:bg-blue-600 transition-colors"
+                    onClick={async () => {
+                      setLoadingActionType("cancel");
+                      try {
+                        await fetch("/api/protected/friend/cancelRequest", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ userId2: profile.userId }),
+                        });
+                        await fetchProfile();
+                      } finally {
+                        setLoadingActionType(null);
+                      }
+                    }}
+                    disabled={loadingActionType !== null}
+                  >
+                    {loadingActionType === "cancel" ? "Loading..." : "Cancel Request"}
+                  </button>
+                ) : null}
+                {profile.friendshipStatus === "received" ? (
+                  <>
+                    <button
+                      className="px-6 py-2 bg-blue-500 text-white font-medium rounded-lg hover:bg-blue-600 transition-colors"
+                      onClick={async () => {
+                        setLoadingActionType("accept");
+                        try {
+                          await fetch("/api/protected/friend/acceptRequest", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ userId2: profile.userId }),
+                          });
+                          await fetchProfile();
+                        } finally {
+                          setLoadingActionType(null);
+                        }
+                      }}
+                      disabled={loadingActionType === "decline" || loadingActionType === "accept"}
+                    >
+                      {loadingActionType === "accept" ? "Loading..." : "Accept Friend"}
+                    </button>
+                    <button
+                      className="px-6 py-2 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 transition-colors"
+                      onClick={async () => {
+                        setLoadingActionType("decline");
+                        try {
+                          await fetch("/api/protected/friend/cancelRequest", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ userId2: profile.userId }),
+                          });
+                          await fetchProfile();
+                        } finally {
+                          setLoadingActionType(null);
+                        }
+                      }}
+                      disabled={loadingActionType === "accept" || loadingActionType === "decline"}
+                    >
+                      {loadingActionType === "decline" ? "Loading..." : "Decline Request"}
+                    </button>
+                  </>
+                ) : null}
+                {profile.friendshipStatus === "accepted" ? (
+                  <button
+                    className="px-6 py-2 bg-red-500 text-white font-medium rounded-lg hover:bg-red-600 transition-colors"
+                    onClick={async () => {
+                      setLoadingActionType("unfriend");
+                      try {
+                        await fetch("/api/protected/friend/unfriend", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ userId2: profile.userId }),
+                        });
+                        await fetchProfile();
+                      } finally {
+                        setLoadingActionType(null);
+                      }
+                    }}
+                    disabled={loadingActionType !== null}
+                  >
+                    {loadingActionType === "unfriend" ? "Loading..." : "Unfriend"}
+                  </button>
+                ) : null}
+                <button className="px-6 py-2 bg-white text-gray-700 font-medium rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
+                  Message
+                </button>
+                <button className="flex items-center gap-2 px-4 py-2 bg-white text-gray-700 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                  </svg>
+                  <span className="font-medium">1.2K</span>
+                </button>
+              </div>
+            ) : (
               <button className="px-6 py-2 bg-blue-500 text-white font-medium rounded-lg hover:bg-blue-600 transition-colors">
-                Add Friend
+                Edit Profile
               </button>
-              <button className="px-6 py-2 bg-white text-gray-700 font-medium rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
-                Message
-              </button>
-              <button className="flex items-center gap-2 px-4 py-2 bg-white text-gray-700 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
-                </svg>
-                <span className="font-medium">1.2K</span>
-              </button>
-            </div>
+            )}
           </div>
         </div>
       </div>

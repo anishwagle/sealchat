@@ -29,7 +29,7 @@ export default function Navbar() {
 
       // TODO: Replace with actual API call
       try {
-        const users = await fetch(`/api/protected/findFriend/${value}`, {
+        const users = await fetch(`/api/protected/friend/findFriend/${value}`, {
           method: "GET",
         });
         const results = await users.json();

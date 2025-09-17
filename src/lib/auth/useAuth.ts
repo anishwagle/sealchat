@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 interface AuthState {
+  userId:string;
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string;
@@ -10,6 +11,7 @@ interface AuthState {
 export const useAuth = () => {
   const [authState, setAuthState] = useState<AuthState>({
     isAuthenticated: false,
+    userId:'',
     isLoading: true,
     error: '',
   });
@@ -19,7 +21,7 @@ export const useAuth = () => {
     try {
       const response = await fetch('/api/auth/verify', { method: 'GET' });
       const data = await response.json();
-      return data.message === 'Token valid';
+      return data;
     } catch (error: any) {
       console.error('Verification failed:', error.message);
       return false;
@@ -44,19 +46,19 @@ export const useAuth = () => {
 
   useEffect(() => {
     const checkAuth = async () => {
-      const isTokenValid = await verifyToken();
-      if (isTokenValid) {
-        setAuthState({ isAuthenticated: true, isLoading: false, error: '' });
+      const data = await verifyToken();
+      if (data.message === 'Token valid') {
+        setAuthState({ isAuthenticated: true,userId:data.userId, isLoading: false, error: '' });
         return;
       }
 
       const isRefreshed = await refreshToken();
-      if (isRefreshed && (await verifyToken())) {
-        setAuthState({ isAuthenticated: true, isLoading: false, error: '' });
+      if (isRefreshed && (data.message === 'Token valid')) {
+        setAuthState({ isAuthenticated: true,userId:data.userId, isLoading: false, error: '' });
         return;
       }
 
-      setAuthState({ isAuthenticated: false, isLoading: false, error: 'Unauthorized' });
+      setAuthState({ isAuthenticated: false,userId:data.userId, isLoading: false, error: 'Unauthorized' });
       router.push('/login');
     };
 

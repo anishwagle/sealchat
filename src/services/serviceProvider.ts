@@ -6,5 +6,5 @@ import { IFriendService } from "./IFriendService";
 import { mockFriendService } from "./mockFriendService";
 import {config} from 'dotenv';
 config();
-export const userService: IUserService = process.env.USE_MOCK==='true'? mockUserService: uService;
-export const friendService:IFriendService =process.env.USE_MOCK==='true'? mockFriendService:fService;
+export const userService: IUserService = uService;
+export const friendService:IFriendService =fService;

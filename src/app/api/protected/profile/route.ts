@@ -10,27 +10,13 @@ const FUNCTION = 'GET';
 export async function GET(request: Request) {
     
   try {
-    const cookies = request.headers.get('cookie') || '';
-  const accessToken = cookies
-    .split("; ")
-    .find((row) => row.startsWith("accessToken="))
-    ?.split("=")[1];
+    const currentUserId = `${request.headers.get('x-user-id')}`;
 
-  const decoded = accessToken
-    ? JSON.parse(atob(accessToken.split(".")[1]))
-    : null;
-  if (!decoded?.userId) {
-    Logger.log(COMPONENT, FUNCTION, 'error', 'No access token provided');
-        return NextResponse.json(
-          { message: 'Unauthorized: No token provided', code: 'NO_TOKEN' },
-          { status: 401 }
-        );
-  }
-  Logger.log(COMPONENT, FUNCTION, 'info', 'Fetching User profile', { userId: decoded.userId });
-    const user = await userService.findUserById(decoded.userId);
+  Logger.log(COMPONENT, FUNCTION, 'info', 'Fetching User profile', { userId: currentUserId });
+    const user = await userService.findUserById(currentUserId);
     if (!user) {
       Logger.log(COMPONENT, FUNCTION, "error", "User not found", {
-        username: decoded.userId,
+        username: currentUserId,
       });
       return NextResponse.json(
         { message: "User not found", code: "USER_NOT_FOUND" },

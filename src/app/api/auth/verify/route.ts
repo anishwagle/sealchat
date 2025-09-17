@@ -26,8 +26,8 @@ export async function GET(request: Request) {
       return NextResponse.json({ message: 'No token provided', code: 'NO_TOKEN' }, { status: 401 });
     }
 
-    jwt.verify(accessToken, JWT_SECRET);
-    return NextResponse.json({ message: 'Token valid' }, { status: 200 });
+    const decoded = jwt.verify(accessToken, JWT_SECRET)as { userId: string; email: string };
+    return NextResponse.json({ message: 'Token valid',userId:decoded.userId }, { status: 200 });
   } catch (error: any) {
     Logger.log(COMPONENT, FUNCTION, 'error', 'Invalid token', { error: error.message });
     return NextResponse.json({ message: 'Invalid token', code: 'INVALID_TOKEN' }, { status: 401 });
