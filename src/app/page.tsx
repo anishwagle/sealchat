@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/useAuth";
 import Navbar from "@/components/Navbar";
+import CreatePostButton from "@/components/posts/CreatePostButton";
 
 export default function Dashboard() {
   const { isAuthenticated, isLoading, error } = useAuth();
@@ -34,6 +35,7 @@ export default function Dashboard() {
           <div className="bg-white p-6 rounded shadow-md">
             <h2 className="text-2xl font-bold mb-4 text-center">Dashboard</h2>
             <p>Welcome to your dashboard!</p>
+            <CreatePostButton/>
             <button
               onClick={handleLogout}
               className="mt-4 w-full bg-red-500 text-white p-2 rounded hover:bg-red-600"

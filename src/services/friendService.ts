@@ -148,6 +148,36 @@ async getProfileLikeStatus(userId1: string, userId2: string): Promise<boolean> {
       userId2,
     });
   }
+
+  async getCurrentFriend(userId:string):Promise<User[]>{
+    const FUNCTION = "getCurrentFriend";
+    Logger.log(COMPONENT, FUNCTION, "debug", "Get current friend of user", {
+      userId,
+    });
+    const [queryResult] = await pool.query(
+      `SELECT u.id,u.username,u.email
+       FROM users u
+       JOIN friends f ON u.id = f.user_id_2
+       WHERE f.user_id_1 = ?
+       UNION
+       SELECT u.id,u.username,u.email
+       FROM users u
+       JOIN friends f ON u.id = f.user_id_1
+       WHERE f.user_id_2 = ?`,[userId,userId]
+    );
+    const result: User[] = (queryResult as any[]).map((user) => ({
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      password: "",
+    }));
+    Logger.log(COMPONENT, FUNCTION, "debug", "Friend search complete", {
+      found: !!result,
+      users: result,
+    });
+
+    return result;
+  }
   async findFriends(searchQuery: string): Promise<User[]> {
     const FUNCTION = "findFriends";
     Logger.log(COMPONENT, FUNCTION, "debug", "Search friend based on query", {

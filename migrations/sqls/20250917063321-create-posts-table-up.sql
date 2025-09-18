@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS sealchat_posts(
+CREATE TABLE IF NOT EXISTS seal_chat.posts(
     id VARCHAR(255) PRIMARY KEY,
     user_id VARCHAR(255) NOT NULL,
     type ENUM('friend_post','public_opinion') DEFAULT 'friend_post',
