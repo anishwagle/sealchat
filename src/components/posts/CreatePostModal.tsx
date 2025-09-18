@@ -91,7 +91,7 @@ export default function CreatePostModal({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-gray-800/50 flex items-center justify-center z-50">
       <div className="bg-white p-6 rounded-md shadow-lg w-full max-w-md">
         <h2 className="text-lg font-bold mb-4">Create New Post</h2>
         <form onSubmit={handleSubmit}>
