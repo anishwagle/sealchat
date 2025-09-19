@@ -7,5 +7,7 @@ export interface IPostService {
     type: PostType,
     durationDays?: number
   ): Promise<void>;
-  getUserPosts(userId: string): Promise<Post[]>
+  getUserPosts(userId: string): Promise<Post[]>;
+  getPublicOpinions(userId: string): Promise<Post[]>;
+  getFriendPosts(userId: string, currentUserId: string): Promise<Post[]>;
 }

@@ -149,6 +149,86 @@ async getUserPosts(userId: string): Promise<Post[]> {
       throw new Error('Failed to fetch user posts: ' + error.message);
     }
   }
-  
+
+  async getFriendPosts(userId: string, currentUserId: string): Promise<Post[]> {
+    const FUNCTION = 'getFriendPosts';
+    if (!userId || !currentUserId) {
+      throw new Error('User ID and current user ID are required');
+    }
+
+    // Check if users are friends
+    const [friendResults] = await pool.query(
+      'SELECT id FROM friends WHERE (user_id_1 = ? AND user_id_2 = ?) OR (user_id_1 = ? AND user_id_2 = ?)',
+      [currentUserId, userId, userId, currentUserId]
+    );
+    const isFriend = (friendResults as any[]).length > 0;
+
+    if (!isFriend) {
+      Logger.log(COMPONENT, FUNCTION, "debug", "Users are not friends", {
+      userId,
+      currentUserId
+    });
+      return []; // Return empty array if not friends
+    }
+
+    try {
+      const [results] = await pool.query(
+        `SELECT p.id, p.user_id, u.username, p.type, p.content, p.duration_days, p.expires_at, p.is_archived, p.created_at
+         FROM posts p
+         JOIN users u ON p.user_id = u.id
+         WHERE p.user_id = ? AND p.type = 'friend_post' AND p.is_archived = false`,
+        [userId]
+      );
+      Logger.log(COMPONENT, FUNCTION, "debug", "Post Fetched Successfully", {
+      userId
+    });
+      return (results as any[]).map(post => ({
+        id: post.id,
+        userId: post.user_id,
+        username: post.username,
+        type: post.type,
+        content: post.content,
+        durationDays: post.duration_days,
+        expiresAt: post.expires_at ? new Date(post.expires_at) : null,
+        isArchived: post.is_archived,
+        createdAt: new Date(post.created_at)
+      }));
+    } catch (error: any) {
+      throw new Error('Failed to fetch friend posts: ' + error.message);
+    }
+  }
+  async getPublicOpinions(userId: string): Promise<Post[]> {
+    const FUNCTION='getPublicOpinions';
+    if (!userId) {
+      throw new Error('User ID is required');
+    }
+
+    try {
+      const [results] = await pool.query(
+        `SELECT p.id, p.user_id, u.username, p.type, p.content, p.duration_days, p.expires_at, p.is_archived, p.created_at
+         FROM posts p
+         JOIN users u ON p.user_id = u.id
+         WHERE p.user_id = ? AND p.type = 'public_opinion' AND p.is_archived = false
+         AND (p.expires_at IS NULL OR p.expires_at > NOW())`,
+        [userId]
+      );
+Logger.log(COMPONENT, FUNCTION, "debug", "Post Fetched Successfully", {
+      userId
+    });
+      return (results as any[]).map(post => ({
+        id: post.id,
+        userId: post.user_id,
+        username: post.username,
+        type: post.type,
+        content: post.content,
+        durationDays: post.duration_days,
+        expiresAt: post.expires_at ? new Date(post.expires_at) : null,
+        isArchived: post.is_archived,
+        createdAt: new Date(post.created_at)
+      }));
+    } catch (error: any) {
+      throw new Error('Failed to fetch public opinions: ' + error.message);
+    }
+  }
 }
 export const postService = new PostService();

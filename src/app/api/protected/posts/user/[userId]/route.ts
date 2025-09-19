@@ -9,20 +9,24 @@ const FUNCTION = "GET";
 
 export async function GET(request: Request,{ params }: { params: { userId: string }}) {
   const p = await params;
-    Logger.log(COMPONENT, FUNCTION, 'info', 'Fetching Users Post', { searchQuery: p.userId });
+    Logger.log(COMPONENT, FUNCTION, 'info', 'Fetching Users Post', { userId: p.userId });
 
   try {
-    const userId = request.headers.get("x-user-id");
-    if (!userId) {
+    const currentUserId = request.headers.get("x-user-id");
+    Logger.log(COMPONENT, FUNCTION, 'info', 'Fetching Users Post', { currentUserId: p.userId });
+    if (!currentUserId) {
       Logger.log(COMPONENT, FUNCTION, "error", "Current User not found");
       return NextResponse.json(
         { message: "Current User not Found", code: "USER_NOT_FOUND" },
         { status: 404 }
       );
     }
-    const posts = await postService.getUserPosts(userId);
+
+    const friendPosts = await postService.getFriendPosts(p.userId,currentUserId);
+    const publicOpinions = await postService.getPublicOpinions(p.userId);
+    const posts = [...friendPosts, ...publicOpinions].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
     if (!posts) {
-      Logger.log(COMPONENT, FUNCTION, "error", "Posts not found",{userId:userId});
+      Logger.log(COMPONENT, FUNCTION, "error", "Posts not found",{userId:p.userId});
       return NextResponse.json(
         { message: "Posts not found", code: "Post_NOT_FOUND" },
         { status: 404 }

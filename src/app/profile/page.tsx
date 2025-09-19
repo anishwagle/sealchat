@@ -458,8 +458,6 @@ export default function Profile() {
             <div className="space-y-4">
               {snackbarMessage && <Snackbar message={snackbarMessage} onClose={closeSnackbar} />}
               <PostList />
-  
-      
             </div>
           </div>
         </div>

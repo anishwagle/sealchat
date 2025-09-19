@@ -3,10 +3,11 @@ import { Post } from "@/types/post";
 import { useState, useEffect } from "react";
 
 interface PostListProps {
-  userId?: number; // Make userId optional
+  userId?: string; // Make userId optional
+  isPublic?:boolean;
 }
 
-export default function PostList({ userId }: PostListProps) {
+export default function PostList({ userId ,isPublic }: PostListProps) {
   const [posts, setPosts] = useState<Post[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -37,8 +38,10 @@ export default function PostList({ userId }: PostListProps) {
   const fetchPosts = async () => {
       try {
         setLoading(true);
-        let apiUrl = `/api/protected/posts/user`;
-        if (userId) apiUrl += `/${userId}`;
+        let apiUrl = `/api/protected/posts`;
+        if(!isPublic) apiUrl+=`/user`;
+        if (!isPublic&& userId) apiUrl += `/${userId}`;
+        
         const data = await fetch(apiUrl);
         const results = await data.json();
         setPosts(results.posts.map((x: Post) => x));
