@@ -10,7 +10,7 @@ export class PostService implements IPostService {
     content: string,
     type: PostType,
     durationDays?: number
-  ): Promise<Post> {
+  ): Promise<void> {
     const FUNCTION = "createPost";
     Logger.log(COMPONENT, FUNCTION, "debug", "creating new post", {
       userId,
@@ -96,7 +96,7 @@ export class PostService implements IPostService {
           ? new Date(Date.now() + durationDays! * 24 * 60 * 60 * 1000)
           : null;
           const postId = v4();
-      const [result] = await pool.query(
+      await pool.query(
         "INSERT INTO posts (id,user_id, type, content, duration_days, expires_at, is_archived) VALUES (?,?, ?, ?, ?, ?, ?)",
         [
           postId,
@@ -109,31 +109,46 @@ export class PostService implements IPostService {
         ]
       );
     Logger.log(COMPONENT, FUNCTION, "info", "New Post Created");
-      
-      const [postResults] = await pool.query(
-        "SELECT * FROM posts WHERE id = ?",
-        [postId]
-      );
 
-      const post = (postResults as any[])[0];
-      Logger.log(COMPONENT, FUNCTION, "info", "get new post by id", {
-        post
-      });
-      return {
-        id: post.id,
-        userId: post.user_id,
-        type: post.type,
-        content: post.content,
-        durationDays: post.duration_days,
-        expiresAt: post.expires_at ?? new Date(post.expires_at),
-        isArchived: post.is_archived,
-        createdAt: new Date(post.created_at),
-      };
+    
     } catch (error: any) {
       throw new Error("Failed to create post: " + error.message);
     }
   }
+async getUserPosts(userId: string): Promise<Post[]> {
+  const FUNCTION = 'getUserPosts';
+  Logger.log(COMPONENT, FUNCTION, "debug", "get user's post", {
+      userId
+    });
+    if (!userId) {
+      throw new Error('User ID is required');
+    }
 
+    try {
+      const [results] = await pool.query(
+        `SELECT p.id, p.user_id, u.username, p.type, p.content, p.duration_days, p.expires_at, p.is_archived, p.created_at
+       FROM posts p
+       JOIN users u ON p.user_id = u.id
+       WHERE p.user_id = ? AND p.is_archived = false
+       AND (p.expires_at IS NULL OR p.expires_at > NOW())`,
+        [userId]
+      );
+
+      return (results as any[]).map(post => ({
+        id: post.id,
+        userId: post.user_id,
+        username:post.username,
+        type: post.type,
+        content: post.content,
+        durationDays: post.duration_days,
+        expiresAt: post.expires_at ? new Date(post.expires_at) : null,
+        isArchived: post.is_archived,
+        createdAt: new Date(post.created_at)
+      }));
+    } catch (error: any) {
+      throw new Error('Failed to fetch user posts: ' + error.message);
+    }
+  }
   
 }
 export const postService = new PostService();

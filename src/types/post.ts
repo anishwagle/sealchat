@@ -6,10 +6,11 @@ export interface FeedResult {
 export interface Post {
   id: string;
   userId: string;
+  username:string;
   type: PostType;
   content: string;
   durationDays?: number;
-  expiresAt?: Date;
+  expiresAt?: Date|null;
   isArchived: boolean;
   createdAt: Date;
 }

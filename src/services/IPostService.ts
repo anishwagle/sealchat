@@ -6,6 +6,6 @@ export interface IPostService {
     content: string,
     type: PostType,
     durationDays?: number
-  ): Promise<Post>;
-  
+  ): Promise<void>;
+  getUserPosts(userId: string): Promise<Post[]>
 }

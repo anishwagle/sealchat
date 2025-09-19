@@ -149,7 +149,7 @@ async getProfileLikeStatus(userId1: string, userId2: string): Promise<boolean> {
     });
   }
 
-  async getCurrentFriend(userId:string):Promise<User[]>{
+  async getCurrentFriend(userId:string,limit:number=5):Promise<User[]>{
     const FUNCTION = "getCurrentFriend";
     Logger.log(COMPONENT, FUNCTION, "debug", "Get current friend of user", {
       userId,
@@ -163,7 +163,8 @@ async getProfileLikeStatus(userId1: string, userId2: string): Promise<boolean> {
        SELECT u.id,u.username,u.email
        FROM users u
        JOIN friends f ON u.id = f.user_id_1
-       WHERE f.user_id_2 = ?`,[userId,userId]
+       WHERE f.user_id_2 = ?
+       LIMIT ?`,[userId,userId,limit]
     );
     const result: User[] = (queryResult as any[]).map((user) => ({
       id: user.id,

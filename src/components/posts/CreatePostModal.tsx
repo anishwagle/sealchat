@@ -2,7 +2,7 @@ import { useAuth } from '@/lib/auth/useAuth';
 import { PostType } from '@/types/post';
 import { useState, useEffect, useRef } from 'react';
 
-export default function CreatePostModal({ onClose }: { onClose: () => void }) {
+export default function CreatePostModal({ onClose , onPostCreated}: { onClose: () => void; onPostCreated:()=>void }) {
   const [content, setContent] = useState('');
   const [type, setType] = useState<PostType>('friend_post');
   const [durationDays, setDurationDays] = useState<number | undefined>(1);
@@ -81,10 +81,8 @@ export default function CreatePostModal({ onClose }: { onClose: () => void }) {
         throw new Error(data.error || 'Failed to create post');
       }
 
-      setSuccess('Post created successfully!');
-      setContent('');
-      setDurationDays(1);
-      setTimeout(onClose, 2000); // Close modal after success
+      onClose();
+      onPostCreated(); 
     } catch (err: any) {
       setError(err.message);
     }
