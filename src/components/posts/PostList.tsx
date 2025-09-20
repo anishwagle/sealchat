@@ -5,9 +5,10 @@ import { useState, useEffect } from "react";
 interface PostListProps {
   userId?: string; // Make userId optional
   isPublic?:boolean;
+  isProfile?:boolean;
 }
 
-export default function PostList({ userId ,isPublic }: PostListProps) {
+export default function PostList({ userId ,isPublic,isProfile }: PostListProps) {
   const [posts, setPosts] = useState<Post[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -39,8 +40,8 @@ export default function PostList({ userId ,isPublic }: PostListProps) {
       try {
         setLoading(true);
         let apiUrl = `/api/protected/posts`;
-        if(!isPublic) apiUrl+=`/user`;
-        if (!isPublic&& userId) apiUrl += `/${userId}`;
+        if(isProfile) apiUrl+=`/user`;
+        if (isProfile && userId) apiUrl += `/${userId}`;
         
         const data = await fetch(apiUrl);
         const results = await data.json();

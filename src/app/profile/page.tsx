@@ -451,7 +451,7 @@ export default function Profile() {
               <p className="text-gray-500 text-sm">Recent activity</p>
             </div>
             <div className="space-y-4">
-              <PostList />
+              <PostList isProfile={true} />
             </div>
           </div>
         </div>

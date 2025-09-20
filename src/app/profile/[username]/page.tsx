@@ -344,7 +344,7 @@ export default function UserProfile() {
               <p className="text-gray-500 text-sm">Recent activity</p>
             </div>
             <div className="space-y-4">
-              <PostList  userId={profile.userId}/>
+              <PostList isProfile={true}  userId={profile.userId}/>
             </div>
           </div>
         </div>
