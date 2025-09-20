@@ -12,14 +12,9 @@ export default function Profile() {
   const [profile, setProfile] = useState<ProfileType | null>(null);
   const [error, setError] = useState("");
   const { isAuthenticated, isLoading, error: authError } = useAuth();
-  const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
+ 
   const router = useRouter();
-  const handlePostCreated = () => {
-    setSnackbarMessage("Posted successfully!");
-  };
-   const closeSnackbar = () => {
-    setSnackbarMessage(null);
-  };
+  
   useEffect(() => {
     if (!isAuthenticated || authError) return;
 
@@ -131,7 +126,7 @@ export default function Profile() {
               </p>
             </div>
             <div className="flex gap-3">
-              <CreatePostButton onPostCreated={handlePostCreated}/>
+              <CreatePostButton />
               <button className="flex items-center gap-2 px-6 py-2 text-gray-700 font-medium rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
                 <svg
                   className="w-5 h-5"
@@ -456,7 +451,6 @@ export default function Profile() {
               <p className="text-gray-500 text-sm">Recent activity</p>
             </div>
             <div className="space-y-4">
-              {snackbarMessage && <Snackbar message={snackbarMessage} onClose={closeSnackbar} />}
               <PostList />
             </div>
           </div>

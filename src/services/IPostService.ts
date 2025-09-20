@@ -8,6 +8,7 @@ export interface IPostService {
     durationDays?: number
   ): Promise<void>;
   getUserPosts(userId: string): Promise<Post[]>;
-  getPublicOpinions(userId: string): Promise<Post[]>;
+  getPublicOpinions(userId: string,isCurrentUser?:boolean): Promise<Post[]>;
   getFriendPosts(userId: string, currentUserId: string): Promise<Post[]>;
+  getPrivatePosts(currentUserId: string): Promise<Post[]>;
 }

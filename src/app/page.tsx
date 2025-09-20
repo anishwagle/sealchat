@@ -4,20 +4,11 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/useAuth";
 import Navbar from "@/components/Navbar";
 import CreatePostButton from "@/components/posts/CreatePostButton";
+import PostList from "@/components/posts/PostList";
 
 export default function Dashboard() {
   const { isAuthenticated, isLoading, error } = useAuth();
   const router = useRouter();
-
-  const handleLogout = async () => {
-    try {
-      await fetch('/api/auth/logout', { method: 'POST' });
-      router.push('/login');
-    } catch (error: any) {
-      console.error('Logout failed:', error.message);
-      router.push('/login');
-    }
-  };
 
   if (isLoading) {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
@@ -36,12 +27,7 @@ export default function Dashboard() {
             <h2 className="text-2xl font-bold mb-4 text-center">Dashboard</h2>
             <p>Welcome to your dashboard!</p>
             <CreatePostButton/>
-            <button
-              onClick={handleLogout}
-              className="mt-4 w-full bg-red-500 text-white p-2 rounded hover:bg-red-600"
-            >
-              Logout
-            </button>
+            <PostList isPublic={true}/>
           </div>
         </div>
       </main>

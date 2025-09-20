@@ -1,11 +1,18 @@
 "use client";
 import { useState } from 'react';
 import CreatePostModal from './CreatePostModal';
+import Snackbar from '../SnackBar';
 
 
-export default function CreatePostButton({onPostCreated }: {onPostCreated: () => void }) {
+export default function CreatePostButton() {
   const [isModalOpen, setIsModalOpen] = useState(false);
-
+   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
+const handlePostCreated = () => {
+    setSnackbarMessage("Posted successfully!");
+  };
+   const closeSnackbar = () => {
+    setSnackbarMessage(null);
+  };
   return (
     <>
       <button
@@ -14,8 +21,10 @@ export default function CreatePostButton({onPostCreated }: {onPostCreated: () =>
       >
         Create Post
       </button>
+
+      {snackbarMessage && <Snackbar message={snackbarMessage} onClose={closeSnackbar} />}
       {isModalOpen && (
-        <CreatePostModal onClose={() => setIsModalOpen(false)} onPostCreated={onPostCreated} />
+        <CreatePostModal onClose={() => setIsModalOpen(false)} onPostCreated={handlePostCreated} />
       )}
     </>
   );
