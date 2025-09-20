@@ -29,27 +29,73 @@ export default function CreatePostModal({ onClose, onPostCreated }: { onClose: (
     loadFriends();
   }, []);
 
+  const getCaretCoordinates = () => {
+    const textarea = textareaRef.current;
+    if (!textarea) return { top: 0, left: 0 };
+
+    const { selectionStart } = textarea;
+    const textBeforeCaret = textarea.value.substring(0, selectionStart);
+    const lines = textBeforeCaret.split('\n');
+    const currentLineNumber = lines.length;
+    const currentLineText = lines[lines.length - 1];
+    
+    // Find the last @ position
+    const lastAtSymbol = currentLineText.lastIndexOf('@');
+    const textUpToAt = lastAtSymbol >= 0 ? currentLineText.substring(0, lastAtSymbol + 1) : currentLineText;
+
+    const computedStyle = window.getComputedStyle(textarea);
+    const lineHeight = parseInt(computedStyle.lineHeight || '20');
+    const paddingLeft = parseInt(computedStyle.paddingLeft || '12');
+    
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    if (context) {
+      context.font = `${computedStyle.fontSize} ${computedStyle.fontFamily}`;
+      const textWidth = context.measureText(textUpToAt).width;
+
+      return {
+        top: (currentLineNumber - 1) * lineHeight,
+        left: Math.min(textWidth + paddingLeft, textarea.offsetWidth - 200) // Give more space for dropdown
+      };
+    }
+
+    return { top: 0, left: 0 };
+  };
+
+  const updateSuggestionPosition = () => {
+    if (!showSuggestions || !textareaRef.current) return;
+
+    const { top, left } = getCaretCoordinates();
+    const lineHeight = parseInt(window.getComputedStyle(textareaRef.current).lineHeight || '20');
+    const isMobile = window.innerWidth < 640;
+
+    setSuggestionPosition({
+      top: top + lineHeight + 8,
+      left: isMobile ? 8 : left
+    });
+  };
+
+  useEffect(() => {
+    window.addEventListener('resize', updateSuggestionPosition);
+    return () => window.removeEventListener('resize', updateSuggestionPosition);
+  }, [showSuggestions]);
+
   const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
     setContent(value);
 
-    // Detect @mention
     const cursorPosition = e.target.selectionStart;
     const textBeforeCursor = value.substring(0, cursorPosition);
     const mentionMatch = textBeforeCursor.match(/@(\w*)$/);
+    
     if (mentionMatch) {
       const query = mentionMatch[1];
       setMentionQuery(query);
-      debugger;
-      setFilteredFriends(friends.filter(f => f.username.toLowerCase().startsWith(query.toLowerCase())));
+      setFilteredFriends(friends.filter(f => 
+        f.username.toLowerCase().startsWith(query.toLowerCase())
+      ));
       setShowSuggestions(true);
-
-      // Calculate suggestion position
-      const textarea = textareaRef.current;
-      if (textarea) {
-        const { top, left } = textarea.getBoundingClientRect();
-        setSuggestionPosition({ top: top + 100, left: left }); // Adjust based on cursor
-      }
+      updateSuggestionPosition();
     } else {
       setShowSuggestions(false);
     }
@@ -89,9 +135,9 @@ export default function CreatePostModal({ onClose, onPostCreated }: { onClose: (
   };
 
   return (
-    <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-all duration-200">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-md transform transition-all duration-200 scale-100">
-        <div className="p-6">
+    <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 md:p-6 transition-all duration-200">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-md transform transition-all duration-200 scale-100 max-h-[90vh] overflow-y-auto">
+        <div className="p-4 md:p-6">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-semibold text-gray-800">Create New Post</h2>
             <button 
@@ -104,46 +150,50 @@ export default function CreatePostModal({ onClose, onPostCreated }: { onClose: (
             </button>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-4 md:space-y-5">
             <div>
               <label htmlFor="content" className="block text-sm font-medium text-gray-700 mb-1">
                 What's on your mind?
               </label>
-              <textarea
-                ref={textareaRef}
-                id="content"
-                value={content}
-                onChange={handleContentChange}
-                className="w-full rounded-lg border-gray-200 bg-gray-50/50 p-3 text-gray-700 focus:border-blue-500 focus:ring-blue-500 focus:ring-1 transition-all duration-200"
-                rows={4}
-                placeholder="Write your post... (use @username to mention friends)"
-                required
-              />
-              <p className="mt-2 text-xs text-gray-500">
-                Tip: You can mention friends with @username or paste YouTube URLs
-              </p>
-            </div>
-
-            {showSuggestions && filteredFriends.length > 0 && (
-              <ul className="absolute bg-white rounded-lg shadow-lg border border-gray-100 max-h-40 overflow-y-auto w-64 py-1 z-50">
-                {filteredFriends.map((friend) => (
-                  <li
-                    key={friend.username}
-                    onClick={() => insertMention(friend.username)}
-                    className="px-4 py-2 hover:bg-gray-50 cursor-pointer flex items-center gap-2 text-gray-700"
+              <div className="relative">
+                <textarea
+                  ref={textareaRef}
+                  id="content"
+                  value={content}
+                  onChange={handleContentChange}
+                  className="w-full rounded-lg border-gray-200 bg-gray-50/50 p-3 text-gray-700 focus:border-blue-500 focus:ring-blue-500 focus:ring-1 transition-all duration-200 min-h-[100px]"
+                  placeholder="Write your post... (use @username to mention friends)"
+                  required
+                />
+                {showSuggestions && filteredFriends.length > 0 && (
+                  <ul 
+                    className="absolute bg-white rounded-md shadow-lg border border-gray-100 max-h-32 overflow-y-auto py-1 z-50 sm:w-48 w-[calc(100%-16px)]"
+                    style={{
+                      top: `${suggestionPosition.top}px`,
+                      left: `${suggestionPosition.left}px`,
+                      transform: 'translateY(2px)' // Slight offset for better visibility
+                    }}
                   >
-                    <span className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-medium">
-                      {friend.username[0].toUpperCase()}
-                    </span>
-                    <span>@{friend.username}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
+                    {filteredFriends.map((friend) => (
+                      <li
+                        key={friend.username}
+                        onClick={() => insertMention(friend.username)}
+                        className="px-3 py-1.5 hover:bg-gray-50 cursor-pointer flex items-center gap-2 text-sm text-gray-700"
+                      >
+                        <span className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-xs font-medium">
+                          {friend.username[0].toUpperCase()}
+                        </span>
+                        <span>@{friend.username}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
 
             <div className="space-y-3">
               <label className="block text-sm font-medium text-gray-700">Visibility</label>
-              <div className="flex gap-4">
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
                 <label className="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
                   <input
                     type="radio"
@@ -200,7 +250,7 @@ export default function CreatePostModal({ onClose, onPostCreated }: { onClose: (
             {error && <p className="text-red-500 text-sm px-3 py-2 bg-red-50 rounded-lg">{error}</p>}
             {success && <p className="text-green-500 text-sm px-3 py-2 bg-green-50 rounded-lg">{success}</p>}
 
-            <div className="flex justify-end gap-3 pt-2">
+            <div className="flex justify-end gap-3 pt-2 mt-6">
               <button
                 type="button"
                 onClick={onClose}
