@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS seal_chat.posts(
     user_id VARCHAR(255) NOT NULL,
     type ENUM('friend_post','public_opinion') DEFAULT 'friend_post',
     content TEXT NOT NULL,
+    original_content TEXT NOT NULL,
     duration_days INT CHECK (duration_days BETWEEN 1 AND 7 OR duration_days IS NULL),
     expires_at TIMESTAMP NULL,
     is_archived BOOLEAN DEFAULT FALSE,

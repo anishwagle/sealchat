@@ -15,7 +15,7 @@ export async function GET(request: Request) {
 
     const publicOpinion = await postService.getAllPublicOpinions();
     Logger.log(COMPONENT, FUNCTION, "info", "User's Own Post Count:",{count:publicOpinion.length});
-    const posts = publicOpinion.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    const posts = [...publicOpinion].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
     Logger.log(COMPONENT, FUNCTION, "info", "User's Total Post Count:",{count:posts.length});
     if (!posts) {
       Logger.log(COMPONENT, FUNCTION, "error", "Posts not found");

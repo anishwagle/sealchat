@@ -52,7 +52,7 @@ export default function PostList({ userId ,isPublic,isProfile }: PostListProps) 
     <div className="space-y-4">
       {posts.map((post) => (
         <div key={post.id}>
-            <PostComponent id={post.id} username={post.username} userId={post.userId} type={post.type} content={post.content} isArchived={post.isArchived} createdAt={post.createdAt} />
+            <PostComponent id={post.id} username={post.username} originalContent={post.originalContent} userId={post.userId} type={post.type} content={post.content} isArchived={post.isArchived} createdAt={post.createdAt} />
         </div>
       ))}
     </div>

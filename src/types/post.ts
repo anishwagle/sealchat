@@ -9,6 +9,7 @@ export interface Post {
   username:string;
   type: PostType;
   content: string;
+  originalContent:string;
   durationDays?: number;
   expiresAt?: Date|null;
   isArchived: boolean;
