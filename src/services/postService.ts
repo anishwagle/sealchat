@@ -310,5 +310,32 @@ export class PostService implements IPostService {
       throw new Error("Failed to fetch private posts: " + error.message);
     }
   }
+  async getAllPublicOpinions(): Promise<Post[]> {
+    try {
+      const FUNCTION = "getPrivatePosts";
+      const [results] = await pool.query(
+        `SELECT p.id, p.user_id, u.username, p.type, p.content, p.duration_days, p.expires_at, p.is_archived, p.created_at
+         FROM posts p
+         JOIN users u ON p.user_id = u.id
+         WHERE p.type = 'public_opinion' AND p.is_archived = false
+         AND (p.expires_at IS NULL OR p.expires_at > NOW())
+         ORDER BY p.created_at DESC`
+      );
+      Logger.log(COMPONENT, FUNCTION, "debug", "Post Fetched Successfully");
+      return (results as any[]).map(post => ({
+        id: post.id,
+        userId: post.user_id,
+        username: post.username,
+        type: post.type,
+        content: post.content,
+        durationDays: post.duration_days,
+        expiresAt: post.expires_at ? new Date(post.expires_at) : null,
+        isArchived: post.is_archived,
+        createdAt: new Date(post.created_at)
+      }));
+    } catch (error: any) {
+      throw new Error('Failed to fetch all public opinions: ' + error.message);
+    }
+  }
 }
 export const postService = new PostService();

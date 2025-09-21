@@ -145,7 +145,7 @@ export default function Dashboard() {
                       </div>
                     </div>
                   </div>
-                  <PostList isPublic={isPublic} />
+                  <PostList isProfile={false} isPublic={isPublic} />
                 </div>
               </div>
             </div>

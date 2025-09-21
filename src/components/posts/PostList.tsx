@@ -18,8 +18,9 @@ export default function PostList({ userId ,isPublic,isProfile }: PostListProps) 
       try {
         setLoading(true);
         let apiUrl = `/api/protected/posts`;
-        if(isProfile) apiUrl+=`/user`;
-        if (isProfile && userId) apiUrl += `/${userId}`;
+        if(isPublic) apiUrl+=`/public`;
+        else if(isProfile) apiUrl+=`/user`;
+        if(isProfile && userId) apiUrl += `/${userId}`;
         
         const data = await fetch(apiUrl);
         const results = await data.json();
@@ -32,9 +33,8 @@ export default function PostList({ userId ,isPublic,isProfile }: PostListProps) 
       }
     };
   useEffect(() => {
-    
     fetchPosts();
-  }, [userId]);
+  }, [userId, isPublic]); // Add isPublic to dependency array
 
   if (loading) {
     return <div className="text-center text-gray-500">Loading posts...</div>;
@@ -58,3 +58,4 @@ export default function PostList({ userId ,isPublic,isProfile }: PostListProps) 
     </div>
   );
 }
+
