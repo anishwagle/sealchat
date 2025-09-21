@@ -132,7 +132,7 @@ export class PostService implements IPostService {
           : null;
       const postId = v4();
       await pool.query(
-        "INSERT INTO posts (id,user_id, type, content,original_content duration_days, expires_at, is_archived) VALUES (?,?,?, ?, ?, ?, ?, ?)",
+        "INSERT INTO posts (id,user_id, type, content,original_content, duration_days, expires_at, is_archived) VALUES (?,?,?, ?, ?, ?, ?, ?)",
         [
           postId,
           userId,
