@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import { Logger } from '@/lib/logger';
-import { friendService } from '@/services/serviceProvider';
+import { friendService, notificationService } from '@/services/serviceProvider';
 import { ApiError } from '@/lib/errors';
 
 const COMPONENT = 'api/protected/friend/sendRequest';
@@ -19,6 +19,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: 'Current Users not found', code: 'USERS_NOT_FOUND' }, { status: 404 });
     }
     await friendService.sendFriendRequest(senderId,receiverId);
+    await notificationService.createNotification(
+          userId2,
+          "friend_request_sent",
+          senderId
+        );
     Logger.log(COMPONENT, FUNCTION, 'info', 'Friend Request Sent');
     return NextResponse.json({message:"Friend Request Sent"}, { status: 200 });
   } catch (error: any) {

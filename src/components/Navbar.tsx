@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useRef, useEffect, SetStateAction } from "react";
+import NotificationComponent from "./Notification";
 
 export default function Navbar() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -152,60 +153,9 @@ export default function Navbar() {
             </button>
 
             {/* Notifications */}
-            <div className="relative group">
-              <button className="p-2 hover:bg-gray-50 rounded-full relative">
-                <svg
-                  className="h-5 w-5 text-gray-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-                  />
-                </svg>
-                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-              </button>
 
-              {/* Notification Dropdown */}
-              <div className="absolute right-0 mt-1 w-80 bg-white rounded-lg shadow-sm border border-gray-100 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-200">
-                <div className="p-4">
-                  <h3 className="font-medium text-sm text-gray-900 mb-3">
-                    Notifications
-                  </h3>
-                  <div className="space-y-3">
-                    {[
-                      { type: "like", user: "John", time: "2m ago" },
-                      { type: "comment", user: "Sarah", time: "5m ago" },
-                      { type: "friend", user: "Mike", time: "10m ago" },
-                    ].map((notif, i) => (
-                      <div
-                        key={i}
-                        className="flex items-start gap-3 p-2 hover:bg-gray-50 rounded-md"
-                      >
-                        <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
-                          {notif.type === "like" && "❤️"}
-                          {notif.type === "comment" && "💭"}
-                          {notif.type === "friend" && "👋"}
-                        </div>
-                        <div>
-                          <p className="text-sm text-gray-700">
-                            <span className="font-medium">{notif.user}</span>
-                            {notif.type === "like" && " liked your post"}
-                            {notif.type === "comment" && " commented on your post"}
-                            {notif.type === "friend" && " sent you a friend request"}
-                          </p>
-                          <p className="text-xs text-gray-400">{notif.time}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
+            <NotificationComponent />
+            
 
             {/* Profile Dropdown */}
             <div className="relative group">

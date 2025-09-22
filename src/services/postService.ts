@@ -1,9 +1,11 @@
 import { Logger } from "@/lib/logger";
 import pool from "../db";
-import { FeedResult, Post, PostType } from "../types/post";
+import { Post, PostType } from "../types/post";
 import { IPostService } from "./IPostService";
 import { v4 } from "uuid";
 import { QueryResult } from "mysql2";
+import {  } from "./INotificationService";
+import { notificationService } from "./serviceProvider";
 const COMPONENT = "PostService";
 export class PostService implements IPostService {
   async createPost(
@@ -76,7 +78,7 @@ export class PostService implements IPostService {
     const uniqueUsernames = Array.from(new Set(mentions.map((m) => m[1])));
 
     // Fetch user ids for usernames
-    const usernameToId: { [key: string]: number } = {};
+    const usernameToId: { [key: string]: string } = {};
     if (uniqueUsernames.length > 0) {
       const placeholders = uniqueUsernames.map(() => "?").join(",");
       const [results] = await pool.query(
@@ -94,7 +96,7 @@ export class PostService implements IPostService {
       const username = mention[1];
       const userIdMentioned = usernameToId[username];
       if (!userIdMentioned) continue; // no user, skip
-
+      
       if (type === "friend_post") {
         const [friendResults] = await pool.query(
           "SELECT id FROM friends WHERE (user_id_1 = ? AND user_id_2 = ?) OR (user_id_1 = ? AND user_id_2 = ?)",
@@ -105,6 +107,7 @@ export class PostService implements IPostService {
 
       const styledMention = `<a href="/profile/${username}" class="user-mention">@${username}</a>`;
       processedContent = processedContent.split(fullMatch).join(styledMention);
+      
     }
 
     // Combine processed content with embeds
@@ -144,6 +147,19 @@ export class PostService implements IPostService {
           false,
         ]
       );
+      for (const mention of mentions) {
+        const username = mention[1];
+        const userIdMentioned = usernameToId[username];
+        if (!userIdMentioned) continue; // no user, skip
+        if (userIdMentioned !== userId) {
+          await notificationService.createNotification(
+            userIdMentioned,
+            'mention',
+            userId,
+            postId
+          );
+        }
+      }
       Logger.log(COMPONENT, FUNCTION, "info", "New Post Created");
     } catch (error: any) {
       throw new Error("Failed to create post: " + error.message);

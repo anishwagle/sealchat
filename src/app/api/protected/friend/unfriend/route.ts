@@ -1,6 +1,6 @@
 import { ApiError } from "@/lib/errors";
 import { Logger } from "@/lib/logger";
-import { friendService } from "@/services/serviceProvider";
+import { friendService, notificationService } from "@/services/serviceProvider";
 import { NextResponse } from "next/server";
 
 const COMPONENT = "api/protected/friend/unfriend";
@@ -18,6 +18,21 @@ export async function POST(request: Request) {
       );
     }
     await friendService.unfriendRequest(userId1, userId2);
+    const notifications1 =
+      await notificationService.getNotificationByUserIdAndType(
+        userId1,
+        "friend_request_accept",
+        userId2
+      );
+    const notifications2 =
+      await notificationService.getNotificationByUserIdAndType(
+        userId2,
+        "friend_request_accept",
+        userId1
+      );
+    [...notifications1, ...notifications2].forEach(async (x) => {
+      await notificationService.deleteNotification(x.id, x.userId);
+    });
     Logger.log(COMPONENT, FUNCTION, "info", "Unfriend Successful");
     return NextResponse.json(
       { message: "Un-friend Successful" },
@@ -27,7 +42,9 @@ export async function POST(request: Request) {
     const apiError = new ApiError("Failed to unFriend", 500, "INTERNAL_ERROR", {
       error: error.message,
     });
-    Logger.log(COMPONENT, FUNCTION, 'error', apiError.message, { details: apiError.details });
+    Logger.log(COMPONENT, FUNCTION, "error", apiError.message, {
+      details: apiError.details,
+    });
     return NextResponse.json(
       {
         message: apiError.message,

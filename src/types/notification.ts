@@ -1,13 +1,12 @@
-export type NotificationType = 'friend_request' | 'mention' | 'like' | 'comment'|'tipped'|'subscribed';
+export type NotificationType = 'friend_request_sent'|'friend_request_accept' | 'mention' | 'like' | 'comment'|'profile_like'|'tipped'|'subscribed';
 
 export interface Notification {
   id: number;
-  userId: number;
+  userId: string;
   type: NotificationType;
-  sourceUserId: number;
+  sourceUserId: string;
   sourceUsername: string;
-  postId: number | null;
-  content: string;
+  postId: string | null;
   isRead: boolean;
   createdAt: Date;
 }

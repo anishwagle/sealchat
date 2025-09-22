@@ -1,4 +1,4 @@
-import { FeedResult, Post, PostType } from "@/types/post";
+import { Post, PostType } from "@/types/post";
 
 export interface IPostService {
   createPost(

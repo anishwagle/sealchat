@@ -36,9 +36,8 @@ export async function GET(request: Request) {
         { status: 404 }
       );
     }
-
     Logger.log(COMPONENT, FUNCTION, "info", "Post fetched");
-    return NextResponse.json({ posts: posts.sort((a:Post,b:Post)=>b.createdAt.getDate()-a.createdAt.getDate()) }, { status: 200 });
+    return NextResponse.json({ posts: posts }, { status: 200 });
   } catch (error: any) {
     const apiError = new ApiError(
       "Failed to fetch Post",

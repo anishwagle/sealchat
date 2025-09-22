@@ -1,48 +1,38 @@
 import { NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 import { Logger } from "@/lib/logger";
-import { friendService, notificationService } from "@/services/serviceProvider";
+import { notificationService, postService } from "@/services/serviceProvider";
 import { ApiError } from "@/lib/errors";
 
-const COMPONENT = "api/protected/friend/acceptRequest";
+const COMPONENT = "api/notification/markasread";
 const FUNCTION = "POST";
 
 export async function POST(request: Request) {
-  Logger.log(COMPONENT, FUNCTION, "info", "Accept Friend request from user");
+  Logger.log(COMPONENT, FUNCTION, "info", "mark notification as read");
 
   try {
-    const userId1 = request.headers.get("x-user-id");
-    const { userId2 } = await request.json();
-    if (!userId1) {
+    const userId = request.headers.get("x-user-id");
+    if (!userId) {
       Logger.log(COMPONENT, FUNCTION, "error", "Current Users not found");
       return NextResponse.json(
         { message: "Current Users not found", code: "USERS_NOT_FOUND" },
         { status: 404 }
       );
     }
-    await friendService.acceptFriendRequest(userId1, userId2);
-    const notifications = await notificationService.getNotificationByUserIdAndType(
-          userId1,
-          "friend_request_sent",
-          userId2
-        );
-    notifications.forEach(async x=>{
-      await notificationService.deleteNotification(x.id,x.userId);
-    });
-    await notificationService.createNotification(
-      userId2,
-      "friend_request_accept",
-      userId1
-    );
+    const  notificationIds  = (await request.json()).notificationIds as number[];
+    Logger.log(COMPONENT, FUNCTION, "info", "mark notification as read",{val:notificationIds});
+    notificationIds.forEach(async x=>{
+        await notificationService.markNotificationAsRead(x,userId);
+    })
     
-    Logger.log(COMPONENT, FUNCTION, "info", "Friend Request Accepted");
+    Logger.log(COMPONENT, FUNCTION, "info", "Marked notification as read Successfully",notificationIds);
     return NextResponse.json(
-      { message: "Friend Request Accepted" },
+      { message: "Marked notification as read Successfully" },
       { status: 200 }
     );
   } catch (error: any) {
     const apiError = new ApiError(
-      "Failed to Accept Friend Request",
+      "Failed to Marked notification as read",
       500,
       "INTERNAL_ERROR",
       { error: error.message }
