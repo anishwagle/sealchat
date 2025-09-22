@@ -1,6 +1,7 @@
 "use client";
 import { Post } from "@/types/post";
 import { getTimeSince, getTimeUntil } from "@/utils/dateConveter";
+import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
 
 export default function PostComponent(post: Post) {
@@ -30,7 +31,7 @@ export default function PostComponent(post: Post) {
             {post.username[0].toUpperCase()}
           </div>
           <div>
-            <p className="font-medium text-gray-700">{post.username}</p>
+            <Link href={`/profile/${post.username}`} className="font-medium text-gray-700">{post.username}</Link>
             <p className="text-xs text-gray-400 flex items-center gap-1.5">
               <span
                 className={`${
