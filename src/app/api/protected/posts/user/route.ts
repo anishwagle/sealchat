@@ -9,11 +9,9 @@ const COMPONENT = "api/protected/posts/user";
 const FUNCTION = "GET";
 
 export async function GET(request: Request) {
-  
-
   try {
     const userId = request.headers.get("x-user-id");
-    Logger.log(COMPONENT, FUNCTION, "info", "Fetching users Post",{userId});
+    Logger.log(COMPONENT, FUNCTION, "info", "Fetching users Post", { userId });
     if (!userId) {
       Logger.log(COMPONENT, FUNCTION, "error", "Current User not found");
       return NextResponse.json(
@@ -21,17 +19,21 @@ export async function GET(request: Request) {
         { status: 404 }
       );
     }
-    const posts = await postService.getUserPosts(userId);
-    if (!posts) {
-      Logger.log(COMPONENT, FUNCTION, "error", "Posts not found",{userId:userId});
+    const userPost = await postService.getUserPosts(userId);
+    if (!userPost) {
+      Logger.log(COMPONENT, FUNCTION, "error", "Posts not found", {
+        userId: userId,
+      });
       return NextResponse.json(
         { message: "Posts not found", code: "Post_NOT_FOUND" },
         { status: 404 }
       );
     }
-
+    const posts = [...userPost].sort(
+      (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
+    );
     Logger.log(COMPONENT, FUNCTION, "info", "Post fetched");
-    return NextResponse.json({ posts: posts.sort((a:Post,b:Post)=>b.createdAt.getDate()-a.createdAt.getDate()) }, { status: 200 });
+    return NextResponse.json({ posts: posts }, { status: 200 });
   } catch (error: any) {
     const apiError = new ApiError(
       "Failed to fetch Post",
