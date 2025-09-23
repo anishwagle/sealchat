@@ -3,6 +3,7 @@ export type PostType = "friend_post" | "public_opinion";
 export interface Comment {
   id: string;
   content: string;
+  userId:string;
   username: string;
   createdAt: string;
 }

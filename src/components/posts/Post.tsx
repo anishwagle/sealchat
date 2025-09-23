@@ -1,11 +1,27 @@
 "use client";
-import { Post } from "@/types/post";
+import { Post, Comment } from "@/types/post";
 import { getTimeSince, getTimeUntil } from "@/utils/dateConveter";
 import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
+import CommentModal from "../modals/CommentModal";
+import LikesModal from "../modals/LikesModal";
+import Snackbar from "../SnackBar";
 
 export default function PostComponent(post: Post) {
   const [showOptions, setShowOptions] = useState(false);
+  const [showCommentModal, setShowCommentModal] = useState(false);
+  const [showLikesModal, setShowLikesModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isLiking, setIsLiking] = useState(false);
+  const [isCommenting, setIsCommenting] = useState(false);
+
+  // Mocking current user for likes
+  const currentUser = "current_user_mock";
+
+  const [localLikes, setLocalLikes] = useState(post.likes || []);
+  const [localComments, setLocalComments] = useState<Comment[]>(
+    post.comments || []
+  );
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -22,119 +38,263 @@ export default function PostComponent(post: Post) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const isLikedByCurrentUser = localLikes.some(
+    (like) => like.username === currentUser
+  );
+
+  const handleLike = async () => {
+    setIsLiking(true);
+    // Mock API call
+    setTimeout(() => {
+      if (isLikedByCurrentUser) {
+        setLocalLikes(localLikes.filter((like) => like.username !== currentUser));
+      
+      } else {
+        setLocalLikes([...localLikes, { username: currentUser }]);
+        
+      }
+      setIsLiking(false);
+    }, 500);
+  };
+
+  const handleCommentSubmit = async (content: string) => {
+    setIsCommenting(true);
+    // Mock API call
+    setTimeout(() => {
+      const newComment: Comment = {
+        id: Date.now().toString(),
+        content,
+        username: currentUser,
+        createdAt: new Date().toISOString(),
+        userId: "mock-user-id",
+      };
+      setLocalComments([...localComments, newComment]);
+     
+      setIsCommenting(false);
+    }, 500);
+  };
+
+  const handleDeletePost = async () => {
+    // Mock API call
+    
+    setShowDeleteConfirm(false);
+  
+    // In a real app, you'd remove the post from the list here.
+  };
+
+  const formatLikesText = (likes: { username: string }[]) => {
+    if (likes.length === 0) return null;
+    if (likes.length === 1) return `${likes[0].username} liked this`;
+    if (likes.length === 2)
+      return `${likes[0].username} and ${likes[1].username} liked this`;
+    return `${likes[0].username}, ${likes[1].username} and ${
+      likes.length - 2
+    } others liked this`;
+  };
+
   return (
-    <div className="bg-white rounded-lg border border-gray-100 p-5 relative">
-      {/* Header Section */}
-      <div className="flex justify-between items-start">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-50 to-blue-100 flex items-center justify-center text-blue-600 font-semibold ring-1 ring-blue-100">
-            {post.username[0].toUpperCase()}
-          </div>
-          <div>
-            <Link href={`/profile/${post.username}`} className="font-medium text-gray-700">{post.username}</Link>
-            <p className="text-xs text-gray-400 flex items-center gap-1.5">
-              <span
-                className={`${
-                  post.type === "friend_post"
-                    ? "text-emerald-500"
-                    : "text-blue-500"
-                }`}
+    <>
+      <div className="bg-white rounded-lg border border-gray-100 p-5 relative">
+        {/* Header Section */}
+        <div className="flex justify-between items-start">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-50 to-blue-100 flex items-center justify-center text-blue-600 font-semibold ring-1 ring-blue-100">
+              {post.username[0].toUpperCase()}
+            </div>
+            <div>
+              <Link
+                href={`/profile/${post.username}`}
+                className="font-medium text-gray-700"
               >
-                {post.type === "friend_post"
-                  ? "Friends Only"
-                  : "Public Opinion"}
-              </span>
-              <span className="text-gray-300">•</span>
-              <span>{getTimeSince(new Date(post.createdAt))}</span>
-              {post.expiresAt && (
-                <>
-                  <span className="text-gray-300">•</span>
-                  <span className="text-amber-500">
-                    {getTimeUntil(new Date(post.expiresAt))}
-                  </span>
-                </>
-              )}
-            </p>
+                {post.username}
+              </Link>
+              <p className="text-xs text-gray-400 flex items-center gap-1.5">
+                <span
+                  className={`${
+                    post.type === "friend_post"
+                      ? "text-emerald-500"
+                      : "text-blue-500"
+                  }`}
+                >
+                  {post.type === "friend_post"
+                    ? "Friends Only"
+                    : "Public Opinion"}
+                </span>
+                <span className="text-gray-300">•</span>
+                <span>{getTimeSince(new Date(post.createdAt))}</span>
+                {post.expiresAt && (
+                  <>
+                    <span className="text-gray-300">•</span>
+                    <span className="text-amber-500">
+                      {getTimeUntil(new Date(post.expiresAt))}
+                    </span>
+                  </>
+                )}
+              </p>
+            </div>
+          </div>
+
+          {/* Options Dropdown */}
+          <div className="relative" ref={dropdownRef}>
+            <button
+              onClick={() => setShowOptions(!showOptions)}
+              className="p-1.5 hover:bg-gray-50 rounded-full transition-colors duration-200"
+            >
+              <svg
+                className="w-4 h-4 text-gray-400"
+                fill="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
+              </svg>
+            </button>
+
+            {showOptions && (
+              <div className="absolute right-0 mt-1 w-48 bg-white rounded-md shadow-[0_3px_10px_-3px_rgba(0,0,0,0.1)] py-1 z-10 ring-1 ring-gray-100">
+                <button className="w-full text-left px-4 py-1.5 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-700">
+                  Edit Post
+                </button>
+                <button className="w-full text-left px-4 py-1.5 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-700">
+                  Change Privacy
+                </button>
+                <div className="h-[1px] bg-gray-100 my-1"></div>
+                <button
+                  onClick={() => {
+                    setShowDeleteConfirm(true);
+                    setShowOptions(false);
+                  }}
+                  className="w-full text-left px-4 py-1.5 text-sm text-red-500 hover:bg-gray-50 hover:text-red-600"
+                >
+                  Delete Post
+                </button>
+                <div className="h-[1px] bg-gray-100 my-1"></div>
+                <button className="w-full text-left px-4 py-1.5 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-700">
+                  Report Post
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Options Dropdown */}
-        <div className="relative" ref={dropdownRef}>
-          <button
-            onClick={() => setShowOptions(!showOptions)}
-            className="p-1.5 hover:bg-gray-50 rounded-full transition-colors duration-200"
-          >
-            <svg
-              className="w-4 h-4 text-gray-400"
-              fill="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
-            </svg>
-          </button>
+        {/* Content Section */}
+        <div
+          className="mt-3.5 text-gray-600 prose max-w-none prose-sm prose-p:leading-relaxed prose-a:text-blue-500 prose-a:no-underline hover:prose-a:underline"
+          dangerouslySetInnerHTML={{ __html: post.content }}
+        />
 
-          {showOptions && (
-            <div className="absolute right-0 mt-1 w-48 bg-white rounded-md shadow-[0_3px_10px_-3px_rgba(0,0,0,0.1)] py-1 z-10 ring-1 ring-gray-100">
-              <button className="w-full text-left px-4 py-1.5 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-700">
-                Edit Post
+        {/* Interaction Section */}
+        <div className="mt-4 pt-4 border-t border-gray-50">
+          {formatLikesText(localLikes) && (
+            <button
+              onClick={() => setShowLikesModal(true)}
+              className="text-sm text-gray-600 hover:text-gray-800 mb-3 transition-colors duration-200 group flex items-center gap-1"
+            >
+              <span className="flex -space-x-2 mr-1.5">
+                {localLikes.slice(0, 3).map((like, index) => (
+                  <div
+                    key={index}
+                    className="w-5 h-5 rounded-full bg-gradient-to-r from-blue-50 to-blue-100 flex items-center justify-center text-blue-600 text-xs font-medium ring-2 ring-white"
+                  >
+                    {like.username[0].toUpperCase()}
+                  </div>
+                ))}
+              </span>
+              <span className="group-hover:underline">
+                {formatLikesText(localLikes)}
+              </span>
+            </button>
+          )}
+          <div className="flex gap-6 text-sm">
+            <button
+              onClick={handleLike}
+              disabled={isLiking}
+              className={`flex items-center gap-1.5 transition-colors duration-200 ${
+                isLikedByCurrentUser
+                  ? "text-blue-500"
+                  : "text-gray-500 hover:text-blue-500"
+              }`}
+            >
+              <svg
+                className={`w-4 h-4 ${isLiking ? "animate-pulse" : ""}`}
+                fill={isLikedByCurrentUser ? "currentColor" : "none"}
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="1.5"
+                  d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                />
+              </svg>
+              <span>Like</span>
+            </button>
+            <button
+              onClick={() => setShowCommentModal(true)}
+              className="flex items-center gap-1.5 text-gray-500 hover:text-blue-500 transition-colors duration-200"
+            >
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="1.5"
+                  d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                />
+              </svg>
+              <span>
+                Comment{" "}
+                {localComments.length > 0 ? `(${localComments.length})` : ""}
+              </span>
+            </button>
+          </div>
+        </div>
+      </div>
+      <CommentModal
+        isOpen={showCommentModal}
+        onClose={() => setShowCommentModal(false)}
+        comments={localComments}
+        onSubmit={handleCommentSubmit}
+        isSubmitting={isCommenting}
+      />
+      <LikesModal
+        isOpen={showLikesModal}
+        onClose={() => setShowLikesModal(false)}
+        likes={localLikes}
+      />
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-sm w-full">
+            <h3 className="text-lg font-semibold mb-4">Delete Post</h3>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to delete this post? This action cannot be
+              undone.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="px-4 py-2 text-gray-600 hover:text-gray-700"
+              >
+                Cancel
               </button>
-              <button className="w-full text-left px-4 py-1.5 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-700">
-                Change Privacy
-              </button>
-              <div className="h-[1px] bg-gray-100 my-1"></div>
-              <button className="w-full text-left px-4 py-1.5 text-sm text-red-500 hover:bg-gray-50 hover:text-red-600">
-                Delete Post
-              </button>
-              <div className="h-[1px] bg-gray-100 my-1"></div>
-              <button className="w-full text-left px-4 py-1.5 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-700">
-                Report Post
+              <button
+                onClick={() => {
+                  handleDeletePost();
+                  setShowDeleteConfirm(false);
+                }}
+                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+              >
+                Delete
               </button>
             </div>
-          )}
+          </div>
         </div>
-      </div>
-
-      {/* Content Section */}
-      <div
-        className="mt-3.5 text-gray-600 prose max-w-none prose-sm prose-p:leading-relaxed prose-a:text-blue-500 prose-a:no-underline hover:prose-a:underline"
-        dangerouslySetInnerHTML={{ __html: post.content }}
-      />
-
-      {/* Interaction Section */}
-      <div className="mt-4 flex gap-6 text-sm pt-4 border-t border-gray-50">
-        <button className="flex items-center gap-1.5 text-gray-500 hover:text-blue-500 transition-colors duration-200">
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="1.5"
-              d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-            />
-          </svg>
-          <span>0 likes</span>
-        </button>
-        <button className="flex items-center gap-1.5 text-gray-500 hover:text-blue-500 transition-colors duration-200">
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="1.5"
-              d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-            />
-          </svg>
-          <span>0 comments</span>
-        </button>
-      </div>
-    </div>
+      )}
+     
+    </>
   );
 }
