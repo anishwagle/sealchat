@@ -11,5 +11,6 @@ export interface IPostService {
   getPublicOpinions(userId: string,isCurrentUser?:boolean): Promise<Post[]>;
   getFriendPosts(userId: string, currentUserId: string): Promise<Post[]>;
   getPrivatePosts(currentUserId: string): Promise<Post[]>;
-  getAllPublicOpinions(): Promise<Post[]>
+  getAllPublicOpinions(): Promise<Post[]>;
+  deletePost(userId:string,postId:string):Promise<void>;
 }

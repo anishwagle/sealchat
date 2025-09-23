@@ -381,5 +381,28 @@ export class PostService implements IPostService {
       throw new Error("Failed to fetch all public opinions: " + error.message);
     }
   }
+  async deletePost(userId:string,postId:string):Promise<void>{
+    const FUNCTION = 'deletePost';
+    if (!userId || !postId) {
+      throw new Error("User ID and Post ID are required");
+    }
+try {
+      const [result] = await pool.query(
+        "DELETE FROM posts WHERE id = ? AND user_id = ?",
+        [postId, userId]
+      );
+      if ((result as any).affectedRows === 0) {
+        throw new Error(
+          `[${COMPONENT}][${FUNCTION}]:Post not found or not owned by user`
+        );
+      }
+    } catch (error: any) {
+      throw new Error(
+        `[${COMPONENT}][${FUNCTION}]:Failed to delete Post: ` +
+          error.message
+      );
+    }
+
+  }
 }
 export const postService = new PostService();
