@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 interface AuthState {
-  userId:string;
+  currentUserId:string;
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string;
@@ -11,7 +11,7 @@ interface AuthState {
 export const useAuth = () => {
   const [authState, setAuthState] = useState<AuthState>({
     isAuthenticated: false,
-    userId:'',
+    currentUserId:'',
     isLoading: true,
     error: '',
   });
@@ -48,17 +48,17 @@ export const useAuth = () => {
     const checkAuth = async () => {
       const data = await verifyToken();
       if (data.message === 'Token valid') {
-        setAuthState({ isAuthenticated: true,userId:data.userId, isLoading: false, error: '' });
+        setAuthState({ isAuthenticated: true,currentUserId:data.userId, isLoading: false, error: '' });
         return;
       }
 
       const isRefreshed = await refreshToken();
       if (isRefreshed && (data.message === 'Token valid')) {
-        setAuthState({ isAuthenticated: true,userId:data.userId, isLoading: false, error: '' });
+        setAuthState({ isAuthenticated: true,currentUserId:data.userId, isLoading: false, error: '' });
         return;
       }
 
-      setAuthState({ isAuthenticated: false,userId:data.userId, isLoading: false, error: 'Unauthorized' });
+      setAuthState({ isAuthenticated: false,currentUserId:data.userId, isLoading: false, error: 'Unauthorized' });
       router.push('/login');
     };
 

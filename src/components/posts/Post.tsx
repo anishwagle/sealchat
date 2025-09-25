@@ -1,11 +1,12 @@
 "use client";
-import { Post, Comment } from "@/types/post";
+import { Post, Comment, Like } from "@/types/post";
 import { getTimeSince, getTimeUntil } from "@/utils/dateConveter";
 import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
 import CommentModal from "../modals/CommentModal";
 import LikesModal from "../modals/LikesModal";
 import Snackbar from "../SnackBar";
+import { useAuth } from "@/lib/auth/useAuth";
 
 export default function PostComponent(post: Post) {
   const [showOptions, setShowOptions] = useState(false);
@@ -13,17 +14,11 @@ export default function PostComponent(post: Post) {
   const [showLikesModal, setShowLikesModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isLiking, setIsLiking] = useState(false);
-  const [isCommenting, setIsCommenting] = useState(false);
+  const { currentUserId } = useAuth();
 
-  // Mocking current user for likes
-  const currentUser = "current_user_mock";
-
-  const [localLikes, setLocalLikes] = useState(post.likes || []);
-  const [localComments, setLocalComments] = useState<Comment[]>(
-    post.comments || []
-  );
+  const [localLikes, setLocalLikes] = useState<Like[]>([]);
   const dropdownRef = useRef<HTMLDivElement>(null);
-
+  
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -39,7 +34,7 @@ export default function PostComponent(post: Post) {
   }, []);
 
   const isLikedByCurrentUser = localLikes.some(
-    (like) => like.username === currentUser
+    (like) => like.username === "currentUser"
   );
 
   const handleLike = async () => {
@@ -47,32 +42,16 @@ export default function PostComponent(post: Post) {
     // Mock API call
     setTimeout(() => {
       if (isLikedByCurrentUser) {
-        setLocalLikes(localLikes.filter((like) => like.username !== currentUser));
+        setLocalLikes(localLikes.filter((like) => like.username !== "currentUser"));
       
       } else {
-        setLocalLikes([...localLikes, { username: currentUser }]);
-        
+       // setLocalLikes([...localLikes, { username: currentUser }]);
       }
       setIsLiking(false);
     }, 500);
   };
 
-  const handleCommentSubmit = async (content: string) => {
-    setIsCommenting(true);
-    // Mock API call
-    setTimeout(() => {
-      const newComment: Comment = {
-        id: Date.now().toString(),
-        content,
-        username: currentUser,
-        createdAt: new Date().toISOString(),
-        userId: "mock-user-id",
-      };
-      setLocalComments([...localComments, newComment]);
-     
-      setIsCommenting(false);
-    }, 500);
-  };
+  
 
   const handleDeletePost = async () => {
     // Mock API call
@@ -248,7 +227,7 @@ export default function PostComponent(post: Post) {
               </svg>
               <span>
                 Comment{" "}
-                {localComments.length > 0 ? `(${localComments.length})` : ""}
+                {post.commentCount}
               </span>
             </button>
           </div>
@@ -257,9 +236,8 @@ export default function PostComponent(post: Post) {
       <CommentModal
         isOpen={showCommentModal}
         onClose={() => setShowCommentModal(false)}
-        comments={localComments}
-        onSubmit={handleCommentSubmit}
-        isSubmitting={isCommenting}
+        postId={post.id}
+        postType={post.type}
       />
       <LikesModal
         isOpen={showLikesModal}

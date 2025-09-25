@@ -3,12 +3,19 @@ export type PostType = "friend_post" | "public_opinion";
 export interface Comment {
   id: string;
   content: string;
+  originalContent: string;
   userId:string;
   username: string;
-  createdAt: string;
+  createdAt: Date;
+  postId: string;
+  parentCommentId?: string | null;
 }
 
 export interface Like {
+  id:number;
+  userId: string;
+  postId: string;
+  createdAt: Date;
   username: string;
 }
 
@@ -23,6 +30,6 @@ export interface Post {
   expiresAt?: Date | null;
   isArchived: boolean;
   createdAt: Date;
-  likes?: Like[];
-  comments?: Comment[];
+  likeCount?:number;
+  commentCount?:number;
 }

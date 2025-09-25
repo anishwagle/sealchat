@@ -6,6 +6,8 @@ import { v4 } from "uuid";
 import { QueryResult } from "mysql2";
 import {  } from "./INotificationService";
 import { notificationService } from "./serviceProvider";
+import { convertMentionsIntoLinks, getEmbedSection, getLinksFromString, getMentionAndIdForString } from "@/utils/stringParser";
+
 const COMPONENT = "PostService";
 export class PostService implements IPostService {
   async createPost(
@@ -35,98 +37,16 @@ export class PostService implements IPostService {
 
     // Store original content and initialize embed section
     let processedContent = content;
-    let embedSection = "";
+    let embedSection = getEmbedSection(content);
+    processedContent = getLinksFromString(processedContent);
+    processedContent =await convertMentionsIntoLinks(processedContent,userId,type);
 
-    // Define regex patterns
-    const youtubeRegex = /https?:\/\/(www\.)?youtube\.com\/watch\?v=([a-zA-Z0-9_-]+)/;
-    const tiktokRegex = /https?:\/\/(www\.)?tiktok\.com\/@[\w\.]+\/video\/(\d+)/;
-    const facebookRegex = /https?:\/\/(www\.)?facebook\.com\/.*\/videos\/(\d+)/;
-
-    // Extract and create embeds first
-    const youtubeMatch = content.match(youtubeRegex);
-    const tiktokMatch = content.match(tiktokRegex);
-    const facebookMatch = content.match(facebookRegex);
-
-    if (youtubeMatch) {
-      embedSection += `<div class="video-container youtube-embed">
-        <iframe src="https://www.youtube.com/embed/${youtubeMatch[2]}" frameborder="0" allowfullscreen></iframe>
-      </div>`;
-    }
-    if (tiktokMatch) {
-      embedSection += `<div class="video-container tiktok-embed">
-        <iframe src="https://www.tiktok.com/embed/v2/${tiktokMatch[2]}" frameborder="0" allowfullscreen></iframe>
-      </div>`;
-    }
-    if (facebookMatch) {
-      embedSection += `<div class="video-container facebook-embed">
-        <iframe src="https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(
-          facebookMatch[0]
-        )}" frameborder="0" allowfullscreen></iframe>
-      </div>`;
-    }
-
-    // Convert URLs to clickable links with styling
-    const urlRegex = /(https?:\/\/[^\s]+)/g;
-    processedContent = processedContent.replace(
-      urlRegex,
-      '<a href="$1" class="post-link" target="_blank" rel="noopener noreferrer">$1</a>'
-    );
-
-    // Process mentions
-    const mentionRegex = /@(\w+)/g;
-    const mentions = Array.from(processedContent.matchAll(mentionRegex));
-    const uniqueUsernames = Array.from(new Set(mentions.map((m) => m[1])));
-
-    // Fetch user ids for usernames
-    const usernameToId: { [key: string]: string } = {};
-    if (uniqueUsernames.length > 0) {
-      const placeholders = uniqueUsernames.map(() => "?").join(",");
-      const [results] = await pool.query(
-        `SELECT id, username FROM users WHERE username IN (${placeholders})`,
-        uniqueUsernames
-      );
-      (results as any[]).forEach((user) => {
-        usernameToId[user.username] = user.id;
-      });
-    }
-
-    // Replace mentions with styled anchor tags
-    for (const mention of mentions) {
-      const fullMatch = mention[0];
-      const username = mention[1];
-      const userIdMentioned = usernameToId[username];
-      if (!userIdMentioned) continue; // no user, skip
-      
-      if (type === "friend_post") {
-        const [friendResults] = await pool.query(
-          "SELECT id FROM friends WHERE (user_id_1 = ? AND user_id_2 = ?) OR (user_id_1 = ? AND user_id_2 = ?)",
-          [userId, userIdMentioned, userIdMentioned, userId]
-        );
-        if (!(friendResults as any[])[0]) continue; // not a friend, skip
-      }
-
-      const styledMention = `<a href="/profile/${username}" class="user-mention">@${username}</a>`;
-      processedContent = processedContent.split(fullMatch).join(styledMention);
-      
-    }
 
     // Combine processed content with embeds
     const finalContent = `
       <div class="post-content">${processedContent}</div>
       ${embedSection ? `<div class="post-embeds">${embedSection}</div>` : ""}
-      <style>
-        .post-content { margin-bottom: 1rem; word-wrap: break-word; }
-        .user-mention { color: #3b82f6; text-decoration: none; font-weight: 500; }
-        .user-mention:hover { text-decoration: underline; }
-        .post-link { color: #2563eb; text-decoration: none; }
-        .post-link:hover { text-decoration: underline; }
-        .post-embeds { margin-top: 1rem; }
-        .video-container { position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 0.5rem; margin-top: 0.5rem; }
-        .video-container iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
-        .youtube-embed { background-color: #000; }
-        .tiktok-embed { background-color: #fff; }
-        .facebook-embed { background-color: #fff; }
-      </style>`;
+      `;
 
     try {
       const expiresAt =
@@ -147,6 +67,7 @@ export class PostService implements IPostService {
           false,
         ]
       );
+      const {mentions,usernameToId} = await getMentionAndIdForString(processedContent);
       for (const mention of mentions) {
         const username = mention[1];
         const userIdMentioned = usernameToId[username];
@@ -154,7 +75,7 @@ export class PostService implements IPostService {
         if (userIdMentioned !== userId) {
           await notificationService.createNotification(
             userIdMentioned,
-            'mention',
+            'post_mention',
             userId,
             postId
           );
@@ -224,9 +145,17 @@ export class PostService implements IPostService {
 
     try {
       const [results] = await pool.query(
-        `SELECT p.id, p.user_id, u.username, p.type, p.content,p.original_content, p.duration_days, p.expires_at, p.is_archived, p.created_at
+        `SELECT p.id, p.user_id, u.username,COALESCE(c.comment_count,0) AS comment_count,COALESCE(l.like_count,0) AS like_count, p.type, p.content,p.original_content, p.duration_days, p.expires_at, p.is_archived, p.created_at
          FROM posts p
          JOIN users u ON p.user_id = u.id
+         LEFT JOIN (
+         SELECT post_id, COUNT(*) as comment_count
+         FROM comments GROUP BY post_id
+         ) c ON p.id = c.post_id
+        LEFT JOIN (
+        SELECT post_id, COUNT(*) as like_count
+         FROM likes GROUP BY post_id
+         ) l ON p.id = l.post_id
          WHERE p.user_id = ? AND p.type = 'friend_post' AND p.is_archived = false`,
         [userId]
       );
@@ -244,11 +173,14 @@ export class PostService implements IPostService {
         expiresAt: post.expires_at ? new Date(post.expires_at) : null,
         isArchived: post.is_archived,
         createdAt: new Date(post.created_at),
+        commentCount:post.comment_count,
+        likeCount:post.like_count
       }));
     } catch (error: any) {
       throw new Error("Failed to fetch friend posts: " + error.message);
     }
   }
+
   async getPublicOpinions(
     userId?: string,
     isCurrentUser: boolean = false
@@ -258,9 +190,17 @@ export class PostService implements IPostService {
       let results: QueryResult;
       if (!isCurrentUser && userId) {
         [results] = await pool.query(
-          `SELECT p.id, p.user_id, u.username, p.type, p.content,p.original_content, p.duration_days, p.expires_at, p.is_archived, p.created_at
+          `SELECT p.id, p.user_id, u.username,COALESCE(c.comment_count,0) AS comment_count,COALESCE(l.like_count,0) AS like_count, p.type, p.content,p.original_content, p.duration_days, p.expires_at, p.is_archived, p.created_at
          FROM posts p
          JOIN users u ON p.user_id = u.id
+         LEFT JOIN (
+         SELECT post_id, COUNT(*) as comment_count
+         FROM comments GROUP BY post_id
+         ) c ON p.id = c.post_id
+        LEFT JOIN (
+        SELECT post_id, COUNT(*) as like_count
+         FROM likes GROUP BY post_id
+         ) l ON p.id = l.post_id
          WHERE p.user_id = ? AND p.type = 'public_opinion' AND p.is_archived = false
          AND (p.expires_at IS NULL OR p.expires_at > NOW())`,
           [userId]
@@ -276,9 +216,17 @@ export class PostService implements IPostService {
         );
       } else {
         [results] = await pool.query(
-          `SELECT p.id, p.user_id, u.username, p.type, p.content,p.original_content, p.duration_days, p.expires_at, p.is_archived, p.created_at
+          `SELECT p.id, p.user_id, u.username,COALESCE(c.comment_count,0) AS comment_count,COALESCE(l.like_count,0) AS like_count, p.type, p.content,p.original_content, p.duration_days, p.expires_at, p.is_archived, p.created_at
          FROM posts p
          JOIN users u ON p.user_id = u.id
+         LEFT JOIN (
+         SELECT post_id, COUNT(*) as comment_count
+         FROM comments GROUP BY post_id
+         ) c ON p.id = c.post_id
+        LEFT JOIN (
+        SELECT post_id, COUNT(*) as like_count
+         FROM likes GROUP BY post_id
+         ) l ON p.id = l.post_id
          WHERE p.type = 'public_opinion' AND p.is_archived = false AND (p.expires_at > NOW() OR p.expires_at IS NULL)
            AND (
              EXISTS (
@@ -313,6 +261,8 @@ export class PostService implements IPostService {
         expiresAt: post.expires_at ? new Date(post.expires_at) : null,
         isArchived: post.is_archived,
         createdAt: new Date(post.created_at),
+        commentCount:post.comment_count,
+        likeCount:post.like_count
       }));
     } catch (error: any) {
       throw new Error("Failed to fetch public opinions: " + error.message);
@@ -327,10 +277,18 @@ export class PostService implements IPostService {
 
     try {
       const [results] = await pool.query(
-        `SELECT p.id, p.user_id, u.username, p.type, p.content,p.original_content, p.duration_days, p.expires_at, p.is_archived, p.created_at
+        `SELECT p.id, p.user_id, u.username,COALESCE(c.comment_count,0) AS comment_count,COALESCE(l.like_count,0) AS like_count, p.type, p.content,p.original_content, p.duration_days, p.expires_at, p.is_archived, p.created_at
          FROM posts p
          JOIN users u ON p.user_id = u.id
          JOIN friends f ON (f.user_id_1 = p.user_id AND f.user_id_2 = ?) OR (f.user_id_1 = ? AND f.user_id_2 = p.user_id)
+         LEFT JOIN (
+         SELECT post_id, COUNT(*) as comment_count
+         FROM comments GROUP BY post_id
+         ) c ON p.id = c.post_id
+        LEFT JOIN (
+        SELECT post_id, COUNT(*) as like_count
+         FROM likes GROUP BY post_id
+         ) l ON p.id = l.post_id
          WHERE p.type = 'friend_post' AND p.is_archived = false`,
         [currentUserId, currentUserId]
       );
@@ -348,18 +306,29 @@ export class PostService implements IPostService {
         expiresAt: post.expires_at ? new Date(post.expires_at) : null,
         isArchived: post.is_archived,
         createdAt: new Date(post.created_at),
+        commentCount:post.comment_count,
+        likeCount:post.like_count
       }));
     } catch (error: any) {
       throw new Error("Failed to fetch private posts: " + error.message);
     }
   }
+
   async getAllPublicOpinions(): Promise<Post[]> {
     try {
       const FUNCTION = "getPrivatePosts";
       const [results] = await pool.query(
-        `SELECT p.id, p.user_id, u.username, p.type, p.content,p.original_content, p.duration_days, p.expires_at, p.is_archived, p.created_at
+        `SELECT p.id, p.user_id, u.username,COALESCE(c.comment_count,0) AS comment_count,COALESCE(l.like_count,0) AS like_count, p.type, p.content,p.original_content, p.duration_days, p.expires_at, p.is_archived, p.created_at
          FROM posts p
          JOIN users u ON p.user_id = u.id
+         LEFT JOIN (
+         SELECT post_id, COUNT(*) as comment_count
+         FROM comments GROUP BY post_id
+         ) c ON p.id = c.post_id
+        LEFT JOIN (
+        SELECT post_id, COUNT(*) as like_count
+         FROM likes GROUP BY post_id
+         ) l ON p.id = l.post_id
          WHERE p.type = 'public_opinion' AND p.is_archived = false
          AND (p.expires_at IS NULL OR p.expires_at > NOW())
          ORDER BY p.created_at DESC`
@@ -376,11 +345,14 @@ export class PostService implements IPostService {
         expiresAt: post.expires_at ? new Date(post.expires_at) : null,
         isArchived: post.is_archived,
         createdAt: new Date(post.created_at),
+        commentCount:post.comment_count,
+        likeCount:post.like_count
       }));
     } catch (error: any) {
       throw new Error("Failed to fetch all public opinions: " + error.message);
     }
   }
+
   async deletePost(userId:string,postId:string):Promise<void>{
     const FUNCTION = 'deletePost';
     if (!userId || !postId) {

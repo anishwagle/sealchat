@@ -14,11 +14,17 @@ export class UserService implements IUserService {
     const [queryResult] = await pool.query('SELECT id,username,email,password,created_at FROM users WHERE id=?',
         [userId]
     );
-    const result:User = (queryResult as any[])[0];
+    const result = (queryResult as any[])[0];
     Logger.log(COMPONENT, FUNCTION, "debug", "User check complete", {
       found: !!result,
     });
-    return result;
+    return {
+      id: result.id,
+      username: result.username,
+      email: result.email,
+      password: result.password,
+      createdAt: result.created_at,
+    };
   }
 
   async findUserByUsername(username: string): Promise<User | undefined> {

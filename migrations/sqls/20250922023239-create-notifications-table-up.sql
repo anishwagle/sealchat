@@ -1,7 +1,10 @@
 CREATE TABLE IF NOT EXISTS seal_chat.notifications (
   id INT AUTO_INCREMENT PRIMARY KEY,
   user_id VARCHAR(255) NOT NULL,
-  type ENUM('friend_request_sent','friend_request_accept', 'mention', 'like', 'comment','profile_like','tipped','subscribed') NOT NULL,
+  type ENUM('friend_request_sent',
+  'friend_request_accept', 'post_mention', 
+  'post_like','comment_like', 'comment','profile_like',
+  'tipped','subscribed') NOT NULL,
   source_user_id VARCHAR(255) NOT NULL,
   post_id VARCHAR(255) NULL,
   is_read BOOLEAN DEFAULT FALSE,

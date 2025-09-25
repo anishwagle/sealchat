@@ -3,13 +3,14 @@ import jwt from "jsonwebtoken";
 import { Logger } from "@/lib/logger";
 import { postService } from "@/services/serviceProvider";
 import { ApiError } from "@/lib/errors";
+import { engagementService } from "@/services/engagementService";
 
-const COMPONENT = "api/protected/posts/delete/[postId]";
+const COMPONENT = "api/protected/posts/comment/delete/[commentId]";
 const FUNCTION = "GET";
 
-export async function GET(request: Request,{ params }: { params: { postId: string }}) {
+export async function GET(request: Request,{ params }: { params: { commentId: string }}) {
   const p = await params;
-    Logger.log(COMPONENT, FUNCTION, 'info', 'Deleting Users Post', { postId: p.postId });
+    Logger.log(COMPONENT, FUNCTION, 'info', 'Deleting Users Comment', { commentId: p.commentId });
 
   try {
     const currentUserId = request.headers.get("x-user-id");
@@ -22,17 +23,17 @@ export async function GET(request: Request,{ params }: { params: { postId: strin
       );
     }
 
-   await postService.deletePost(currentUserId,p.postId);
+   await engagementService.deleteComment(currentUserId,p.commentId);
 
 
-    Logger.log(COMPONENT, FUNCTION, "info", "Post Deleted");
+    Logger.log(COMPONENT, FUNCTION, "info", "Comment Deleted");
     return NextResponse.json(
-      { message: "Post Deleted Successfully" },
+      { message: "Comment Deleted Successfully" },
       { status: 200 }
     );
   } catch (error: any) {
     const apiError = new ApiError(
-      "Failed to fetch Post",
+      "Failed to fetch Comment",
       500,
       "INTERNAL_ERROR",
       { error: error.message }
