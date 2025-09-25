@@ -1,28 +1,17 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/lib/auth/useAuth";
-import Navbar from "@/components/Navbar";
 import CreatePostButton from "@/components/posts/CreatePostButton";
 import PostList from "@/components/posts/PostList";
 import Image from "next/image";
+import { useAuth } from "@/lib/auth/useAuth";
 
 export default function Dashboard() {
   const [isPublic, setIsPublic] = useState(false);
   const { isAuthenticated, isLoading, error } = useAuth();
-  const router = useRouter();
-
-  if (isLoading) {
-    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
-  }
-
-  if (error || !isAuthenticated) {
-    return null; // Redirect handled by useAuth
-  }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navbar />
       <main className="pt-16">
         <div className="px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col lg:flex-row gap-6">

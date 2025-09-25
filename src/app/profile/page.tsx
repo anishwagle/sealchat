@@ -61,7 +61,6 @@ export default function Profile() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navbar />
 
       {/* Full width header */}
       <div className="w-full bg-white border-b">

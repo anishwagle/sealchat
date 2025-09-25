@@ -2,12 +2,14 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { Comment } from "@/types/post";
 import { getTimeSince } from "@/utils/dateConveter";
+import RenderedContent from "../RenderedContent";
 
 interface CommentItemProps {
   comment: Comment;
+  onNavigate?: () => void;
 }
 
-export default function CommentItem({ comment }: CommentItemProps) {
+export default function CommentItem({ comment,onNavigate}: CommentItemProps) {
   const [showOptions, setShowOptions] = useState(false);
   const [isLiking, setIsLiking] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -82,10 +84,7 @@ export default function CommentItem({ comment }: CommentItemProps) {
         </div>
 
         {/* Content Section */}
-        <div
-          className="mt-3.5 text-gray-600 prose max-w-none prose-sm prose-p:leading-relaxed prose-a:text-blue-500 prose-a:no-underline hover:prose-a:underline"
-          dangerouslySetInnerHTML={{ __html: comment.content }}
-        />
+        <RenderedContent htmlContent={comment.content} className="mt-3.5 text-gray-600 prose max-w-none prose-sm prose-p:leading-relaxed prose-a:text-blue-500 prose-a:no-underline hover:prose-a:underline" />
         <div className="flex gap-6 text-sm mt-2">
           <button
             disabled={isLiking}

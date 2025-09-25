@@ -7,6 +7,7 @@ import CommentModal from "../modals/CommentModal";
 import LikesModal from "../modals/LikesModal";
 import Snackbar from "../SnackBar";
 import { useAuth } from "@/lib/auth/useAuth";
+import RenderedContent from "../RenderedContent";
 
 export default function PostComponent(post: Post) {
   const [showOptions, setShowOptions] = useState(false);
@@ -156,10 +157,7 @@ export default function PostComponent(post: Post) {
         </div>
 
         {/* Content Section */}
-        <div
-          className="mt-3.5 text-gray-600 prose max-w-none prose-sm prose-p:leading-relaxed prose-a:text-blue-500 prose-a:no-underline hover:prose-a:underline"
-          dangerouslySetInnerHTML={{ __html: post.content }}
-        />
+        <RenderedContent htmlContent={post.content} className="mt-3.5 text-gray-600 prose max-w-none prose-sm prose-p:leading-relaxed prose-a:text-blue-500 prose-a:no-underline hover:prose-a:underline" />
 
         {/* Interaction Section */}
         <div className="mt-4 pt-4 border-t border-gray-50">

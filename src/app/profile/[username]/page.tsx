@@ -2,7 +2,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth/useAuth';
-import Navbar from '@/components/Navbar';
 import { Profile } from '@/types/profile';
 import Link from 'next/link';
 import ProfileLikeButton from '@/components/profile/ProfileLikeButton';
@@ -57,8 +56,6 @@ export default function UserProfile() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navbar />
-      
       {/* Full width header */}
       <div className="w-full bg-white border-b">
         <div className="relative h-48 bg-gradient-to-r from-blue-500 to-blue-600">

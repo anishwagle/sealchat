@@ -201,7 +201,7 @@ export default function CommentModal({
           ) : comments.length > 0 ? (
             <div className="space-y-4">
               {comments.map((comment) => (
-                <CommentItem key={comment.id} comment={comment} />
+                <CommentItem key={comment.id} comment={comment} onNavigate={onClose} />
               ))}
             </div>
           ) : (

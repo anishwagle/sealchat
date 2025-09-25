@@ -42,7 +42,7 @@ export default function PostPage() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="min-h-screen bg-gray-50">
           <PostComponent
             id={post.id}
             username={post.username}
