@@ -12,7 +12,7 @@ export default function UserProfile() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [error, setError] = useState('');
   const [loadingActionType, setLoadingActionType] = useState<null | "accept" | "decline" | "send" | "cancel" | "unfriend">(null);
-  const { isAuthenticated, userId, isLoading, error: authError } = useAuth();
+  const { isAuthenticated, currentUserId, isLoading, error: authError } = useAuth();
   const router = useRouter();
   const { username } = useParams();
 
@@ -37,7 +37,7 @@ export default function UserProfile() {
   useEffect(() => {
     if (!isAuthenticated || authError) return;
     fetchProfile();
-  }, [isAuthenticated, authError, userId, username, router]);
+  }, [isAuthenticated, authError, currentUserId, username, router]);
 
   if (isLoading) {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
@@ -85,7 +85,7 @@ export default function UserProfile() {
                 {profile.bio || 'Passionate about building great software and contributing to open source projects.'}
               </p>
             </div>
-            {profile.userId !== userId ? (
+            {profile.userId !== currentUserId ? (
               <div className="flex gap-3">
                 {profile.friendshipStatus === "none" ? (
                   <button

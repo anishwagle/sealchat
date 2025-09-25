@@ -4,12 +4,76 @@ import { Post, PostType } from "../types/post";
 import { IPostService } from "./IPostService";
 import { v4 } from "uuid";
 import { QueryResult } from "mysql2";
-import {  } from "./INotificationService";
+import {} from "./INotificationService";
 import { notificationService } from "./serviceProvider";
-import { convertMentionsIntoLinks, getEmbedSection, getLinksFromString, getMentionAndIdForString } from "@/utils/stringParser";
+import {
+  convertMentionsIntoLinks,
+  getEmbedSection,
+  getLinksFromString,
+  getMentionAndIdForString,
+} from "@/utils/stringParser";
 
 const COMPONENT = "PostService";
 export class PostService implements IPostService {
+  async getPostById(
+    postId: string,
+    currentUserId: string
+  ): Promise<Post | null> {
+    const FUNCTION = "getPostById";
+    Logger.log(COMPONENT, FUNCTION, "debug", "Fetching post by id", {
+      postId,
+      currentUserId,
+    });
+
+    const [results] = await pool.query(
+      `SELECT p.id, p.user_id, u.username,COALESCE(c.comment_count,0) AS comment_count,COALESCE(l.like_count,0) AS like_count, p.type, p.content,p.original_content, p.duration_days, p.expires_at, p.is_archived, p.created_at
+         FROM posts p
+         JOIN users u ON p.user_id = u.id
+         LEFT JOIN (
+         SELECT post_id, COUNT(*) as comment_count
+         FROM comments GROUP BY post_id
+         ) c ON p.id = c.post_id
+        LEFT JOIN (
+        SELECT post_id, COUNT(*) as like_count
+         FROM likes GROUP BY post_id
+         ) l ON p.id = l.post_id
+         WHERE p.Id = ? `,
+      [postId]
+    );
+
+    const post = (results as any[])[0];
+    if (currentUserId != post.user_id) {
+      // Check if users are friends
+      const [friendResults] = await pool.query(
+        "SELECT id FROM friends WHERE (user_id_1 = ? AND user_id_2 = ?) OR (user_id_1 = ? AND user_id_2 = ?)",
+        [currentUserId, post.user_id, post.user_id, currentUserId]
+      );
+      const isFriend = (friendResults as any[]).length > 0;
+
+      if (!isFriend) {
+        Logger.log(COMPONENT, FUNCTION, "debug", "Users are not friends", {
+          userId: post.user_id,
+          currentUserId,
+        });
+        return null; // Return empty array if not friends
+      }
+    }
+
+    return {
+      id: post.id,
+      userId: post.user_id,
+      username: post.username,
+      originalContent: post.original_content,
+      type: post.type,
+      content: post.content,
+      durationDays: post.duration_days,
+      expiresAt: post.expires_at ? new Date(post.expires_at) : null,
+      isArchived: post.is_archived,
+      createdAt: new Date(post.created_at),
+      commentCount: post.comment_count,
+      likeCount: post.like_count,
+    };
+  }
   async createPost(
     userId: string,
     content: string,
@@ -39,8 +103,11 @@ export class PostService implements IPostService {
     let processedContent = content;
     let embedSection = getEmbedSection(content);
     processedContent = getLinksFromString(processedContent);
-    processedContent =await convertMentionsIntoLinks(processedContent,userId,type);
-
+    processedContent = await convertMentionsIntoLinks(
+      processedContent,
+      userId,
+      type
+    );
 
     // Combine processed content with embeds
     const finalContent = `
@@ -67,7 +134,9 @@ export class PostService implements IPostService {
           false,
         ]
       );
-      const {mentions,usernameToId} = await getMentionAndIdForString(processedContent);
+      const { mentions, usernameToId } = await getMentionAndIdForString(
+        processedContent
+      );
       for (const mention of mentions) {
         const username = mention[1];
         const userIdMentioned = usernameToId[username];
@@ -75,7 +144,7 @@ export class PostService implements IPostService {
         if (userIdMentioned !== userId) {
           await notificationService.createNotification(
             userIdMentioned,
-            'post_mention',
+            "post_mention",
             userId,
             postId
           );
@@ -117,15 +186,15 @@ export class PostService implements IPostService {
         id: post.id,
         userId: post.user_id,
         username: post.username,
-        originalContent:post.original_content,
+        originalContent: post.original_content,
         type: post.type,
         content: post.content,
         durationDays: post.duration_days,
         expiresAt: post.expires_at ? new Date(post.expires_at) : null,
         isArchived: post.is_archived,
         createdAt: new Date(post.created_at),
-        commentCount:post.comment_count,
-        likeCount:post.like_count
+        commentCount: post.comment_count,
+        likeCount: post.like_count,
       }));
     } catch (error: any) {
       throw new Error("Failed to fetch user posts: " + error.message);
@@ -176,15 +245,15 @@ export class PostService implements IPostService {
         id: post.id,
         userId: post.user_id,
         username: post.username,
-        originalContent:post.original_content,
+        originalContent: post.original_content,
         type: post.type,
         content: post.content,
         durationDays: post.duration_days,
         expiresAt: post.expires_at ? new Date(post.expires_at) : null,
         isArchived: post.is_archived,
         createdAt: new Date(post.created_at),
-        commentCount:post.comment_count,
-        likeCount:post.like_count
+        commentCount: post.comment_count,
+        likeCount: post.like_count,
       }));
     } catch (error: any) {
       throw new Error("Failed to fetch friend posts: " + error.message);
@@ -264,15 +333,15 @@ export class PostService implements IPostService {
         id: post.id,
         userId: post.user_id,
         username: post.username,
-        originalContent:post.original_content,
+        originalContent: post.original_content,
         type: post.type,
         content: post.content,
         durationDays: post.duration_days,
         expiresAt: post.expires_at ? new Date(post.expires_at) : null,
         isArchived: post.is_archived,
         createdAt: new Date(post.created_at),
-        commentCount:post.comment_count,
-        likeCount:post.like_count
+        commentCount: post.comment_count,
+        likeCount: post.like_count,
       }));
     } catch (error: any) {
       throw new Error("Failed to fetch public opinions: " + error.message);
@@ -311,13 +380,13 @@ export class PostService implements IPostService {
         username: post.username,
         type: post.type,
         content: post.content,
-        originalContent:post.original_content,
+        originalContent: post.original_content,
         durationDays: post.duration_days,
         expiresAt: post.expires_at ? new Date(post.expires_at) : null,
         isArchived: post.is_archived,
         createdAt: new Date(post.created_at),
-        commentCount:post.comment_count,
-        likeCount:post.like_count
+        commentCount: post.comment_count,
+        likeCount: post.like_count,
       }));
     } catch (error: any) {
       throw new Error("Failed to fetch private posts: " + error.message);
@@ -350,25 +419,25 @@ export class PostService implements IPostService {
         username: post.username,
         type: post.type,
         content: post.content,
-        originalContent:post.original_content,
+        originalContent: post.original_content,
         durationDays: post.duration_days,
         expiresAt: post.expires_at ? new Date(post.expires_at) : null,
         isArchived: post.is_archived,
         createdAt: new Date(post.created_at),
-        commentCount:post.comment_count,
-        likeCount:post.like_count
+        commentCount: post.comment_count,
+        likeCount: post.like_count,
       }));
     } catch (error: any) {
       throw new Error("Failed to fetch all public opinions: " + error.message);
     }
   }
 
-  async deletePost(userId:string,postId:string):Promise<void>{
-    const FUNCTION = 'deletePost';
+  async deletePost(userId: string, postId: string): Promise<void> {
+    const FUNCTION = "deletePost";
     if (!userId || !postId) {
       throw new Error("User ID and Post ID are required");
     }
-try {
+    try {
       const [result] = await pool.query(
         "DELETE FROM posts WHERE id = ? AND user_id = ?",
         [postId, userId]
@@ -380,11 +449,9 @@ try {
       }
     } catch (error: any) {
       throw new Error(
-        `[${COMPONENT}][${FUNCTION}]:Failed to delete Post: ` +
-          error.message
+        `[${COMPONENT}][${FUNCTION}]:Failed to delete Post: ` + error.message
       );
     }
-
   }
 }
 export const postService = new PostService();
