@@ -18,9 +18,15 @@ export default function CommentModal({
   const [newComment, setNewComment] = useState("");
   const [isCommenting,setIsCommenting] = useState(false);
   const [isLoadingComments, setIsLoadingComments] = useState(true);
-
   const [comments,setComments] = useState<Comment[]>([]);
   const commentsContainerRef = useRef<HTMLDivElement>(null);
+
+  const [mentionQuery, setMentionQuery] = useState('');
+  const [friends, setFriends] = useState<{ username: string }[]>([]);
+  const [filteredFriends, setFilteredFriends] = useState<{ username: string }[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [suggestionPosition, setSuggestionPosition] = useState({ top: 0, left: 0 });
+  const commentInputRef = useRef<HTMLTextAreaElement>(null);
 
 
   const handleCommentSubmit = async (content: string) => {
@@ -59,8 +65,71 @@ export default function CommentModal({
     }
   // Effect to handle clicks outside of the active menu to close it
   useEffect(() => {
-    if (isOpen) fetchComments();
+    if (isOpen) {
+      fetchComments();
+      loadFriends();
+    }
   }, [isOpen]);
+
+  const loadFriends = async () => {
+    try {
+      const data = await fetch('/api/protected/friend');
+      const results = await data.json();
+      setFriends(results.users);
+    } catch (err) {
+      console.error('Failed to load friends');
+    }
+  };
+
+  const getCaretCoordinates = () => {
+    const textarea = commentInputRef.current;
+    if (!textarea) return { top: 0, left: 0 };
+
+    const { selectionStart } = textarea;
+    const textBeforeCaret = textarea.value.substring(0, selectionStart);
+    const lines = textBeforeCaret.split('\n');
+    const currentLineNumber = lines.length;
+    const currentLineText = lines[lines.length - 1];
+    
+    const lastAtSymbol = currentLineText.lastIndexOf('@');
+    const textUpToAt = lastAtSymbol >= 0 ? currentLineText.substring(0, lastAtSymbol + 1) : currentLineText;
+
+    const computedStyle = window.getComputedStyle(textarea);
+    const lineHeight = parseInt(computedStyle.lineHeight || '20');
+    const paddingLeft = parseInt(computedStyle.paddingLeft || '12');
+    
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    if (context) {
+      context.font = `${computedStyle.fontSize} ${computedStyle.fontFamily}`;
+      const textWidth = context.measureText(textUpToAt).width;
+
+      return {
+        top: (currentLineNumber - 1) * lineHeight,
+        left: Math.min(textWidth + paddingLeft, textarea.offsetWidth - 200)
+      };
+    }
+
+    return { top: 0, left: 0 };
+  };
+
+  const updateSuggestionPosition = () => {
+    if (!showSuggestions || !commentInputRef.current) return;
+
+    const { top, left } = getCaretCoordinates();
+    const lineHeight = parseInt(window.getComputedStyle(commentInputRef.current).lineHeight || '20');
+    const isMobile = window.innerWidth < 640;
+
+    setSuggestionPosition({
+      top: top + lineHeight + 8,
+      left: isMobile ? 8 : left
+    });
+  };
+
+  useEffect(() => {
+    window.addEventListener('resize', updateSuggestionPosition);
+    return () => window.removeEventListener('resize', updateSuggestionPosition);
+  }, [showSuggestions]);
 
   useEffect(() => {
     // Scroll to the bottom when comments change
@@ -68,6 +137,34 @@ export default function CommentModal({
       commentsContainerRef.current.scrollTop = commentsContainerRef.current.scrollHeight;
     }
   }, [comments]);
+
+  const handleCommentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value;
+    setNewComment(value);
+
+    const cursorPosition = e.target.selectionStart;
+    const textBeforeCursor = value.substring(0, cursorPosition);
+    const mentionMatch = textBeforeCursor.match(/@(\w*)$/);
+    
+    if (mentionMatch) {
+      const query = mentionMatch[1];
+      setMentionQuery(query);
+      setFilteredFriends(friends.filter(f => f.username.toLowerCase().startsWith(query.toLowerCase())));
+      setShowSuggestions(true);
+      updateSuggestionPosition();
+    } else {
+      setShowSuggestions(false);
+    }
+  };
+
+  const insertMention = (username: string) => {
+    const cursorPosition = commentInputRef.current?.selectionStart || 0;
+    const textBefore = newComment.substring(0, cursorPosition - mentionQuery.length - 1);
+    const textAfter = newComment.substring(cursorPosition);
+    setNewComment(`${textBefore}@${username} ${textAfter}`);
+    setShowSuggestions(false);
+    commentInputRef.current?.focus();
+  };
 
   if (!isOpen) return null;
 
@@ -121,14 +218,40 @@ export default function CommentModal({
         <div className="p-6 bg-gray-50 border-t border-gray-200">
           <form onSubmit={handleSubmit} className="flex gap-3 items-center">
             <div className="w-9 h-9 rounded-full bg-gray-200 flex-shrink-0"></div>
-            <input
-              type="text"
-              value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-              placeholder="Write a comment..."
-              disabled={isCommenting}
-              className="flex-1 bg-white border border-gray-200 rounded-full px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-            />
+            <div className="relative flex-1">
+              <textarea
+                ref={commentInputRef}
+                value={newComment}
+                onChange={handleCommentChange}
+                placeholder="Write a comment... (use @ to mention)"
+                disabled={isCommenting}
+                className="w-full bg-white border border-gray-200 rounded-full px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
+                rows={1}
+                onInput={(e) => {
+                  const target = e.target as HTMLTextAreaElement;
+                  target.style.height = 'auto';
+                  target.style.height = `${target.scrollHeight}px`;
+                }}
+              />
+              {showSuggestions && filteredFriends.length > 0 && (
+                <ul 
+                  className="absolute bottom-full mb-2 bg-white rounded-md shadow-lg border border-gray-100 max-h-40 overflow-y-auto py-1 z-50 w-48"
+                >
+                  {filteredFriends.map((friend) => (
+                    <li
+                      key={friend.username}
+                      onClick={() => insertMention(friend.username)}
+                      className="px-3 py-1.5 hover:bg-gray-50 cursor-pointer flex items-center gap-2 text-sm text-gray-700"
+                    >
+                      <span className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-xs font-medium">
+                        {friend.username[0].toUpperCase()}
+                      </span>
+                      <span>@{friend.username}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
             <button
               type="submit"
               disabled={isCommenting || !newComment.trim()}

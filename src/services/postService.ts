@@ -97,9 +97,17 @@ export class PostService implements IPostService {
 
     try {
       const [results] = await pool.query(
-        `SELECT p.id, p.user_id, u.username, p.type, p.content,p.original_content, p.duration_days, p.expires_at, p.is_archived, p.created_at
+        `SELECT p.id, p.user_id, u.username,COALESCE(c.comment_count,0) AS comment_count,COALESCE(l.like_count,0) AS like_count, p.type, p.content,p.original_content, p.duration_days, p.expires_at, p.is_archived, p.created_at
        FROM posts p
        JOIN users u ON p.user_id = u.id
+       LEFT JOIN (
+         SELECT post_id, COUNT(*) as comment_count
+         FROM comments GROUP BY post_id
+         ) c ON p.id = c.post_id
+        LEFT JOIN (
+        SELECT post_id, COUNT(*) as like_count
+         FROM likes GROUP BY post_id
+         ) l ON p.id = l.post_id
        WHERE p.user_id = ? AND p.is_archived = false
        AND (p.expires_at IS NULL OR p.expires_at > NOW())`,
         [userId]
@@ -116,6 +124,8 @@ export class PostService implements IPostService {
         expiresAt: post.expires_at ? new Date(post.expires_at) : null,
         isArchived: post.is_archived,
         createdAt: new Date(post.created_at),
+        commentCount:post.comment_count,
+        likeCount:post.like_count
       }));
     } catch (error: any) {
       throw new Error("Failed to fetch user posts: " + error.message);

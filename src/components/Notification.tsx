@@ -1,8 +1,12 @@
 "use client";
 import { Notification } from "@/types/notification";
 import { getTimeSince } from "@/utils/dateConveter";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
+
+type ProcessedNotification = Notification & {
+  otherUsers?: Notification[];
+};
 
 export default function NotificationComponent() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -75,54 +79,33 @@ export default function NotificationComponent() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const groupProfileLikes = (notifications: Notification[]) => {
-    const profileLikes = notifications.filter((n) => n.type === "profile_like");
-    if (profileLikes.length <= 2) return profileLikes;
+  const renderNotificationMessage = (notif: ProcessedNotification) => {
+    const linkUrl = notif.postId ? `/posts/${notif.postId}` : `/profile/${notif.sourceUsername}`;
 
-    const first = profileLikes[0];
-    const second = profileLikes[1];
-    const others = profileLikes.slice(2);
-
-    return [
-      {
-        ...first,
-        sourceUsername: `${first.sourceUsername}, ${second.sourceUsername} and ${others.length} others`,
-        otherUsers: others,
-      },
-    ];
-  };
-
-  const renderNotificationMessage = (notif: Notification) => {
     switch (notif.type) {
       case "friend_request_sent":
         return (
-          <Link
-            href={`/profile/${notif.sourceUsername}`}
-            className="hover:underline"
-          >
+          <p>
             <span className="font-medium">{notif.sourceUsername}</span> sent you a
             friend request
-          </Link>
+          </p>
         );
       case "friend_request_accept":
         return (
-          <Link
-            href={`/profile/${notif.sourceUsername}`}
-            className="hover:underline"
-          >
+          <p>
             <span className="font-medium">{notif.sourceUsername}</span> accepted
             your friend request
-          </Link>
+          </p>
         );
       case "profile_like":
         return (
           <div className="group/like relative">
-            <span className="font-medium">
-              {notif.sourceUsername} liked your profile
-            </span>
-            {(notif as any).otherUsers && (
+            <p>
+              <span className="font-medium">{notif.sourceUsername}</span> and {notif.otherUsers ? `${notif.otherUsers.length} others` : 'others'} liked your profile
+            </p>
+            {notif.otherUsers && (
               <div className="absolute left-0 mt-2 w-48 bg-white rounded-md shadow-lg p-2 invisible group-hover/like:visible">
-                {(notif as any).otherUsers.map((user: Notification, i: number) => (
+                {notif.otherUsers.map((user: Notification, i: number) => (
                   <Link
                     key={i}
                     href={`/profile/${user.sourceUsername}`}
@@ -135,20 +118,73 @@ export default function NotificationComponent() {
             )}
           </div>
         );
+      case "post_like":
+        return (
+          <Link href={linkUrl} className="hover:underline">
+            <span className="font-medium">{notif.sourceUsername}</span> liked your post.
+          </Link>
+        );
+      case "comment":
+        return (
+          <Link href={linkUrl} className="hover:underline">
+            <span className="font-medium">{notif.sourceUsername}</span> commented on your post.
+          </Link>
+        );
+      case "post_mention":
+        return (
+          <Link href={linkUrl} className="hover:underline">
+            <span className="font-medium">{notif.sourceUsername}</span> mentioned you in a post.
+          </Link>
+        );
+      case "comment_mention":
+        return (
+          <Link href={linkUrl} className="hover:underline">
+            <span className="font-medium">{notif.sourceUsername}</span> mentioned you in a comment.
+          </Link>
+        );
       default:
         return null;
     }
   };
 
-  const processedNotifications = notifications.reduce(
-    (acc: Notification[], notif) => {
-      if (notif.type === "profile_like") {
-        return [...acc, ...groupProfileLikes([notif])];
-      }
-      return [...acc, notif];
-    },
-    []
-  );
+  const processedNotifications = useMemo(() => {
+    if (loading) return [];
+
+    const groupNotifications = (
+      notifications: Notification[],
+      type: Notification["type"],
+      keySelector: (n: Notification) => string | null
+    ): ProcessedNotification[] => {
+      const groups = new Map<string, Notification[]>();
+
+      notifications.filter(n => n.type === type).forEach(n => {
+        const key = keySelector(n);
+        if (key) {
+          if (!groups.has(key)) groups.set(key, []);
+          groups.get(key)!.push(n);
+        }
+      });
+
+      const result: ProcessedNotification[] = [];
+      groups.forEach(group => {
+        const [first, ...others] = group;
+        if (others.length > 0) {
+          result.push({ ...first, otherUsers: others });
+        } else {
+          result.push(first);
+        }
+      });
+      return result;
+    };
+
+    const otherNotifications = notifications.filter(n => n.type !== 'profile_like' && n.type !== 'post_like');
+    const profileLikes = groupNotifications(notifications, 'profile_like', n => 'profile_likes');
+    const postLikes = groupNotifications(notifications, 'post_like', n => n.postId);
+
+    return [...otherNotifications, ...profileLikes, ...postLikes].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+  }, [notifications, loading]);
 
   return (
     <div className="relative" ref={dropdownRef}>
@@ -256,6 +292,21 @@ export default function NotificationComponent() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                     )}
+                    {(notif.type === "post_like" || notif.type === "profile_like") && (
+                      <svg className="h-4 w-4 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
+                      </svg>
+                    )}
+                    {notif.type === "comment" && (
+                       <svg className="h-4 w-4 text-sky-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                       </svg>
+                    )}
+                    {(notif.type === "post_mention" || notif.type === "comment_mention") && (
+                      <svg className="h-4 w-4 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
+                      </svg>
+                    )}
                     {notif.type === "profile_like" && (
                       <svg className="h-4 w-4 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
@@ -294,4 +345,3 @@ export default function NotificationComponent() {
     </div>
   );
 }
-

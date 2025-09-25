@@ -30,7 +30,7 @@ export class EngagementService implements IEngagementService {
     }
 
     const [queryResult] = await pool.query(
-        `SELECT id,type
+        `SELECT id,type,user_id
          FROM posts
          WHERE id = ?`,
         [postId]
@@ -87,6 +87,16 @@ const [commentResult] = await pool.query(
       );
 
       const comment = (commentResult as any[])[0];
+
+      if(post.user_id!=userId){
+        await notificationService.createNotification(
+                    post.user_id,
+                    'comment',
+                    userId,
+                    postId
+                  );
+      }
+      
       Logger.log(COMPONENT, FUNCTION, "debug", "Fetched the comment", {
       comment
     });
