@@ -1,6 +1,6 @@
 import { Logger } from "@/lib/logger";
 import executeQuery from "../db";
-import { Comment, PostType } from "../types/post";
+import { Comment, Like, PostType } from "../types/post";
 import { v4 } from "uuid";
 import { QueryResult } from "mysql2";
 import {  } from "./INotificationService";
@@ -10,6 +10,29 @@ import { IEngagementService } from "./IEngagementService";
 
 const COMPONENT = "EngagementService";
 export class EngagementService implements IEngagementService {
+  async getPostLikeList(postId: string): Promise<Like[]> {
+    const FUNCTION = "getPostLikeList";
+    Logger.log(COMPONENT, FUNCTION, "debug", "get post like list", {
+      postId,
+    });
+    const queryResult = await executeQuery(
+      `SELECT l.*,u.username AS username FROM likes l
+      JOIN users u ON u.id=l.user_id
+       WHERE post_id=? `,
+      [ postId]
+    );
+    const result = (queryResult as any[]);
+    Logger.log(COMPONENT, FUNCTION, "debug", "Get Post Like Status", {
+      result,
+    });
+    return (result as any[]).map((x)=>({
+      id:x.id,
+      userId:x.user_id,
+      postId:x.post_id,
+      username:x.username,
+      createdAt:x.created_at
+    }));
+  }
   async createComment(
     userId: string,
     content: string,

@@ -32,4 +32,5 @@ export interface Post {
   createdAt: Date;
   likeCount?:number;
   commentCount?:number;
+  isLikedByCurrentUser?:boolean;
 }
