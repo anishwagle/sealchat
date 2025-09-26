@@ -1,9 +1,9 @@
-import {createPool,Pool} from 'mysql2/promise';
+import {createPool,Pool, QueryResult} from 'mysql2/promise';
 import { config } from 'dotenv';
 
 config();
 
-const pool:Pool = createPool({
+const sqlPool:Pool = createPool({
     host:process.env.MYSQL_HOST,
     user:process.env.MYSQL_USER,
     password:process.env.MYSQL_PASSWORD,
@@ -12,4 +12,15 @@ const pool:Pool = createPool({
     connectionLimit:10,
     queueLimit:0
 })
-export default pool;
+
+const executeQuery = async ( sql:string,params:any[]=[]): Promise<QueryResult>=>{
+  
+    const connection = await sqlPool.getConnection();
+    try{
+        const [rows] = await connection.execute(sql,params);
+        return rows;
+    }finally{
+        connection.release();
+    }
+}
+export default executeQuery;

@@ -1,4 +1,4 @@
-import pool from "@/db";
+import executeQuery from "@/db";
 import { PostType } from "@/types/post";
 
 const getLinksFromString = (str:string):string => {
@@ -51,7 +51,7 @@ const getMentionAndIdForString = async (str:string) =>{
     const usernameToId: { [key: string]: string } = {};
     if (uniqueUsernames.length > 0) {
       const placeholders = uniqueUsernames.map(() => "?").join(",");
-      const [results] = await pool.query(
+      const results = await executeQuery(
         `SELECT id, username FROM users WHERE username IN (${placeholders})`,
         uniqueUsernames
       );
@@ -74,7 +74,7 @@ const convertMentionsIntoLinks = async (str:string,currentUserId:string,type:Pos
       if (!userIdMentioned) continue; // no user, skip
       
       if (type === "friend_post") {
-        const [friendResults] = await pool.query(
+        const friendResults = await executeQuery(
           "SELECT id FROM friends WHERE (user_id_1 = ? AND user_id_2 = ?) OR (user_id_1 = ? AND user_id_2 = ?)",
           [currentUserId, userIdMentioned, userIdMentioned, currentUserId]
         );

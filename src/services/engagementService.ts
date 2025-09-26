@@ -1,5 +1,5 @@
 import { Logger } from "@/lib/logger";
-import pool from "../db";
+import executeQuery from "../db";
 import { Comment, PostType } from "../types/post";
 import { v4 } from "uuid";
 import { QueryResult } from "mysql2";
@@ -29,7 +29,7 @@ export class EngagementService implements IEngagementService {
       throw new Error("Content must be 1000 characters or less");
     }
 
-    const [queryResult] = await pool.query(
+    const queryResult = await executeQuery(
         `SELECT id,type,user_id
          FROM posts
          WHERE id = ?`,
@@ -53,7 +53,7 @@ export class EngagementService implements IEngagementService {
 
     try {
       const commentId = v4();
-      await pool.query(
+      await executeQuery(
         "INSERT INTO comments (id,user_id, post_id, content,original_content, parent_comment_id) VALUES (?,?,?, ?, ?, ?)",
         [
           commentId,
@@ -78,7 +78,7 @@ export class EngagementService implements IEngagementService {
           );
         }
       }
-const [commentResult] = await pool.query(
+const commentResult = await executeQuery(
         `SELECT c.*, u.username
          FROM comments c
           JOIN users u on c.user_id = u.id
@@ -118,7 +118,7 @@ const [commentResult] = await pool.query(
   async getPublicOpinionComment(postId:string): Promise<Comment[]> {
     const FUNCTION = "getPublicOpinionComment";
     try {
-       const [results] = await pool.query(
+       const results = await executeQuery(
           `SELECT c.id, c.user_id,c.post_id, u.username,c.parent_comment_id, c.content,c.original_content, c.created_at
          FROM comments c
          JOIN users u ON c.user_id = u.id
@@ -159,7 +159,7 @@ const [commentResult] = await pool.query(
       throw new Error("Post ID and current user ID are required");
     }
 
-    const [queryResult] = await pool.query(
+    const queryResult = await executeQuery(
         `SELECT id,type,user_id
          FROM posts
          WHERE id = ?`,
@@ -170,7 +170,7 @@ const [commentResult] = await pool.query(
 
     if(post.user_id != currentUserId){
     // Check if users are friends
-    const [friendResults] = await pool.query(
+    const friendResults = await executeQuery(
       "SELECT id FROM friends WHERE (user_id_1 = ? AND user_id_2 = ?) OR (user_id_1 = ? AND user_id_2 = ?)",
       [currentUserId, post.user_id, post.user_id, currentUserId]
     );
@@ -185,7 +185,7 @@ const [commentResult] = await pool.query(
     }
   }
     try {
-      const [results] = await pool.query(
+      const results = await executeQuery(
           `SELECT c.id, c.user_id,c.post_id, u.username,c.parent_comment_id, c.content,c.original_content, c.created_at
          FROM comments c
          JOIN users u ON c.user_id = u.id
@@ -226,7 +226,7 @@ const [commentResult] = await pool.query(
       throw new Error("User ID and Comment ID are required");
     }
 try {
-      const [result] = await pool.query(
+      const result = await executeQuery(
         "DELETE FROM comments WHERE id = ? AND user_id = ?",
         [commentId, userId]
       );
@@ -252,7 +252,7 @@ try {
       userId,
       postId,
     });
-    const [queryResult] = await pool.query(
+    const queryResult = await executeQuery(
       "SELECT * FROM likes WHERE post_id=? AND user_id=?",
       [userId, postId]
     );
@@ -269,7 +269,7 @@ try {
       postId,
     });
     const result = await this.getPostLikeStatus(userId, postId);
-    const [queryResult] = await pool.query(
+    const queryResult = await executeQuery(
         `SELECT id,type,user_id
          FROM posts
          WHERE id = ?`,
@@ -291,14 +291,14 @@ try {
         await notificationService.deleteNotification(x.id, x.userId);
       });
       Logger.log(COMPONENT, FUNCTION, "debug", "Post dis-liked");
-      await pool.query(
+      await executeQuery(
         "DELETE FROM likes WHERE post_id=? AND user_id=?",
         [postId, userId]
       );
     } else {
       
       Logger.log(COMPONENT, FUNCTION, "debug", "Post Liked");
-      await pool.query(
+      await executeQuery(
         "INSERT INTO likes (user_id,post_id) VALUES(?,?)",
         [userId, postId]
       );

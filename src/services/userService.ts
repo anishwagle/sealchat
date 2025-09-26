@@ -3,7 +3,7 @@ import { refreshTokens, users } from "@/lib/mockData";
 import { User } from "@/types/user";
 import { IUserService } from "./IUserService";
 import { Logger } from "@/lib/logger";
-import pool from "@/db";
+import executeQuery from "@/db";
 const COMPONENT = "UserService";
 export class UserService implements IUserService {
   async findUserById(userId: string): Promise<User | undefined> {
@@ -11,7 +11,7 @@ export class UserService implements IUserService {
     Logger.log(COMPONENT, FUNCTION, "debug", "Checking for existing user", {
       userId,
     });
-    const [queryResult] = await pool.query('SELECT id,username,email,password,created_at FROM users WHERE id=?',
+    const queryResult = await executeQuery('SELECT id,username,email,password,created_at FROM users WHERE id=?',
         [userId]
     );
     const result = (queryResult as any[])[0];
@@ -32,7 +32,7 @@ export class UserService implements IUserService {
     Logger.log(COMPONENT, FUNCTION, "debug", "Checking for existing user", {
       username,
     });
-    const [queryResult] = await pool.query('SELECT id,username,email,password,created_at FROM users WHERE username=?',
+    const queryResult = await executeQuery('SELECT id,username,email,password,created_at FROM users WHERE username=?',
         [username]
     );
     const result:User = (queryResult as any[])[0];
@@ -46,7 +46,7 @@ export class UserService implements IUserService {
     Logger.log(COMPONENT, FUNCTION, "debug", "Checking for existing user", {
       email,
     });
-    const [queryResult] = await pool.query('SELECT id,username,email,password,created_at FROM users WHERE email=?',
+    const queryResult = await executeQuery('SELECT id,username,email,password,created_at FROM users WHERE email=?',
         [email]
     );
     const result:User = (queryResult as any)[0];
@@ -64,7 +64,7 @@ export class UserService implements IUserService {
       email,
       username,
     });
-    const [queryResult] = await pool.query('SELECT id,username,email,password,created_at FROM users WHERE email=? OR username=?',
+    const queryResult = await executeQuery('SELECT id,username,email,password,created_at FROM users WHERE email=? OR username=?',
         [email,username]
     );
     const result:User = (queryResult as any)[0];
@@ -81,7 +81,7 @@ export class UserService implements IUserService {
   ): Promise<User> {
     const FUNCTION = "createUser";
 
-    const [result] = await pool.query('INSERT INTO users (id,username,email,password) VALUES(?,?,?,?)',
+    const result = await executeQuery('INSERT INTO users (id,username,email,password) VALUES(?,?,?,?)',
         [v4(),username,email,password]);
     const newUser:User ={
         id:(result as any).insertId,
@@ -100,7 +100,7 @@ export class UserService implements IUserService {
     Logger.log(COMPONENT, FUNCTION, "debug", "Storing refresh token", {
       userId,
     });
-    await pool.query('INSERT INTO refresh_tokens (user_id,token) VALUES(?,?)',
+    await executeQuery('INSERT INTO refresh_tokens (user_id,token) VALUES(?,?)',
         [userId,refreshToken]
     );
   }
@@ -113,7 +113,7 @@ export class UserService implements IUserService {
     Logger.log(COMPONENT, FUNCTION, "debug", "Validating refresh token", {
       userId,
     });
-    const [queryResult] = await pool.query('SELECT user_id,token FROM refresh_tokens WHERE user_id=?',
+    const queryResult = await executeQuery('SELECT user_id,token FROM refresh_tokens WHERE user_id=?',
         [userId]);
     const token = (queryResult as any)[0].token;
     return token === refreshToken;
@@ -124,7 +124,7 @@ export class UserService implements IUserService {
     Logger.log(COMPONENT, FUNCTION, "debug", "Removing refresh token", {
       userId,
     });
-    await pool.query('DELETE FROM refresh_tokens WHERE user_id=?',
+    await executeQuery('DELETE FROM refresh_tokens WHERE user_id=?',
         [userId]
     );
   }

@@ -2,9 +2,9 @@ import { User } from "@/types/user";
 import { IFriendService } from "./IFriendService";
 import { users } from "@/lib/mockData";
 import { Logger } from "@/lib/logger";
-import pool from "@/db";
 import { FriendshipStatus } from "@/types/profile";
 import { notificationService } from "./serviceProvider";
+import executeQuery from "@/db";
 const COMPONENT = "FriendService";
 export class FriendService implements IFriendService {
   async getFriendCount(userId: string): Promise<number> {
@@ -12,7 +12,7 @@ export class FriendService implements IFriendService {
     Logger.log(COMPONENT, FUNCTION, "debug", "get User's Friend Count", {
       userId,
     });
-    const [queryResult] = await pool.query(
+    const queryResult = await executeQuery(
       "SELECT * FROM friends WHERE user_id_1=? OR user_id_2=?",
       [userId, userId]
     );
@@ -44,14 +44,14 @@ export class FriendService implements IFriendService {
         await notificationService.deleteNotification(x.id, x.userId);
       });
       Logger.log(COMPONENT, FUNCTION, "debug", "Profile dis-liked");
-      await pool.query(
+      await executeQuery(
         "DELETE FROM follows WHERE follower_id=? AND followed_id=?",
         [userId1, userId2]
       );
     } else {
       
       Logger.log(COMPONENT, FUNCTION, "debug", "Profile Liked");
-      await pool.query(
+      await executeQuery(
         "INSERT INTO follows (follower_id,followed_id) VALUES(?,?)",
         [userId1, userId2]
       );
@@ -68,7 +68,7 @@ export class FriendService implements IFriendService {
     Logger.log(COMPONENT, FUNCTION, "debug", "get User's Like Count", {
       userId,
     });
-    const [queryResult] = await pool.query(
+    const queryResult = await executeQuery(
       "SELECT * FROM follows WHERE followed_id=?",
       [userId]
     );
@@ -84,7 +84,7 @@ export class FriendService implements IFriendService {
       userId1,
       userId2,
     });
-    await pool.query(
+    await executeQuery(
       "DELETE FROM friends WHERE (user_id_1=? AND user_id_2=?) OR user_id_1=? AND user_id_2=?",
       [userId1, userId2, userId2, userId1]
     );
@@ -99,7 +99,7 @@ export class FriendService implements IFriendService {
       userId1,
       userId2,
     });
-    const [queryResult] = await pool.query(
+    const queryResult = await executeQuery(
       "SELECT * FROM follows WHERE follower_id=? AND followed_id=?",
       [userId1, userId2]
     );
@@ -118,21 +118,21 @@ export class FriendService implements IFriendService {
       sender_id,
       receiver_id,
     });
-    const [acceptedRequest] = await pool.query(
+    const acceptedRequest= await executeQuery(
       "SELECT * FROM friends WHERE (user_id_1=? AND user_id_2=?) OR (user_id_1=? AND user_id_2=?)",
       [sender_id, receiver_id, receiver_id, sender_id]
     );
     if ((acceptedRequest as any)[0]) {
       return "accepted";
     }
-    const [sentResult] = await pool.query(
+    const sentResult = await executeQuery(
       "SELECT * FROM friend_requests WHERE sender_id=? AND receiver_id=?",
       [sender_id, receiver_id]
     );
     if ((sentResult as any)[0]) {
       return "sent";
     }
-    const [receivedResult] = await pool.query(
+    const receivedResult = await executeQuery(
       "SELECT * FROM friend_requests WHERE sender_id=? AND receiver_id=?",
       [receiver_id, sender_id]
     );
@@ -151,7 +151,7 @@ export class FriendService implements IFriendService {
       sender_id,
       receiver_id,
     });
-    const [queryResult] = await pool.query(
+    const queryResult = await executeQuery(
       "INSERT INTO friend_requests (sender_id,receiver_id) VALUES (?,?)",
       [sender_id, receiver_id]
     );
@@ -169,7 +169,7 @@ export class FriendService implements IFriendService {
       receiver_id,
     });
 
-    await pool.query(
+    await executeQuery(
       "DELETE FROM friend_requests WHERE (sender_id=? AND receiver_id=?) OR (sender_id=? AND receiver_id=?)",
       [sender_id, receiver_id, receiver_id, sender_id]
     );
@@ -191,7 +191,7 @@ export class FriendService implements IFriendService {
       userId2,
     });
 
-    const [queryResult] = await pool.query(
+    const queryResult = await executeQuery(
       "INSERT INTO friends (user_id_1,user_id_2) VALUES (?,?)",
       [userId1, userId2]
     );
@@ -199,7 +199,7 @@ export class FriendService implements IFriendService {
       requestId: (queryResult as any).insertId,
     });
 
-    await pool.query(
+    await executeQuery(
       "DELETE FROM friend_requests WHERE sender_id=? AND receiver_id=?",
       [userId2, userId1]
     );
@@ -220,7 +220,7 @@ export class FriendService implements IFriendService {
     Logger.log(COMPONENT, FUNCTION, "debug", "Get current friend of user", {
       userId,
     });
-    const [queryResult] = await pool.query(
+    const queryResult = await executeQuery(
       `SELECT u.id,u.username,u.email
        FROM users u
        JOIN friends f ON u.id = f.user_id_2
@@ -251,7 +251,7 @@ export class FriendService implements IFriendService {
     Logger.log(COMPONENT, FUNCTION, "debug", "Search friend based on query", {
       searchQuery,
     });
-    const [queryResult] = await pool.query(
+    const queryResult = await executeQuery(
       "SELECT id,username,password,email FROM users WHERE username LIKE ? OR email LIKE ?",
       [`%${searchQuery}%`, `%${searchQuery}%`]
     );

@@ -1,5 +1,4 @@
 import { Logger } from "@/lib/logger";
-import pool from "../db";
 import { Post, PostType } from "../types/post";
 import { IPostService } from "./IPostService";
 import { v4 } from "uuid";
@@ -12,6 +11,7 @@ import {
   getLinksFromString,
   getMentionAndIdForString,
 } from "@/utils/stringParser";
+import executeQuery from "../db";
 
 const COMPONENT = "PostService";
 export class PostService implements IPostService {
@@ -25,7 +25,7 @@ export class PostService implements IPostService {
       currentUserId,
     });
 
-    const [results] = await pool.query(
+    const results = await executeQuery(
       `SELECT p.id, p.user_id, u.username,COALESCE(c.comment_count,0) AS comment_count,COALESCE(l.like_count,0) AS like_count, p.type, p.content,p.original_content, p.duration_days, p.expires_at, p.is_archived, p.created_at
          FROM posts p
          JOIN users u ON p.user_id = u.id
@@ -44,7 +44,7 @@ export class PostService implements IPostService {
     const post = (results as any[])[0];
     if (currentUserId != post.user_id) {
       // Check if users are friends
-      const [friendResults] = await pool.query(
+      const friendResults = await executeQuery(
         "SELECT id FROM friends WHERE (user_id_1 = ? AND user_id_2 = ?) OR (user_id_1 = ? AND user_id_2 = ?)",
         [currentUserId, post.user_id, post.user_id, currentUserId]
       );
@@ -121,7 +121,7 @@ export class PostService implements IPostService {
           ? new Date(Date.now() + durationDays! * 24 * 60 * 60 * 1000)
           : null;
       const postId = v4();
-      await pool.query(
+      await executeQuery(
         "INSERT INTO posts (id,user_id, type, content,original_content, duration_days, expires_at, is_archived) VALUES (?,?,?, ?, ?, ?, ?, ?)",
         [
           postId,
@@ -165,7 +165,7 @@ export class PostService implements IPostService {
     }
 
     try {
-      const [results] = await pool.query(
+      const results = await executeQuery(
         `SELECT p.id, p.user_id, u.username,COALESCE(c.comment_count,0) AS comment_count,COALESCE(l.like_count,0) AS like_count, p.type, p.content,p.original_content, p.duration_days, p.expires_at, p.is_archived, p.created_at
        FROM posts p
        JOIN users u ON p.user_id = u.id
@@ -208,7 +208,7 @@ export class PostService implements IPostService {
     }
 
     // Check if users are friends
-    const [friendResults] = await pool.query(
+    const friendResults = await executeQuery(
       "SELECT id FROM friends WHERE (user_id_1 = ? AND user_id_2 = ?) OR (user_id_1 = ? AND user_id_2 = ?)",
       [currentUserId, userId, userId, currentUserId]
     );
@@ -223,7 +223,7 @@ export class PostService implements IPostService {
     }
 
     try {
-      const [results] = await pool.query(
+      const results = await executeQuery(
         `SELECT p.id, p.user_id, u.username,COALESCE(c.comment_count,0) AS comment_count,COALESCE(l.like_count,0) AS like_count, p.type, p.content,p.original_content, p.duration_days, p.expires_at, p.is_archived, p.created_at
          FROM posts p
          JOIN users u ON p.user_id = u.id
@@ -268,7 +268,7 @@ export class PostService implements IPostService {
     try {
       let results: QueryResult;
       if (!isCurrentUser && userId) {
-        [results] = await pool.query(
+        results = await executeQuery(
           `SELECT p.id, p.user_id, u.username,COALESCE(c.comment_count,0) AS comment_count,COALESCE(l.like_count,0) AS like_count, p.type, p.content,p.original_content, p.duration_days, p.expires_at, p.is_archived, p.created_at
          FROM posts p
          JOIN users u ON p.user_id = u.id
@@ -294,7 +294,7 @@ export class PostService implements IPostService {
           }
         );
       } else {
-        [results] = await pool.query(
+        results = await executeQuery(
           `SELECT p.id, p.user_id, u.username,COALESCE(c.comment_count,0) AS comment_count,COALESCE(l.like_count,0) AS like_count, p.type, p.content,p.original_content, p.duration_days, p.expires_at, p.is_archived, p.created_at
          FROM posts p
          JOIN users u ON p.user_id = u.id
@@ -355,7 +355,7 @@ export class PostService implements IPostService {
     }
 
     try {
-      const [results] = await pool.query(
+      const results = await executeQuery(
         `SELECT p.id, p.user_id, u.username,COALESCE(c.comment_count,0) AS comment_count,COALESCE(l.like_count,0) AS like_count, p.type, p.content,p.original_content, p.duration_days, p.expires_at, p.is_archived, p.created_at
          FROM posts p
          JOIN users u ON p.user_id = u.id
@@ -396,7 +396,7 @@ export class PostService implements IPostService {
   async getAllPublicOpinions(): Promise<Post[]> {
     try {
       const FUNCTION = "getPrivatePosts";
-      const [results] = await pool.query(
+      const results = await executeQuery(
         `SELECT p.id, p.user_id, u.username,COALESCE(c.comment_count,0) AS comment_count,COALESCE(l.like_count,0) AS like_count, p.type, p.content,p.original_content, p.duration_days, p.expires_at, p.is_archived, p.created_at
          FROM posts p
          JOIN users u ON p.user_id = u.id
@@ -438,7 +438,7 @@ export class PostService implements IPostService {
       throw new Error("User ID and Post ID are required");
     }
     try {
-      const [result] = await pool.query(
+      const result = await executeQuery(
         "DELETE FROM posts WHERE id = ? AND user_id = ?",
         [postId, userId]
       );

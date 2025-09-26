@@ -1,7 +1,7 @@
 import { Logger } from "@/lib/logger";
-import pool from "../db";
 import { INotificationService } from "./INotificationService";
 import { NotificationType, Notification } from "@/types/notification";
+import executeQuery from "../db";
 const COMPONENT = "NotificationService";
 export class NotificationService implements INotificationService {
   async createNotification(
@@ -18,12 +18,12 @@ export class NotificationService implements INotificationService {
     }
 
     try {
-      const [result] = await pool.query(
+      const result = await executeQuery(
         "INSERT INTO notifications (user_id, type, source_user_id, post_id, is_read) VALUES (?, ?, ?, ?, ?)",
         [userId, type, sourceUserId, postId || null, false]
       );
       const notificationId = (result as any).insertId;
-      const [notificationResults] = await pool.query(
+      const notificationResults = await executeQuery(
         "SELECT n.*, u.username AS source_username FROM notifications n JOIN users u ON n.source_user_id = u.id WHERE n.id = ?",
         [notificationId]
       );
@@ -62,7 +62,7 @@ export class NotificationService implements INotificationService {
     }
 
     try {
-      const [results] = await pool.query(
+      const results = await executeQuery(
         `SELECT n.*, u.username AS source_username
          FROM notifications n
          JOIN users u ON n.source_user_id = u.id
@@ -109,7 +109,7 @@ export class NotificationService implements INotificationService {
     }
 
     try {
-      const [result] = await pool.query(
+      const result = await executeQuery(
         "UPDATE notifications SET is_read = ? WHERE id = ? AND user_id = ?",
         [true, notificationId, userId]
       );
@@ -138,7 +138,7 @@ async getNotificationByUserIdAndType(
     }
 
     try {
-      const [results] = await pool.query(
+      const results = await executeQuery(
         `SELECT n.*, u.username AS source_username
          FROM notifications n
          JOIN users u ON n.source_user_id = u.id
@@ -177,7 +177,7 @@ async getNotificationByUserIdAndType(
     }
 
     try {
-      const [result] = await pool.query(
+      const result = await executeQuery(
         "DELETE FROM notifications WHERE id = ? AND user_id = ?",
         [notificationId, userId]
       );
