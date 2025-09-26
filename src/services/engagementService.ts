@@ -152,6 +152,7 @@ const [commentResult] = await pool.query(
       throw new Error("Failed to fetch public opinions: " + error.message);
     }
   }
+
   async getFriendPostComment(currentUserId: string,postId:string): Promise<Comment[]> {
     const FUNCTION = "getFriendPostComment";
     if (!postId || !currentUserId) {
@@ -241,6 +242,73 @@ try {
       );
     }
 
+  }
+  async getPostLikeStatus(
+    userId: string,
+    postId: string
+  ): Promise<boolean> {
+    const FUNCTION = "getPostLikeStatus";
+    Logger.log(COMPONENT, FUNCTION, "debug", "get post like status", {
+      userId,
+      postId,
+    });
+    const [queryResult] = await pool.query(
+      "SELECT * FROM likes WHERE post_id=? AND user_id=?",
+      [userId, postId]
+    );
+    const result = (queryResult as any[])[0];
+    Logger.log(COMPONENT, FUNCTION, "debug", "Get Post Like Status", {
+      result,
+    });
+    return !!result;
+  }
+  async togglePostLike(userId: string, postId: string): Promise<void> {
+    const FUNCTION = "togglePostLike";
+    Logger.log(COMPONENT, FUNCTION, "debug", "toggle post like status", {
+      userId,
+      postId,
+    });
+    const result = await this.getPostLikeStatus(userId, postId);
+    const [queryResult] = await pool.query(
+        `SELECT id,type,user_id
+         FROM posts
+         WHERE id = ?`,
+        [postId]
+      );
+
+      const post = (queryResult as any[])[0];
+      Logger.log(COMPONENT, FUNCTION, "debug", "Fetched the post", {
+      post
+    });
+    if (result) {
+      const notifications =
+        await notificationService.getNotificationByUserIdAndType(
+          post.user_id,
+          "post_like",
+          userId
+        );
+      notifications.forEach(async (x) => {
+        await notificationService.deleteNotification(x.id, x.userId);
+      });
+      Logger.log(COMPONENT, FUNCTION, "debug", "Post dis-liked");
+      await pool.query(
+        "DELETE FROM likes WHERE post_id=? AND user_id=?",
+        [postId, userId]
+      );
+    } else {
+      
+      Logger.log(COMPONENT, FUNCTION, "debug", "Post Liked");
+      await pool.query(
+        "INSERT INTO likes (user_id,post_id) VALUES(?,?)",
+        [userId, postId]
+      );
+      await notificationService.createNotification(
+        post.user_id,
+        "post_like",
+        userId
+      );
+    }
+    Logger.log(COMPONENT, FUNCTION, "debug", "Like status toggled");
   }
 }
 export const engagementService = new EngagementService();
