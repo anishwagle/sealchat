@@ -1,0 +1,40 @@
+import { ApiError } from "@/lib/errors";
+import { Logger } from "@/lib/logger";
+import { engagementService } from "@/services/serviceProvider";
+import { NextResponse } from "next/server";
+
+const COMPONENT = "api/protected/posts/toggleLike/[postId]";
+const FUNCTION = "GET";
+export async function GET(request: Request,{ params }: { params: { postId: string }}) {
+  const p = await params;
+  Logger.log(COMPONENT, FUNCTION, "info", "Toggle profile post for User",{postId:p.postId});
+  try {
+    const userId1 = request.headers.get("x-user-id");
+    if (!userId1) {
+      Logger.log(COMPONENT, FUNCTION, "error", "Current User not found");
+      return NextResponse.json(
+        { message: "Current User not Found", code: "USER_NOT_FOUND" },
+        { status: 404 }
+      );
+    }
+    await engagementService.togglePostLike(userId1, p.postId);
+    Logger.log(COMPONENT, FUNCTION, "info", "post like toggled Successful");
+    return NextResponse.json(
+      { message: "Like Toggled Successful" },
+      { status: 200 }
+    );
+  } catch (error: any) {
+    const apiError = new ApiError("Failed to Toggle post Like", 500, "INTERNAL_ERROR", {
+      error: error.message,
+    });
+    Logger.log(COMPONENT, FUNCTION, 'error', apiError.message, { details: apiError.details });
+    return NextResponse.json(
+      {
+        message: apiError.message,
+        code: apiError.code,
+        details: apiError.details,
+      },
+      { status: apiError.status }
+    );
+  }
+}

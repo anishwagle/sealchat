@@ -16,20 +16,28 @@ export default function PostComponent(post: Post) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isLiking, setIsLiking] = useState(false);
   const { currentUserId } = useAuth();
-  const [isLikedByCurrentUser, setIsLikedByCurrentUser] = useState(false);
-  const [localLikes, setLocalLikes] = useState<Like[]>([]);
+  const [isLikedByCurrentUser, setIsLikedByCurrentUser] = useState(!!post.isLikedByCurrentUser);
+  const [likeCount, setLikeCount] = useState(post.likeCount);
+  const [localLikes, setLocalLikes] = useState<Like[]>([]); // This could be fetched on modal open
   const dropdownRef = useRef<HTMLDivElement>(null);
-  // const fetchLikeList =async ()=>{
-  //   const apiUrl = `/api/protected/posts/postLikeList/${post.id}`;
-  //   const data = await fetch(apiUrl, {
-  //       method: 'GET',
-  //     });
-  //   const results = await data.json();
-  //   setLocalLikes(results.likeList.map((x: Like) => x));
-  // }
+
+  const fetchLikeList = async () => {
+    if (showLikesModal) {
+      const apiUrl = `/api/protected/posts/postLikeList/${post.id}`;
+      const data = await fetch(apiUrl);
+      const results = await data.json();
+      setLocalLikes(results.likeList || []);
+    }
+  };
 
   useEffect(() => {
+    fetchLikeList();
+  }, [showLikesModal]);
+
+  useEffect(() => {
+    debugger;
     setIsLikedByCurrentUser(!!post.isLikedByCurrentUser);
+    setLikeCount(post.likeCount);
     const handleClickOutside = (event: MouseEvent) => {
       if (
         dropdownRef.current &&
@@ -41,31 +49,35 @@ export default function PostComponent(post: Post) {
 
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isLikedByCurrentUser]);
+  }, [post.isLikedByCurrentUser,post.likeCount]);
   
   
 
   const handleLike = async () => {
+    if (isLiking) return;
     setIsLiking(true);
-    // const toggleLikeUrl = `/api/protected/posts/toggleLike/${post.id}`;
-    // const profileResponse = await fetch(toggleLikeUrl, {
-    //     method: 'GET',
-    //   });
-    // const profileData = await profileResponse.json();
-      // if (profileData.ok) {
-      debugger;
-        setIsLikedByCurrentUser(!isLikedByCurrentUser);
-      // } 
-    // Mock API call
-    // setTimeout(() => {
-    //   if (isLikedByCurrentUser) {
-    //     setLocalLikes(localLikes.filter((like) => like.username !== "currentUser"));
-      
-    //   } else {
-    //    // setLocalLikes([...localLikes, { username: currentUser }]);
-    //   }
-       setIsLiking(false);
-    // }, 500);
+
+    // Optimistic update
+    const originallyLiked = isLikedByCurrentUser;
+    setIsLikedByCurrentUser(!originallyLiked);
+    setLikeCount(likeCount + (originallyLiked ? -1 : 1));
+
+    const toggleLikeUrl = `/api/protected/posts/toggleLike/${post.id}`;
+    try {
+      const response = await fetch(toggleLikeUrl, { method: 'GET' });
+      if (!response.ok) {
+        // Revert on error
+        setIsLikedByCurrentUser(originallyLiked);
+        setLikeCount(likeCount);
+      }
+    } catch (error) {
+      console.error("Failed to toggle like:", error);
+      // Revert on error
+      setIsLikedByCurrentUser(originallyLiked);
+      setLikeCount(likeCount);
+    } finally {
+      setIsLiking(false);
+    }
   };
 
   
@@ -177,7 +189,7 @@ export default function PostComponent(post: Post) {
 
         {/* Interaction Section */}
         <div className="mt-4 pt-4 border-t border-gray-50">
-          {formatLikesText(localLikes) && (
+          {likeCount > 0 && (
             <button
               onClick={() => setShowLikesModal(true)}
               className="text-sm text-gray-600 hover:text-gray-800 mb-3 transition-colors duration-200 group flex items-center gap-1"
@@ -193,7 +205,7 @@ export default function PostComponent(post: Post) {
                 ))}
               </span>
               <span className="group-hover:underline">
-                {formatLikesText(localLikes)}
+                {likeCount} {likeCount === 1 ? 'like' : 'likes'}
               </span>
             </button>
           )}
@@ -220,7 +232,7 @@ export default function PostComponent(post: Post) {
                   d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
                 />
               </svg>
-              <span>Like</span>
+              <span>{likeCount} Like</span>
             </button>
             <button
               onClick={() => setShowCommentModal(true)}

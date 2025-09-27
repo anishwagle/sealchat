@@ -3,9 +3,14 @@ import executeQuery from "../db";
 import { Comment, Like, PostType } from "../types/post";
 import { v4 } from "uuid";
 import { QueryResult } from "mysql2";
-import {  } from "./INotificationService";
+import {} from "./INotificationService";
 import { notificationService } from "./serviceProvider";
-import { convertMentionsIntoLinks, getEmbedSection, getLinksFromString, getMentionAndIdForString } from "@/utils/stringParser";
+import {
+  convertMentionsIntoLinks,
+  getEmbedSection,
+  getLinksFromString,
+  getMentionAndIdForString,
+} from "@/utils/stringParser";
 import { IEngagementService } from "./IEngagementService";
 
 const COMPONENT = "EngagementService";
@@ -19,18 +24,18 @@ export class EngagementService implements IEngagementService {
       `SELECT l.*,u.username AS username FROM likes l
       JOIN users u ON u.id=l.user_id
        WHERE post_id=? `,
-      [ postId]
+      [postId]
     );
-    const result = (queryResult as any[]);
+    const result = queryResult as any[];
     Logger.log(COMPONENT, FUNCTION, "debug", "Get Post Like Status", {
       result,
     });
-    return (result as any[]).map((x)=>({
-      id:x.id,
-      userId:x.user_id,
-      postId:x.post_id,
-      username:x.username,
-      createdAt:x.created_at
+    return (result as any[]).map((x) => ({
+      id: x.id,
+      userId: x.user_id,
+      postId: x.post_id,
+      username: x.username,
+      createdAt: x.created_at,
     }));
   }
   async createComment(
@@ -43,7 +48,7 @@ export class EngagementService implements IEngagementService {
     Logger.log(COMPONENT, FUNCTION, "debug", "creating new Comment", {
       userId,
       content,
-      postId
+      postId,
     });
     if (!userId || !content || !postId) {
       throw new Error("User ID, content, and postId are required");
@@ -53,21 +58,24 @@ export class EngagementService implements IEngagementService {
     }
 
     const queryResult = await executeQuery(
-        `SELECT id,type,user_id
+      `SELECT id,type,user_id
          FROM posts
          WHERE id = ?`,
-        [postId]
-      );
+      [postId]
+    );
 
-      const post = (queryResult as any[])[0];
-      Logger.log(COMPONENT, FUNCTION, "debug", "Fetched the post", {
-      post
+    const post = (queryResult as any[])[0];
+    Logger.log(COMPONENT, FUNCTION, "debug", "Fetched the post", {
+      post,
     });
     // Store original content and initialize embed section
     let processedContent = content;
     processedContent = getLinksFromString(processedContent);
-    processedContent =await convertMentionsIntoLinks(processedContent,userId,post.type);
-
+    processedContent = await convertMentionsIntoLinks(
+      processedContent,
+      userId,
+      post.type
+    );
 
     // Combine processed content with embeds
     const finalContent = `
@@ -87,7 +95,9 @@ export class EngagementService implements IEngagementService {
           parentCommentId || null,
         ]
       );
-      const {mentions,usernameToId} = await getMentionAndIdForString(processedContent);
+      const { mentions, usernameToId } = await getMentionAndIdForString(
+        processedContent
+      );
       for (const mention of mentions) {
         const username = mention[1];
         const userIdMentioned = usernameToId[username];
@@ -95,13 +105,13 @@ export class EngagementService implements IEngagementService {
         if (userIdMentioned !== userId) {
           await notificationService.createNotification(
             userIdMentioned,
-            'comment_mention',
+            "comment_mention",
             userId,
             postId
           );
         }
       }
-const commentResult = await executeQuery(
+      const commentResult = await executeQuery(
         `SELECT c.*, u.username
          FROM comments c
           JOIN users u on c.user_id = u.id
@@ -111,64 +121,62 @@ const commentResult = await executeQuery(
 
       const comment = (commentResult as any[])[0];
 
-      if(post.user_id!=userId){
+      if (post.user_id != userId) {
         await notificationService.createNotification(
-                    post.user_id,
-                    'comment',
-                    userId,
-                    postId
-                  );
+          post.user_id,
+          "comment",
+          userId,
+          postId
+        );
       }
-      
+
       Logger.log(COMPONENT, FUNCTION, "debug", "Fetched the comment", {
-      comment
-    });
+        comment,
+      });
       Logger.log(COMPONENT, FUNCTION, "info", "New Comment Created");
       return {
-        id:commentId,
-        content:finalContent,
-        originalContent:content,
-        userId:userId,
-        postId:post.Id,
-        createdAt:comment.created_at,
-        username:comment.username
-      }
+        id: commentId,
+        content: finalContent,
+        originalContent: content,
+        userId: userId,
+        postId: post.Id,
+        createdAt: comment.created_at,
+        username: comment.username,
+      };
     } catch (error: any) {
       throw new Error("Failed to create Comment: " + error.message);
     }
   }
 
-  async getPublicOpinionComment(postId:string): Promise<Comment[]> {
+  async getPublicOpinionComment(postId: string): Promise<Comment[]> {
     const FUNCTION = "getPublicOpinionComment";
     try {
-       const results = await executeQuery(
-          `SELECT c.id, c.user_id,c.post_id, u.username,c.parent_comment_id, c.content,c.original_content, c.created_at
+      const results = await executeQuery(
+        `SELECT c.id, c.user_id,c.post_id, u.username,c.parent_comment_id, c.content,c.original_content, c.created_at
          FROM comments c
          JOIN users u ON c.user_id = u.id
          WHERE c.post_id = ?`,
-          [postId]
-        );
-     
-      
-        Logger.log(
-          COMPONENT,
-          FUNCTION,
-          "debug",
-          "Comments Fetched for feed Successfully",
-          {
-            postId,
-          }
-        );
-      
+        [postId]
+      );
+
+      Logger.log(
+        COMPONENT,
+        FUNCTION,
+        "debug",
+        "Comments Fetched for feed Successfully",
+        {
+          postId,
+        }
+      );
 
       return (results as any[]).map((comment) => ({
         id: comment.id,
         userId: comment.user_id,
         username: comment.username,
-        originalContent:comment.original_content,
+        originalContent: comment.original_content,
         content: comment.content,
-        parentCommentId:comment.parent_comment_id,
-        postId:comment.post_id,
+        parentCommentId: comment.parent_comment_id,
+        postId: comment.post_id,
         createdAt: new Date(comment.created_at),
       }));
     } catch (error: any) {
@@ -176,66 +184,67 @@ const commentResult = await executeQuery(
     }
   }
 
-  async getFriendPostComment(currentUserId: string,postId:string): Promise<Comment[]> {
+  async getFriendPostComment(
+    currentUserId: string,
+    postId: string
+  ): Promise<Comment[]> {
     const FUNCTION = "getFriendPostComment";
     if (!postId || !currentUserId) {
       throw new Error("Post ID and current user ID are required");
     }
 
     const queryResult = await executeQuery(
-        `SELECT id,type,user_id
+      `SELECT id,type,user_id
          FROM posts
          WHERE id = ?`,
-        [postId]
-      );
-
-      const post = (queryResult as any[])[0];
-
-    if(post.user_id != currentUserId){
-    // Check if users are friends
-    const friendResults = await executeQuery(
-      "SELECT id FROM friends WHERE (user_id_1 = ? AND user_id_2 = ?) OR (user_id_1 = ? AND user_id_2 = ?)",
-      [currentUserId, post.user_id, post.user_id, currentUserId]
+      [postId]
     );
-    const isFriend = (friendResults as any[]).length > 0;
 
-    if (!isFriend) {
-      Logger.log(COMPONENT, FUNCTION, "debug", "Users are not friends", {
-        userId:post.user_id,
-        currentUserId,
-      });
-      return []; // Return empty array if not friends
+    const post = (queryResult as any[])[0];
+
+    if (post.user_id != currentUserId) {
+      // Check if users are friends
+      const friendResults = await executeQuery(
+        "SELECT id FROM friends WHERE (user_id_1 = ? AND user_id_2 = ?) OR (user_id_1 = ? AND user_id_2 = ?)",
+        [currentUserId, post.user_id, post.user_id, currentUserId]
+      );
+      const isFriend = (friendResults as any[]).length > 0;
+
+      if (!isFriend) {
+        Logger.log(COMPONENT, FUNCTION, "debug", "Users are not friends", {
+          userId: post.user_id,
+          currentUserId,
+        });
+        return []; // Return empty array if not friends
+      }
     }
-  }
     try {
       const results = await executeQuery(
-          `SELECT c.id, c.user_id,c.post_id, u.username,c.parent_comment_id, c.content,c.original_content, c.created_at
+        `SELECT c.id, c.user_id,c.post_id, u.username,c.parent_comment_id, c.content,c.original_content, c.created_at
          FROM comments c
          JOIN users u ON c.user_id = u.id
          WHERE c.post_id = ?`,
-          [postId]
-        );
-     
-      
-        Logger.log(
-          COMPONENT,
-          FUNCTION,
-          "debug",
-          "Comments Fetched for feed Successfully",
-          {
-            postId,
-          }
-        );
-      
+        [postId]
+      );
+
+      Logger.log(
+        COMPONENT,
+        FUNCTION,
+        "debug",
+        "Comments Fetched for feed Successfully",
+        {
+          postId,
+        }
+      );
 
       return (results as any[]).map((comment) => ({
         id: comment.id,
         userId: comment.user_id,
         username: comment.username,
-        originalContent:comment.original_content,
+        originalContent: comment.original_content,
         content: comment.content,
-        parentCommentId:comment.parent_comment_id,
-        postId:comment.post_id,
+        parentCommentId: comment.parent_comment_id,
+        postId: comment.post_id,
         createdAt: new Date(comment.created_at),
       }));
     } catch (error: any) {
@@ -243,12 +252,12 @@ const commentResult = await executeQuery(
     }
   }
 
-  async deleteComment(userId:string,commentId:string):Promise<void>{
-    const FUNCTION = 'deleteComment';
+  async deleteComment(userId: string, commentId: string): Promise<void> {
+    const FUNCTION = "deleteComment";
     if (!userId || !commentId) {
       throw new Error("User ID and Comment ID are required");
     }
-try {
+    try {
       const result = await executeQuery(
         "DELETE FROM comments WHERE id = ? AND user_id = ?",
         [commentId, userId]
@@ -260,28 +269,23 @@ try {
       }
     } catch (error: any) {
       throw new Error(
-        `[${COMPONENT}][${FUNCTION}]:Failed to delete Comment: ` +
-          error.message
+        `[${COMPONENT}][${FUNCTION}]:Failed to delete Comment: ` + error.message
       );
     }
-
   }
-  async getPostLikeStatus(
-    userId: string,
-    postId: string
-  ): Promise<boolean> {
+  async getPostLikeStatus(userId: string, postId: string): Promise<boolean> {
     const FUNCTION = "getPostLikeStatus";
     Logger.log(COMPONENT, FUNCTION, "debug", "get post like status", {
       userId,
       postId,
     });
     const queryResult = await executeQuery(
-      "SELECT * FROM likes WHERE post_id=? AND user_id=?",
+      "SELECT * FROM likes WHERE user_id=? AND post_id=?",
       [userId, postId]
     );
     const result = (queryResult as any[])[0];
     Logger.log(COMPONENT, FUNCTION, "debug", "Get Post Like Status", {
-      result,
+      result,found:!!result
     });
     return !!result;
   }
@@ -293,15 +297,15 @@ try {
     });
     const result = await this.getPostLikeStatus(userId, postId);
     const queryResult = await executeQuery(
-        `SELECT id,type,user_id
+      `SELECT id,type,user_id
          FROM posts
          WHERE id = ?`,
-        [postId]
-      );
+      [postId]
+    );
 
-      const post = (queryResult as any[])[0];
-      Logger.log(COMPONENT, FUNCTION, "debug", "Fetched the post", {
-      post
+    const post = (queryResult as any[])[0];
+    Logger.log(COMPONENT, FUNCTION, "debug", "Fetched the post", {
+      post,
     });
     if (result) {
       const notifications =
@@ -314,17 +318,16 @@ try {
         await notificationService.deleteNotification(x.id, x.userId);
       });
       Logger.log(COMPONENT, FUNCTION, "debug", "Post dis-liked");
-      await executeQuery(
-        "DELETE FROM likes WHERE post_id=? AND user_id=?",
-        [postId, userId]
-      );
+      await executeQuery("DELETE FROM likes WHERE post_id=? AND user_id=?", [
+        postId,
+        userId,
+      ]);
     } else {
-      
       Logger.log(COMPONENT, FUNCTION, "debug", "Post Liked");
-      await executeQuery(
-        "INSERT INTO likes (user_id,post_id) VALUES(?,?)",
-        [userId, postId]
-      );
+      await executeQuery("INSERT INTO likes (user_id,post_id) VALUES(?,?)", [
+        userId,
+        postId,
+      ]);
       await notificationService.createNotification(
         post.user_id,
         "post_like",

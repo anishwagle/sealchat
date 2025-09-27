@@ -30,7 +30,7 @@ export interface Post {
   expiresAt?: Date | null;
   isArchived: boolean;
   createdAt: Date;
-  likeCount?:number;
-  commentCount?:number;
-  isLikedByCurrentUser?:boolean;
+  likeCount:number;
+  commentCount:number;
+  isLikedByCurrentUser:boolean;
 }
