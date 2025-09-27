@@ -35,7 +35,6 @@ export default function PostComponent(post: Post) {
   }, [showLikesModal]);
 
   useEffect(() => {
-    debugger;
     setIsLikedByCurrentUser(!!post.isLikedByCurrentUser);
     setLikeCount(post.likeCount);
     const handleClickOutside = (event: MouseEvent) => {

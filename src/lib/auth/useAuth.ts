@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 
 interface AuthState {
   currentUserId:string;
@@ -16,6 +16,7 @@ export const useAuth = () => {
     error: '',
   });
   const router = useRouter();
+  const pathname = usePathname();
 
   const verifyToken = async () => {
     try {
@@ -59,7 +60,10 @@ export const useAuth = () => {
       }
 
       setAuthState({ isAuthenticated: false,currentUserId:data.userId, isLoading: false, error: 'Unauthorized' });
-      router.push('/login');
+      // Only redirect if not on a public route already
+      if (pathname !== '/login' && pathname !== '/signup') {
+        router.push('/login');
+      }
     };
 
     checkAuth();
@@ -74,7 +78,7 @@ export const useAuth = () => {
     }, 10 * 60 * 1000);
 
     return () => clearInterval(interval);
-  }, [router]);
+  }, [router, pathname]);
 
   return authState;
 };

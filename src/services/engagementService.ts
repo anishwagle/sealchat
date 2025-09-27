@@ -328,11 +328,14 @@ export class EngagementService implements IEngagementService {
         userId,
         postId,
       ]);
+      if(post.user_id!=userId){
       await notificationService.createNotification(
         post.user_id,
         "post_like",
-        userId
+        userId,
+        postId
       );
+    }
     }
     Logger.log(COMPONENT, FUNCTION, "debug", "Like status toggled");
   }
