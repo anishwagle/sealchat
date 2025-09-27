@@ -25,7 +25,7 @@ export async function GET(request: Request) {
     Logger.log(COMPONENT, FUNCTION, "info", "User's Own Post Count:",{count:ownPosts.length});
     const friendPosts = await postService.getPrivatePosts(userId);
     Logger.log(COMPONENT, FUNCTION, "info", "User's Friend Post Count:",{count:friendPosts.length});
-    const publicOpinions = await postService.getPublicOpinions(userId,true);
+    const publicOpinions = await postService.getPublicOpinions(userId,userId);
     Logger.log(COMPONENT, FUNCTION, "info", "User's Friend public opinion Count:",{count:publicOpinions.length});
     const posts = [...ownPosts, ...friendPosts, ...publicOpinions].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
     Logger.log(COMPONENT, FUNCTION, "info", "User's Total Post Count:",{count:posts.length});

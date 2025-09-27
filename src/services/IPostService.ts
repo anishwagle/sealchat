@@ -9,9 +9,9 @@ export interface IPostService {
   ): Promise<void>;
   getPostById(postId:string,currentUserId:string):Promise<Post|null>;
   getUserPosts(userId: string): Promise<Post[]>;
-  getPublicOpinions(userId: string,isCurrentUser?:boolean): Promise<Post[]>;
+  getPublicOpinions(userId: string,currentUserId: string): Promise<Post[]>;
   getFriendPosts(userId: string, currentUserId: string): Promise<Post[]>;
   getPrivatePosts(currentUserId: string): Promise<Post[]>;
-  getAllPublicOpinions(): Promise<Post[]>;
+  getAllPublicOpinions(currentUserId: string): Promise<Post[]>;
   deletePost(userId:string,postId:string):Promise<void>;
 }

@@ -26,22 +26,49 @@ export class PostService implements IPostService {
     });
 
     const results = await executeQuery(
-      `SELECT p.id, p.user_id, u.username,COALESCE(c.comment_count,0) AS comment_count,COALESCE(l.like_count,0) AS like_count, p.type, p.content,p.original_content, p.duration_days, p.expires_at, p.is_archived, p.created_at
-         FROM posts p
-         JOIN users u ON p.user_id = u.id
-         LEFT JOIN (
-         SELECT post_id, COUNT(*) as comment_count
-         FROM comments GROUP BY post_id
-         ) c ON p.id = c.post_id
-        LEFT JOIN (
-        SELECT post_id, COUNT(*) as like_count
-         FROM likes GROUP BY post_id
-         ) l ON p.id = l.post_id
-         WHERE p.Id = ? `,
-      [postId]
+      `SELECT 
+    p.id,
+    p.user_id,
+    u.username,
+    p.original_content,
+    p.type,
+    p.content,
+    p.duration_days,
+    p.expires_at,
+    p.is_archived,
+    p.created_at,
+    -- Pre-aggregated comment count
+    COALESCE(c.comment_count, 0) AS comment_count,
+    -- Pre-aggregated like count
+    COALESCE(l.like_count, 0) AS like_count,
+    -- Check if current user liked the post
+    CASE WHEN ul.user_id IS NULL THEN FALSE ELSE TRUE END AS is_liked_by_current_user
+    FROM posts p
+    JOIN users u ON p.user_id = u.id
+    -- Aggregate comments
+    LEFT JOIN (
+        SELECT post_id, COUNT(*) AS comment_count
+        FROM comments
+        GROUP BY post_id
+    ) c ON p.id = c.post_id
+    -- Aggregate likes
+    LEFT JOIN (
+        SELECT post_id, COUNT(*) AS like_count
+        FROM likes
+        GROUP BY post_id
+    ) l ON p.id = l.post_id
+    -- Check if current user liked this post
+    LEFT JOIN (
+        SELECT post_id, user_id
+        FROM likes
+        WHERE user_id = ?  -- pass current user ID here
+    ) ul ON p.id = ul.post_id
+    WHERE p.id = ?;        -- pass target post ID here`,
+      [currentUserId, postId]
     );
 
     const post = (results as any[])[0];
+    Logger.log(COMPONENT, FUNCTION, "debug", " post by id fetched", post);
     if (currentUserId != post.user_id) {
       // Check if users are friends
       const friendResults = await executeQuery(
@@ -72,6 +99,7 @@ export class PostService implements IPostService {
       createdAt: new Date(post.created_at),
       commentCount: post.comment_count,
       likeCount: post.like_count,
+      isLikedByCurrentUser:post.is_liked_by_current_user
     };
   }
   async createPost(
@@ -166,20 +194,46 @@ export class PostService implements IPostService {
 
     try {
       const results = await executeQuery(
-        `SELECT p.id, p.user_id, u.username,COALESCE(c.comment_count,0) AS comment_count,COALESCE(l.like_count,0) AS like_count, p.type, p.content,p.original_content, p.duration_days, p.expires_at, p.is_archived, p.created_at
-       FROM posts p
-       JOIN users u ON p.user_id = u.id
-       LEFT JOIN (
-         SELECT post_id, COUNT(*) as comment_count
-         FROM comments GROUP BY post_id
-         ) c ON p.id = c.post_id
-        LEFT JOIN (
-        SELECT post_id, COUNT(*) as like_count
-         FROM likes GROUP BY post_id
-         ) l ON p.id = l.post_id
+        `SELECT 
+    p.id,
+    p.user_id,
+    u.username,
+    p.original_content,
+    p.type,
+    p.content,
+    p.duration_days,
+    p.expires_at,
+    p.is_archived,
+    p.created_at,
+    -- Pre-aggregated comment count
+    COALESCE(c.comment_count, 0) AS comment_count,
+    -- Pre-aggregated like count
+    COALESCE(l.like_count, 0) AS like_count,
+    -- Check if current user liked the post
+    CASE WHEN ul.user_id IS NULL THEN FALSE ELSE TRUE END AS is_liked_by_current_user
+    FROM posts p
+    JOIN users u ON p.user_id = u.id
+    -- Aggregate comments
+    LEFT JOIN (
+        SELECT post_id, COUNT(*) AS comment_count
+        FROM comments
+        GROUP BY post_id
+    ) c ON p.id = c.post_id
+    -- Aggregate likes
+    LEFT JOIN (
+        SELECT post_id, COUNT(*) AS like_count
+        FROM likes
+        GROUP BY post_id
+    ) l ON p.id = l.post_id
+    -- Check if current user liked this post
+    LEFT JOIN (
+        SELECT post_id, user_id
+        FROM likes
+        WHERE user_id = ?  -- pass current user ID here
+    ) ul ON p.id = ul.post_id
        WHERE p.user_id = ? AND p.is_archived = false
        AND (p.expires_at IS NULL OR p.expires_at > NOW())`,
-        [userId]
+        [userId,userId]
       );
 
       return (results as any[]).map((post) => ({
@@ -195,6 +249,7 @@ export class PostService implements IPostService {
         createdAt: new Date(post.created_at),
         commentCount: post.comment_count,
         likeCount: post.like_count,
+        isLikedByCurrentUser:post.is_liked_by_current_user
       }));
     } catch (error: any) {
       throw new Error("Failed to fetch user posts: " + error.message);
@@ -224,19 +279,45 @@ export class PostService implements IPostService {
 
     try {
       const results = await executeQuery(
-        `SELECT p.id, p.user_id, u.username,COALESCE(c.comment_count,0) AS comment_count,COALESCE(l.like_count,0) AS like_count, p.type, p.content,p.original_content, p.duration_days, p.expires_at, p.is_archived, p.created_at
-         FROM posts p
-         JOIN users u ON p.user_id = u.id
-         LEFT JOIN (
-         SELECT post_id, COUNT(*) as comment_count
-         FROM comments GROUP BY post_id
-         ) c ON p.id = c.post_id
-        LEFT JOIN (
-        SELECT post_id, COUNT(*) as like_count
-         FROM likes GROUP BY post_id
-         ) l ON p.id = l.post_id
+        `SELECT 
+    p.id,
+    p.user_id,
+    u.username,
+    p.original_content,
+    p.type,
+    p.content,
+    p.duration_days,
+    p.expires_at,
+    p.is_archived,
+    p.created_at,
+    -- Pre-aggregated comment count
+    COALESCE(c.comment_count, 0) AS comment_count,
+    -- Pre-aggregated like count
+    COALESCE(l.like_count, 0) AS like_count,
+    -- Check if current user liked the post
+    CASE WHEN ul.user_id IS NULL THEN FALSE ELSE TRUE END AS is_liked_by_current_user
+    FROM posts p
+    JOIN users u ON p.user_id = u.id
+    -- Aggregate comments
+    LEFT JOIN (
+        SELECT post_id, COUNT(*) AS comment_count
+        FROM comments
+        GROUP BY post_id
+    ) c ON p.id = c.post_id
+    -- Aggregate likes
+    LEFT JOIN (
+        SELECT post_id, COUNT(*) AS like_count
+        FROM likes
+        GROUP BY post_id
+    ) l ON p.id = l.post_id
+    -- Check if current user liked this post
+    LEFT JOIN (
+        SELECT post_id, user_id
+        FROM likes
+        WHERE user_id = ?  -- pass current user ID here
+    ) ul ON p.id = ul.post_id
          WHERE p.user_id = ? AND p.type = 'friend_post' AND p.is_archived = false`,
-        [userId]
+        [currentUserId, userId]
       );
       Logger.log(COMPONENT, FUNCTION, "debug", "Post Fetched Successfully", {
         userId,
@@ -254,6 +335,7 @@ export class PostService implements IPostService {
         createdAt: new Date(post.created_at),
         commentCount: post.comment_count,
         likeCount: post.like_count,
+        isLikedByCurrentUser:post.is_liked_by_current_user
       }));
     } catch (error: any) {
       throw new Error("Failed to fetch friend posts: " + error.message);
@@ -261,28 +343,54 @@ export class PostService implements IPostService {
   }
 
   async getPublicOpinions(
-    userId?: string,
-    isCurrentUser: boolean = false
+    userId: string,
+    currentUserId: string
   ): Promise<Post[]> {
     const FUNCTION = "getPublicOpinions";
     try {
       let results: QueryResult;
-      if (!isCurrentUser && userId) {
+      if (currentUserId!= userId) {
         results = await executeQuery(
-          `SELECT p.id, p.user_id, u.username,COALESCE(c.comment_count,0) AS comment_count,COALESCE(l.like_count,0) AS like_count, p.type, p.content,p.original_content, p.duration_days, p.expires_at, p.is_archived, p.created_at
-         FROM posts p
-         JOIN users u ON p.user_id = u.id
-         LEFT JOIN (
-         SELECT post_id, COUNT(*) as comment_count
-         FROM comments GROUP BY post_id
-         ) c ON p.id = c.post_id
-        LEFT JOIN (
-        SELECT post_id, COUNT(*) as like_count
-         FROM likes GROUP BY post_id
-         ) l ON p.id = l.post_id
+          `SELECT 
+    p.id,
+    p.user_id,
+    u.username,
+    p.original_content,
+    p.type,
+    p.content,
+    p.duration_days,
+    p.expires_at,
+    p.is_archived,
+    p.created_at,
+    -- Pre-aggregated comment count
+    COALESCE(c.comment_count, 0) AS comment_count,
+    -- Pre-aggregated like count
+    COALESCE(l.like_count, 0) AS like_count,
+    -- Check if current user liked the post
+    CASE WHEN ul.user_id IS NULL THEN FALSE ELSE TRUE END AS is_liked_by_current_user
+    FROM posts p
+    JOIN users u ON p.user_id = u.id
+    -- Aggregate comments
+    LEFT JOIN (
+        SELECT post_id, COUNT(*) AS comment_count
+        FROM comments
+        GROUP BY post_id
+    ) c ON p.id = c.post_id
+    -- Aggregate likes
+    LEFT JOIN (
+        SELECT post_id, COUNT(*) AS like_count
+        FROM likes
+        GROUP BY post_id
+    ) l ON p.id = l.post_id
+    -- Check if current user liked this post
+    LEFT JOIN (
+        SELECT post_id, user_id
+        FROM likes
+        WHERE user_id = ?  -- pass current user ID here
+    ) ul ON p.id = ul.post_id
          WHERE p.user_id = ? AND p.type = 'public_opinion' AND p.is_archived = false
          AND (p.expires_at IS NULL OR p.expires_at > NOW())`,
-          [userId]
+          [currentUserId,userId]
         );
         Logger.log(
           COMPONENT,
@@ -295,17 +403,43 @@ export class PostService implements IPostService {
         );
       } else {
         results = await executeQuery(
-          `SELECT p.id, p.user_id, u.username,COALESCE(c.comment_count,0) AS comment_count,COALESCE(l.like_count,0) AS like_count, p.type, p.content,p.original_content, p.duration_days, p.expires_at, p.is_archived, p.created_at
-         FROM posts p
-         JOIN users u ON p.user_id = u.id
-         LEFT JOIN (
-         SELECT post_id, COUNT(*) as comment_count
-         FROM comments GROUP BY post_id
-         ) c ON p.id = c.post_id
-        LEFT JOIN (
-        SELECT post_id, COUNT(*) as like_count
-         FROM likes GROUP BY post_id
-         ) l ON p.id = l.post_id
+          `SELECT 
+    p.id,
+    p.user_id,
+    u.username,
+    p.original_content,
+    p.type,
+    p.content,
+    p.duration_days,
+    p.expires_at,
+    p.is_archived,
+    p.created_at,
+    -- Pre-aggregated comment count
+    COALESCE(c.comment_count, 0) AS comment_count,
+    -- Pre-aggregated like count
+    COALESCE(l.like_count, 0) AS like_count,
+    -- Check if current user liked the post
+    CASE WHEN ul.user_id IS NULL THEN FALSE ELSE TRUE END AS is_liked_by_current_user
+    FROM posts p
+    JOIN users u ON p.user_id = u.id
+    -- Aggregate comments
+    LEFT JOIN (
+        SELECT post_id, COUNT(*) AS comment_count
+        FROM comments
+        GROUP BY post_id
+    ) c ON p.id = c.post_id
+    -- Aggregate likes
+    LEFT JOIN (
+        SELECT post_id, COUNT(*) AS like_count
+        FROM likes
+        GROUP BY post_id
+    ) l ON p.id = l.post_id
+    -- Check if current user liked this post
+    LEFT JOIN (
+        SELECT post_id, user_id
+        FROM likes
+        WHERE user_id = ?  -- pass current user ID here
+    ) ul ON p.id = ul.post_id
          WHERE p.type = 'public_opinion' AND p.is_archived = false AND (p.expires_at > NOW() OR p.expires_at IS NULL)
            AND (
              EXISTS (
@@ -316,7 +450,7 @@ export class PostService implements IPostService {
                WHERE fo.followed_id = p.user_id AND fo.follower_id = ?
              )
            )`,
-          [userId, userId, userId]
+          [currentUserId,currentUserId, currentUserId, currentUserId]
         );
         Logger.log(
           COMPONENT,
@@ -342,6 +476,7 @@ export class PostService implements IPostService {
         createdAt: new Date(post.created_at),
         commentCount: post.comment_count,
         likeCount: post.like_count,
+        isLikedByCurrentUser:post.is_liked_by_current_user
       }));
     } catch (error: any) {
       throw new Error("Failed to fetch public opinions: " + error.message);
@@ -356,20 +491,46 @@ export class PostService implements IPostService {
 
     try {
       const results = await executeQuery(
-        `SELECT p.id, p.user_id, u.username,COALESCE(c.comment_count,0) AS comment_count,COALESCE(l.like_count,0) AS like_count, p.type, p.content,p.original_content, p.duration_days, p.expires_at, p.is_archived, p.created_at
-         FROM posts p
-         JOIN users u ON p.user_id = u.id
+        `SELECT 
+    p.id,
+    p.user_id,
+    u.username,
+    p.original_content,
+    p.type,
+    p.content,
+    p.duration_days,
+    p.expires_at,
+    p.is_archived,
+    p.created_at,
+    -- Pre-aggregated comment count
+    COALESCE(c.comment_count, 0) AS comment_count,
+    -- Pre-aggregated like count
+    COALESCE(l.like_count, 0) AS like_count,
+    -- Check if current user liked the post
+    CASE WHEN ul.user_id IS NULL THEN FALSE ELSE TRUE END AS is_liked_by_current_user
+    FROM posts p
+    JOIN users u ON p.user_id = u.id
+    -- Aggregate comments
+    LEFT JOIN (
+        SELECT post_id, COUNT(*) AS comment_count
+        FROM comments
+        GROUP BY post_id
+    ) c ON p.id = c.post_id
+    -- Aggregate likes
+    LEFT JOIN (
+        SELECT post_id, COUNT(*) AS like_count
+        FROM likes
+        GROUP BY post_id
+    ) l ON p.id = l.post_id
+    -- Check if current user liked this post
+    LEFT JOIN (
+        SELECT post_id, user_id
+        FROM likes
+        WHERE user_id = ?  -- pass current user ID here
+    ) ul ON p.id = ul.post_id
          JOIN friends f ON (f.user_id_1 = p.user_id AND f.user_id_2 = ?) OR (f.user_id_1 = ? AND f.user_id_2 = p.user_id)
-         LEFT JOIN (
-         SELECT post_id, COUNT(*) as comment_count
-         FROM comments GROUP BY post_id
-         ) c ON p.id = c.post_id
-        LEFT JOIN (
-        SELECT post_id, COUNT(*) as like_count
-         FROM likes GROUP BY post_id
-         ) l ON p.id = l.post_id
          WHERE p.type = 'friend_post' AND p.is_archived = false`,
-        [currentUserId, currentUserId]
+        [currentUserId,currentUserId, currentUserId]
       );
       Logger.log(COMPONENT, FUNCTION, "debug", "Post Fetched Successfully", {
         currentUserId,
@@ -387,31 +548,58 @@ export class PostService implements IPostService {
         createdAt: new Date(post.created_at),
         commentCount: post.comment_count,
         likeCount: post.like_count,
+        isLikedByCurrentUser:post.is_liked_by_current_user
       }));
     } catch (error: any) {
       throw new Error("Failed to fetch private posts: " + error.message);
     }
   }
 
-  async getAllPublicOpinions(): Promise<Post[]> {
+  async getAllPublicOpinions(currentUserId:string): Promise<Post[]> {
     try {
       const FUNCTION = "getPrivatePosts";
       const results = await executeQuery(
-        `SELECT p.id, p.user_id, u.username,COALESCE(c.comment_count,0) AS comment_count,COALESCE(l.like_count,0) AS like_count, p.type, p.content,p.original_content, p.duration_days, p.expires_at, p.is_archived, p.created_at
-         FROM posts p
-         JOIN users u ON p.user_id = u.id
-         LEFT JOIN (
-         SELECT post_id, COUNT(*) as comment_count
-         FROM comments GROUP BY post_id
-         ) c ON p.id = c.post_id
-        LEFT JOIN (
-        SELECT post_id, COUNT(*) as like_count
-         FROM likes GROUP BY post_id
-         ) l ON p.id = l.post_id
+        `SELECT 
+    p.id,
+    p.user_id,
+    u.username,
+    p.original_content,
+    p.type,
+    p.content,
+    p.duration_days,
+    p.expires_at,
+    p.is_archived,
+    p.created_at,
+    -- Pre-aggregated comment count
+    COALESCE(c.comment_count, 0) AS comment_count,
+    -- Pre-aggregated like count
+    COALESCE(l.like_count, 0) AS like_count,
+    -- Check if current user liked the post
+    CASE WHEN ul.user_id IS NULL THEN FALSE ELSE TRUE END AS is_liked_by_current_user
+    FROM posts p
+    JOIN users u ON p.user_id = u.id
+    -- Aggregate comments
+    LEFT JOIN (
+        SELECT post_id, COUNT(*) AS comment_count
+        FROM comments
+        GROUP BY post_id
+    ) c ON p.id = c.post_id
+    -- Aggregate likes
+    LEFT JOIN (
+        SELECT post_id, COUNT(*) AS like_count
+        FROM likes
+        GROUP BY post_id
+    ) l ON p.id = l.post_id
+    -- Check if current user liked this post
+    LEFT JOIN (
+        SELECT post_id, user_id
+        FROM likes
+        WHERE user_id = ?  -- pass current user ID here
+    ) ul ON p.id = ul.post_id
          WHERE p.type = 'public_opinion' AND p.is_archived = false
          AND (p.expires_at IS NULL OR p.expires_at > NOW())
          ORDER BY p.created_at DESC`
-      );
+      ,[currentUserId]);
       Logger.log(COMPONENT, FUNCTION, "debug", "Post Fetched Successfully");
       return (results as any[]).map((post) => ({
         id: post.id,
@@ -426,6 +614,7 @@ export class PostService implements IPostService {
         createdAt: new Date(post.created_at),
         commentCount: post.comment_count,
         likeCount: post.like_count,
+        isLikedByCurrentUser:post.is_liked_by_current_user
       }));
     } catch (error: any) {
       throw new Error("Failed to fetch all public opinions: " + error.message);

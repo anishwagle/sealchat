@@ -12,8 +12,16 @@ export async function GET(request: Request) {
   
 
   try {
-
-    const publicOpinion = await postService.getAllPublicOpinions();
+  const userId = request.headers.get("x-user-id");
+    Logger.log(COMPONENT, FUNCTION, "info", "Fetching users feed",{userId});
+    if (!userId) {
+      Logger.log(COMPONENT, FUNCTION, "error", "Current User not found");
+      return NextResponse.json(
+        { message: "Current User not Found", code: "USER_NOT_FOUND" },
+        { status: 404 }
+      );
+    }
+    const publicOpinion = await postService.getAllPublicOpinions(userId);
     Logger.log(COMPONENT, FUNCTION, "info", "User's Own Post Count:",{count:publicOpinion.length});
     const posts = [...publicOpinion].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
     Logger.log(COMPONENT, FUNCTION, "info", "User's Total Post Count:",{count:posts.length});

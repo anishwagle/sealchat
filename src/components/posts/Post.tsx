@@ -16,11 +16,20 @@ export default function PostComponent(post: Post) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isLiking, setIsLiking] = useState(false);
   const { currentUserId } = useAuth();
-
+  const [isLikedByCurrentUser, setIsLikedByCurrentUser] = useState(false);
   const [localLikes, setLocalLikes] = useState<Like[]>([]);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  
+  // const fetchLikeList =async ()=>{
+  //   const apiUrl = `/api/protected/posts/postLikeList/${post.id}`;
+  //   const data = await fetch(apiUrl, {
+  //       method: 'GET',
+  //     });
+  //   const results = await data.json();
+  //   setLocalLikes(results.likeList.map((x: Like) => x));
+  // }
+
   useEffect(() => {
+    setIsLikedByCurrentUser(!!post.isLikedByCurrentUser);
     const handleClickOutside = (event: MouseEvent) => {
       if (
         dropdownRef.current &&
@@ -32,24 +41,31 @@ export default function PostComponent(post: Post) {
 
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  const isLikedByCurrentUser = localLikes.some(
-    (like) => like.username === "currentUser"
-  );
+  }, [isLikedByCurrentUser]);
+  
+  
 
   const handleLike = async () => {
     setIsLiking(true);
+    // const toggleLikeUrl = `/api/protected/posts/toggleLike/${post.id}`;
+    // const profileResponse = await fetch(toggleLikeUrl, {
+    //     method: 'GET',
+    //   });
+    // const profileData = await profileResponse.json();
+      // if (profileData.ok) {
+      debugger;
+        setIsLikedByCurrentUser(!isLikedByCurrentUser);
+      // } 
     // Mock API call
-    setTimeout(() => {
-      if (isLikedByCurrentUser) {
-        setLocalLikes(localLikes.filter((like) => like.username !== "currentUser"));
+    // setTimeout(() => {
+    //   if (isLikedByCurrentUser) {
+    //     setLocalLikes(localLikes.filter((like) => like.username !== "currentUser"));
       
-      } else {
-       // setLocalLikes([...localLikes, { username: currentUser }]);
-      }
-      setIsLiking(false);
-    }, 500);
+    //   } else {
+    //    // setLocalLikes([...localLikes, { username: currentUser }]);
+    //   }
+       setIsLiking(false);
+    // }, 500);
   };
 
   
@@ -64,13 +80,13 @@ export default function PostComponent(post: Post) {
 
   const formatLikesText = (likes: { username: string }[]) => {
     if (likes.length === 0) return null;
-    if (likes.length === 1) return `${likes[0].username} liked this`;
     if (likes.length === 2)
       return `${likes[0].username} and ${likes[1].username} liked this`;
     return `${likes[0].username}, ${likes[1].username} and ${
       likes.length - 2
     } others liked this`;
   };
+
 
   return (
     <>

@@ -23,7 +23,7 @@ export async function GET(request: Request,{ params }: { params: { userId: strin
     }
 
     const friendPosts = await postService.getFriendPosts(p.userId,currentUserId);
-    const publicOpinions = await postService.getPublicOpinions(p.userId);
+    const publicOpinions = await postService.getPublicOpinions(p.userId,currentUserId);
     const posts = [...friendPosts, ...publicOpinions].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
     if (!posts) {
       Logger.log(COMPONENT, FUNCTION, "error", "Posts not found",{userId:p.userId});

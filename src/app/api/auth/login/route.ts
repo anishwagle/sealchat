@@ -45,7 +45,7 @@ export async function POST(request: Request) {
     const refreshToken = jwt.sign({ userId: user.id }, REFRESH_TOKEN_SECRET, {
       expiresIn: REFRESH_TOKEN_EXPIRES_IN,
     });
-
+    await userService.removeRefreshToken(user.id);
     await userService.storeRefreshToken(user.id, refreshToken);
 
     Logger.log(COMPONENT, FUNCTION, 'info', 'Login successful', { userId: user.id });
