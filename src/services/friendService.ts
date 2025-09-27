@@ -7,6 +7,25 @@ import { notificationService } from "./serviceProvider";
 import executeQuery from "@/db";
 const COMPONENT = "FriendService";
 export class FriendService implements IFriendService {
+  async getCurrentProfileLikeList(userId: string): Promise<User[]> {
+    const FUNCTION = "getCurrentProfileLikeList";
+    Logger.log(COMPONENT, FUNCTION, "debug", "get User's Like Count", {
+      userId,
+    });
+    const queryResult = await executeQuery(
+      `SELECT f.*,u.email,u.username FROM follows f
+        JOIN users u on f.follower_id = u.id
+       WHERE f.followed_id=?`,
+      [userId]
+    );
+
+    return (queryResult as any[]).map((user) => ({
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      password: "",
+    }));
+  }
   async getFriendCount(userId: string): Promise<number> {
     const FUNCTION = "getFriendCount";
     Logger.log(COMPONENT, FUNCTION, "debug", "get User's Friend Count", {
@@ -215,7 +234,7 @@ export class FriendService implements IFriendService {
     );
   }
 
-  async getCurrentFriend(userId: string, limit: number = 5): Promise<User[]> {
+  async getCurrentFriend(userId: string): Promise<User[]> {
     const FUNCTION = "getCurrentFriend";
     Logger.log(COMPONENT, FUNCTION, "debug", "Get current friend of user", {
       userId,
@@ -229,9 +248,8 @@ export class FriendService implements IFriendService {
        SELECT u.id,u.username,u.email
        FROM users u
        JOIN friends f ON u.id = f.user_id_1
-       WHERE f.user_id_2 = ?
-       LIMIT ?`,
-      [userId, userId, limit]
+       WHERE f.user_id_2 = ?`,
+      [userId, userId]
     );
     const result: User[] = (queryResult as any[]).map((user) => ({
       id: user.id,

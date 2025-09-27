@@ -10,5 +10,6 @@ toggleProfileLike(userId1:string,userId2:string):Promise<void>;
 getProfileLikeCount(userId:string):Promise<number>;
 getFriendCount(userId:string):Promise<number>;
 getFriendShipStatus(sender_id: string, receiver_id: string): Promise<FriendshipStatus>;
-getCurrentFriend(userId:string,limit?:number):Promise<User[]>;
+getCurrentFriend(userId:string):Promise<User[]>;
+getCurrentProfileLikeList(userId:string):Promise<User[]>;
 }

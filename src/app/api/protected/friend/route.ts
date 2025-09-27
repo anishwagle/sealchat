@@ -4,7 +4,7 @@ import { Logger } from '@/lib/logger';
 import { friendService } from '@/services/serviceProvider';
 import { ApiError } from '@/lib/errors';
 
-const COMPONENT = 'api/protected/friend/findfriend/';
+const COMPONENT = 'api/protected/friend/';
 const FUNCTION = 'GET';
 
 export async function GET(request: Request) {

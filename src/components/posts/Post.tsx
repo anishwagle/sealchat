@@ -2,9 +2,9 @@
 import { Post, Comment, Like } from "@/types/post";
 import { getTimeSince, getTimeUntil } from "@/utils/dateConveter";
 import Link from "next/link";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import CommentModal from "../modals/CommentModal";
-import LikesModal from "../modals/LikesModal";
+import UserListModal from "../modals/UserListModal";
 import Snackbar from "../SnackBar";
 import { useAuth } from "@/lib/auth/useAuth";
 import RenderedContent from "../RenderedContent";
@@ -20,19 +20,19 @@ export default function PostComponent(post: Post) {
   const [likeCount, setLikeCount] = useState(post.likeCount);
   const [localLikes, setLocalLikes] = useState<Like[]>([]); // This could be fetched on modal open
   const dropdownRef = useRef<HTMLDivElement>(null);
-
-  const fetchLikeList = async () => {
+  
+  const fetchLikeList = useCallback(async () => {
     if (showLikesModal) {
       const apiUrl = `/api/protected/posts/postLikeList/${post.id}`;
       const data = await fetch(apiUrl);
       const results = await data.json();
       setLocalLikes(results.likeList || []);
     }
-  };
+  }, [showLikesModal, post.id]);
 
   useEffect(() => {
     fetchLikeList();
-  }, [showLikesModal]);
+  }, [showLikesModal, fetchLikeList]);
 
   useEffect(() => {
     setIsLikedByCurrentUser(!!post.isLikedByCurrentUser);
@@ -264,10 +264,11 @@ export default function PostComponent(post: Post) {
         postId={post.id}
         postType={post.type}
       />
-      <LikesModal
+      <UserListModal
         isOpen={showLikesModal}
         onClose={() => setShowLikesModal(false)}
-        likes={localLikes}
+        users={localLikes}
+        title="Liked by"
       />
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">

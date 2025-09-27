@@ -7,12 +7,17 @@ import Navbar from "@/components/Navbar";
 import PostList from "@/components/posts/PostList";
 import CreatePostButton from "@/components/posts/CreatePostButton";
 import Snackbar from "@/components/SnackBar";
+import UserListModal from "@/components/modals/UserListModal";
 
 export default function Profile() {
   const [profile, setProfile] = useState<ProfileType | null>(null);
   const [error, setError] = useState("");
   const { isAuthenticated, isLoading, error: authError } = useAuth();
- 
+  const [showFriendsModal, setShowFriendsModal] = useState(false);
+  const [friendsList, setFriendsList] = useState<{ username: string }[]>([]);
+  const [showProfileLikesModal, setShowProfileLikesModal] = useState(false);
+  const [profileLikesList, setProfileLikesList] = useState<{ username: string }[]>([]);
+
   const router = useRouter();
   
   useEffect(() => {
@@ -38,6 +43,32 @@ export default function Profile() {
 
     fetchProfile();
   }, [isAuthenticated, authError, router]);
+
+  const handleShowFriends = async () => {
+    if (profile?.profileFriendCount && profile.profileFriendCount > 0) {
+      try {
+        const response = await fetch('/api/protected/friend');
+        const data = await response.json();
+        setFriendsList(data.users || []);
+        setShowFriendsModal(true);
+      } catch (error) {
+        console.error("Failed to fetch friends list:", error);
+      }
+    }
+  };
+
+  const handleShowProfileLikes = async () => {
+    if (profile?.profileLikeCount && profile.profileLikeCount > 0) {
+      try {
+        const response = await fetch('/api/protected/friend/profileLikeList');
+        const data = await response.json();
+        setProfileLikesList(data.users || []);
+        setShowProfileLikesModal(true);
+      } catch (error) {
+        console.error("Failed to fetch profile likes list:", error);
+      }
+    }
+  };
 
   if (isLoading) {
     return (
@@ -85,8 +116,8 @@ export default function Profile() {
                 {profile.fullName || "John Doe"}
               </h1>
               <p className="text-base text-gray-500">@{profile.username}</p>
-              <div className="mt-2 flex items-center gap-6 text-sm text-gray-600">
-                <div className="flex items-center gap-2">
+              <div className="mt-2 flex items-center gap-6 text-sm ">
+                <button onClick={handleShowFriends} className="flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-colors">
                   <svg
                     className="w-5 h-5"
                     fill="none"
@@ -100,9 +131,9 @@ export default function Profile() {
                       d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
                     />
                   </svg>
-                  <span>{profile.profileFriendCount || 0} Friends</span>
-                </div>
-                <div className="flex items-center gap-2">
+                  <span className="font-medium">{profile.profileFriendCount || 0} Friends</span>
+                </button>
+                <button onClick={handleShowProfileLikes} className="flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-colors">
                   <svg
                     className="w-5 h-5"
                     fill="none"
@@ -116,8 +147,8 @@ export default function Profile() {
                       d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
                     />
                   </svg>
-                  <span>{profile.profileLikeCount || 0} Profile Likes</span>
-                </div>
+                  <span className="font-medium">{profile.profileLikeCount || 0} Profile Likes</span>
+                </button>
               </div>
               <p className="mt-3 text-gray-600 max-w-2xl">
                 Passionate about building great software and contributing to
@@ -147,6 +178,21 @@ export default function Profile() {
         </div>
       </div>
 
+      <UserListModal
+        isOpen={showFriendsModal}
+        onClose={() => setShowFriendsModal(false)}
+        users={friendsList}
+        title="Friends"
+        emptyMessage="You don't have any friends yet."
+      />
+
+      <UserListModal
+        isOpen={showProfileLikesModal}
+        onClose={() => setShowProfileLikesModal(false)}
+        users={profileLikesList}
+        title="Profile Likes"
+        emptyMessage="No one has liked this profile yet."
+      />
       {/* Main content */}
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="flex flex-col lg:flex-row gap-8">
