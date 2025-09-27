@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import { Logger } from "@/lib/logger";
 import { postService } from "@/services/serviceProvider";
 import { ApiError } from "@/lib/errors";
+import { Post } from "@/types/post";
 
 const COMPONENT = "api/protected/posts/user/[userId]";
 const FUNCTION = "GET";
@@ -21,10 +22,17 @@ export async function GET(request: Request,{ params }: { params: { userId: strin
         { status: 404 }
       );
     }
-
+    let posts:Post[] = [];
+    if(currentUserId==p.userId){
+      const userPost = await postService.getUserPosts(currentUserId);
+      posts = [...userPost].sort((a,b)=>b.createdAt.getTime()- a.createdAt.getTime());
+    }else{
     const friendPosts = await postService.getFriendPosts(p.userId,currentUserId);
     const publicOpinions = await postService.getPublicOpinions(p.userId,currentUserId);
-    const posts = [...friendPosts, ...publicOpinions].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    posts = [...friendPosts, ...publicOpinions].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    }
+
+    
     if (!posts) {
       Logger.log(COMPONENT, FUNCTION, "error", "Posts not found",{userId:p.userId});
       return NextResponse.json(
