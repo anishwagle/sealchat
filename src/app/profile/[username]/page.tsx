@@ -12,7 +12,7 @@ export default function UserProfile() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [error, setError] = useState('');
   const [loadingActionType, setLoadingActionType] = useState<null | "accept" | "decline" | "send" | "cancel" | "unfriend">(null);
-  const { isAuthenticated, currentUserId, error: authError } = useAuth();
+  const { isAuthenticated, currentUserId, isLoading, error: authError } = useAuth();
   const router = useRouter();
   const { username } = useParams();
 
@@ -35,10 +35,15 @@ export default function UserProfile() {
   };
 
   useEffect(() => {
-    if (!isAuthenticated || authError) return;
-    fetchProfile();
-  }, [isAuthenticated, authError, currentUserId, username, router]);
+    // We should only fetch the profile if authentication is not loading and is successful.
+    if (!isLoading && isAuthenticated) {
+      fetchProfile();
+    }
+  }, [isAuthenticated, isLoading, username]); // Dependencies that trigger fetching.
 
+  if (isLoading) {
+    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  }
 
   if (authError || error) {
     return (
