@@ -30,6 +30,7 @@ export async function GET(request: Request,{ params }: { params: { userId: strin
 
     const direction = sinceCreatedAt ? 'newer' : 'older';
     const cursor = sinceCreatedAt || cursorCreatedAt;
+    Logger.log(COMPONENT, FUNCTION, "info", "Params:",{cursorCreatedAt,sinceCreatedAt,limit,direction,cursor});
     let posts:Post[] = [];
     
     if(currentUserId==p.userId){
@@ -39,7 +40,7 @@ export async function GET(request: Request,{ params }: { params: { userId: strin
       const areFriends = await friendService.checkFriendship(p.userId,currentUserId)
       Logger.log(COMPONENT, FUNCTION, "error", "Checking user's friendship",{areFriends});
       if(areFriends) {
-        const friendPosts = await postService.getFriendPosts(p.userId,currentUserId);
+        const friendPosts = await postService.getFriendPosts(p.userId,currentUserId,`${cursor}`,direction,limit);
         posts=[...friendPosts];
       }else{
         const publicOpinions = await postService.getPublicOpinions(p.userId,currentUserId);
