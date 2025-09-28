@@ -35,8 +35,6 @@ export default function PostComponent(post: Post) {
   }, [showLikesModal, fetchLikeList]);
 
   useEffect(() => {
-    setIsLikedByCurrentUser(!!post.isLikedByCurrentUser);
-    setLikeCount(post.likeCount);
     const handleClickOutside = (event: MouseEvent) => {
       if (
         dropdownRef.current &&
@@ -48,7 +46,7 @@ export default function PostComponent(post: Post) {
 
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [post.isLikedByCurrentUser,post.likeCount]);
+  }, []);
   
   
 
