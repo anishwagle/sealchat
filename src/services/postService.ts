@@ -245,9 +245,7 @@ export class PostService implements IPostService {
       params.push(cursorCreatedAt);
     }
 
-    query += ` ORDER BY p.created_at ${
-      direction === "older" ? "DESC" : "ASC"
-    } LIMIT ? `;
+    query += ` ORDER BY p.created_at DESC LIMIT ? `;
     params.push(`${limit}`);
 
     try {
@@ -267,101 +265,100 @@ export class PostService implements IPostService {
         likeCount: post.like_count,
         isLikedByCurrentUser: post.is_liked_by_current_user,
       }));
-      return direction === "older" ? posts : posts.reverse();
+      return posts;
     } catch (error: any) {
       throw new Error("Failed to fetch user posts: " + error.message);
     }
   }
 
   async getFriendPosts(
-    userId: string,
-    currentUserId: string,
-    cursorCreatedAt?: string,
-    direction = "older",
-    limit: number = 20
-  ): Promise<Post[]> {
-    const FUNCTION = "getFriendPosts";
-    if (!userId || !currentUserId) {
-      throw new Error("User ID and current user ID are required");
-    }
+  userId: string,
+  currentUserId: string,
+  cursorCreatedAt?: string,
+  direction: "older" | "newer" = "older",
+  limit: number = 20
+): Promise<Post[]> {
+  const FUNCTION = "getFriendPosts";
+  if (!userId || !currentUserId) {
+    throw new Error("User ID and current user ID are required");
+  }
 
-    try {
-      let query = `SELECT 
-    p.id,
-    p.user_id,
-    u.username,
-    p.original_content,
-    p.type,
-    p.content,
-    p.duration_days,
-    p.expires_at,
-    p.is_archived,
-    p.created_at,
-    -- Pre-aggregated comment count
-    COALESCE(c.comment_count, 0) AS comment_count,
-    -- Pre-aggregated like count
-    COALESCE(l.like_count, 0) AS like_count,
-    -- Check if current user liked the post
-    CASE WHEN ul.user_id IS NULL THEN FALSE ELSE TRUE END AS is_liked_by_current_user
-    FROM posts p
-    JOIN users u ON p.user_id = u.id
-    -- Aggregate comments
-    LEFT JOIN (
+  try {
+    let query = `
+      SELECT 
+        p.id,
+        p.user_id,
+        u.username,
+        p.original_content,
+        p.type,
+        p.content,
+        p.duration_days,
+        p.expires_at,
+        p.is_archived,
+        p.created_at,
+        COALESCE(c.comment_count, 0) AS comment_count,
+        COALESCE(l.like_count, 0) AS like_count,
+        CASE WHEN ul.user_id IS NULL THEN FALSE ELSE TRUE END AS is_liked_by_current_user
+      FROM posts p
+      JOIN users u ON p.user_id = u.id
+      LEFT JOIN (
         SELECT post_id, COUNT(*) AS comment_count
         FROM comments
         GROUP BY post_id
-    ) c ON p.id = c.post_id
-    -- Aggregate likes
-    LEFT JOIN (
+      ) c ON p.id = c.post_id
+      LEFT JOIN (
         SELECT post_id, COUNT(*) AS like_count
         FROM likes
         GROUP BY post_id
-    ) l ON p.id = l.post_id
-    -- Check if current user liked this post
-    LEFT JOIN (
+      ) l ON p.id = l.post_id
+      LEFT JOIN (
         SELECT post_id, user_id
         FROM likes
-        WHERE user_id = ?  -- pass current user ID here
-    ) ul ON p.id = ul.post_id
-         WHERE p.user_id = ? AND p.is_archived = false`;
-      let params = [currentUserId, userId];
-      if (cursorCreatedAt) {
-        query +=
-          direction === "older"
-            ? ` AND p.created_at < ? `
-            : ` AND p.created_at > ? `;
-        params.push(cursorCreatedAt);
+        WHERE user_id = ?
+      ) ul ON p.id = ul.post_id
+      WHERE p.user_id = ? 
+        AND p.is_archived = false
+    `;
+
+    const params = [currentUserId, userId];
+
+    if (cursorCreatedAt) {
+      if (direction === "older") {
+        query += ` AND p.created_at < ? `;
+      } else {
+        query += ` AND p.created_at > ? `;
       }
-
-      query += ` ORDER BY p.created_at ${
-        direction === "older" ? "DESC" : "ASC"
-      } LIMIT ? `;
-      params.push(`${limit}`);
-
-      const results = await executeQuery(query, params);
-      Logger.log(COMPONENT, FUNCTION, "debug", "Post Fetched Successfully", {
-        userId,
-      });
-      const posts: Post[] =  (results as any[]).map((post) => ({
-        id: post.id,
-        userId: post.user_id,
-        username: post.username,
-        originalContent: post.original_content,
-        type: post.type,
-        content: post.content,
-        durationDays: post.duration_days,
-        expiresAt: post.expires_at ? new Date(post.expires_at) : null,
-        isArchived: post.is_archived,
-        createdAt: new Date(post.created_at),
-        commentCount: post.comment_count,
-        likeCount: post.like_count,
-        isLikedByCurrentUser: post.is_liked_by_current_user,
-      }));
-      return direction === "older" ? posts : posts.reverse();
-    } catch (error: any) {
-      throw new Error("Failed to fetch friend posts: " + error.message);
+      params.push(cursorCreatedAt);
     }
+
+    query += ` ORDER BY p.created_at DESC LIMIT ? `;
+    params.push(limit.toString());
+    
+    const results = await executeQuery(query, params);
+
+    Logger.log(COMPONENT, FUNCTION, "debug", "Post Fetched Successfully", {
+      userId
+    });
+
+    return (results as any[]).map((post) => ({
+      id: post.id,
+      userId: post.user_id,
+      username: post.username,
+      originalContent: post.original_content,
+      type: post.type,
+      content: post.content,
+      durationDays: post.duration_days,
+      expiresAt: post.expires_at ? new Date(post.expires_at) : null,
+      isArchived: post.is_archived,
+      createdAt: new Date(post.created_at),
+      commentCount: post.comment_count,
+      likeCount: post.like_count,
+      isLikedByCurrentUser: post.is_liked_by_current_user,
+    }));
+  } catch (error: any) {
+    throw new Error("Failed to fetch friend posts: " + error.message);
   }
+}
 
   async getPublicOpinions(
     userId: string,
