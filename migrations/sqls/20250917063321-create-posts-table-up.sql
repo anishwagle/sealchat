@@ -11,5 +11,6 @@ CREATE TABLE IF NOT EXISTS seal_chat.posts(
     FOREIGN KEY (user_id) REFERENCES seal_chat.users(id) ON DELETE CASCADE,
     INDEX idx_user_id(user_id),
     INDEX idx_expires_at(expires_at),
-    INDEX idx_type(type)
+    INDEX idx_type(type),
+    INDEX idx_created_at(created_at DESC)
 )

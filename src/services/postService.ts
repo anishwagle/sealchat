@@ -183,7 +183,7 @@ export class PostService implements IPostService {
       throw new Error("Failed to create post: " + error.message);
     }
   }
-  async getUserPosts(userId: string): Promise<Post[]> {
+  async getUserPaginatedPosts(userId: string,cursorCreatedAt?:string,direction = 'older',limit:number = 20): Promise<Post[]> {
     const FUNCTION = "getUserPosts";
     Logger.log(COMPONENT, FUNCTION, "debug", "get user's post", {
       userId,
@@ -191,10 +191,8 @@ export class PostService implements IPostService {
     if (!userId) {
       throw new Error("User ID is required");
     }
-
-    try {
-      const results = await executeQuery(
-        `SELECT 
+    
+    let query = `SELECT 
     p.id,
     p.user_id,
     u.username,
@@ -232,11 +230,23 @@ export class PostService implements IPostService {
         WHERE user_id = ?  -- pass current user ID here
     ) ul ON p.id = ul.post_id
        WHERE p.user_id = ? AND p.is_archived = false
-       AND (p.expires_at IS NULL OR p.expires_at > NOW())`,
-        [userId,userId]
-      );
+       AND (p.expires_at IS NULL OR p.expires_at > NOW())`;
+  const params = [userId,userId];
+  if (cursorCreatedAt) {
+    query += direction === 'older' ? ` AND p.created_at < ? ` : ` AND p.created_at > ? `;
+    params.push(cursorCreatedAt);
+  }
 
-      return (results as any[]).map((post) => ({
+  query += ` ORDER BY p.created_at ${direction === 'older' ? 'DESC' : 'ASC'} LIMIT ? `;
+  params.push(`${limit}`);
+
+
+    try {
+      const queryResult = await executeQuery(
+        query,
+        params
+      );
+      const posts:Post[]= (queryResult as any[]).map((post) => ({
         id: post.id,
         userId: post.user_id,
         username: post.username,
@@ -251,6 +261,7 @@ export class PostService implements IPostService {
         likeCount: post.like_count,
         isLikedByCurrentUser:post.is_liked_by_current_user
       }));
+      return direction === 'older' ? posts : posts.reverse();
     } catch (error: any) {
       throw new Error("Failed to fetch user posts: " + error.message);
     }
