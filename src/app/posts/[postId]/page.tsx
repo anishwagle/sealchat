@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { Post } from "@/types/post";
 import PostComponent from "@/components/posts/Post";
+import { fetchWithAuth } from "@/lib/auth/fetchWithAuth";
 
 export default function PostPage() {
   const { postId } = useParams();
@@ -15,7 +16,7 @@ export default function PostPage() {
       setLoading(true);
       let apiUrl = `/api/protected/posts/${postId}`;
 
-      const data = await fetch(apiUrl);
+      const data = await fetchWithAuth(apiUrl);
       const results = await data.json();
       setPost(results.post);
       setError(null);
@@ -54,6 +55,7 @@ export default function PostPage() {
             content={post.content}
             isArchived={post.isArchived}
             createdAt={post.createdAt}
+            isLikedByCurrentUser={post.isLikedByCurrentUser}
           />
         </div>
   );

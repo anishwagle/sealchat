@@ -3,6 +3,7 @@ import { Post } from "@/types/post";
 import { useState, useEffect } from "react";
 import PostComponent from "./Post";
 import InfiniteScroll from "react-infinite-scroll-component";
+import { fetchWithAuth } from "@/lib/auth/fetchWithAuth";
 
 interface PostListProps {
   userId?: string;
@@ -36,14 +37,13 @@ export default function PostList({ userId, isPublic, isProfile }: PostListProps)
       }
       
       apiUrl += `?${param}&limit=20`;
-      const response = await fetch(apiUrl, {
+      const response = await fetchWithAuth(apiUrl, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
         },
       });
       if (!response.ok) throw new Error(`Failed to fetch ${direction} posts`);
       const { posts: newPosts, nextCursor: newCursor } = await response.json();
-      debugger;
       // Deduplicate posts
       const existingIds = new Set(posts.map(p => p.id));
       const uniqueNewPosts:Post[] = newPosts.filter((post: Post) => !existingIds.has(post.id));
@@ -83,7 +83,7 @@ export default function PostList({ userId, isPublic, isProfile }: PostListProps)
       if (isProfile && userId) apiUrl += `/${userId}`;
       
       apiUrl += `?sinceCreatedAt=${encodeURIComponent(lastKnownCreatedAt)}&sinceId=${encodeURIComponent(lastKnownId || '')}`;
-      const response = await fetch(apiUrl, {
+      const response = await fetchWithAuth(apiUrl, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
         },

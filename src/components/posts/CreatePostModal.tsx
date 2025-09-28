@@ -1,3 +1,4 @@
+import { fetchWithAuth } from '@/lib/auth/fetchWithAuth';
 import { useAuth } from '@/lib/auth/useAuth';
 import { PostType } from '@/types/post';
 import { useState, useEffect, useRef } from 'react';
@@ -18,7 +19,7 @@ export default function CreatePostModal({ onClose, onPostCreated }: { onClose: (
   useEffect(() => {
     const loadFriends = async () => {
       try {
-        const data = await fetch('/api/protected/friend');
+        const data = await fetchWithAuth('/api/protected/friend');
         const results = await data.json();
         
         setFriends(results.users);
@@ -115,7 +116,7 @@ export default function CreatePostModal({ onClose, onPostCreated }: { onClose: (
     setSuccess(null);
 
     try {
-      const response = await fetch('/api/protected/posts/create', {
+      const response = await fetchWithAuth('/api/protected/posts/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content, type, durationDays: type === 'public_opinion' ? durationDays : undefined }),

@@ -6,6 +6,7 @@ import { Profile } from '@/types/profile';
 import Link from 'next/link';
 import ProfileLikeButton from '@/components/profile/ProfileLikeButton';
 import PostList from '@/components/posts/PostList';
+import { fetchWithAuth } from '@/lib/auth/fetchWithAuth';
 
 export default function UserProfile() {
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -18,7 +19,7 @@ export default function UserProfile() {
   // fetchProfile now defined outside useEffect for reuse
   const fetchProfile = async () => {
     try {
-      const profileResponse = await fetch(`/api/protected/profile/${username}`, {
+      const profileResponse = await fetchWithAuth(`/api/protected/profile/${username}`, {
         method: 'GET',
       });
       const profileData = await profileResponse.json();
@@ -90,7 +91,7 @@ export default function UserProfile() {
                     onClick={async () => {
                       setLoadingActionType("send");
                       try {
-                        await fetch("/api/protected/friend/sendRequest", {
+                        await fetchWithAuth("/api/protected/friend/sendRequest", {
                           method: "POST",
                           headers: { "Content-Type": "application/json" },
                           body: JSON.stringify({ userId2: profile.userId }),
@@ -111,7 +112,7 @@ export default function UserProfile() {
                     onClick={async () => {
                       setLoadingActionType("cancel");
                       try {
-                        await fetch("/api/protected/friend/cancelRequest", {
+                        await fetchWithAuth("/api/protected/friend/cancelRequest", {
                           method: "POST",
                           headers: { "Content-Type": "application/json" },
                           body: JSON.stringify({ userId2: profile.userId }),
@@ -133,7 +134,7 @@ export default function UserProfile() {
                       onClick={async () => {
                         setLoadingActionType("accept");
                         try {
-                          await fetch("/api/protected/friend/acceptRequest", {
+                          await fetchWithAuth("/api/protected/friend/acceptRequest", {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({ userId2: profile.userId }),
@@ -152,7 +153,7 @@ export default function UserProfile() {
                       onClick={async () => {
                         setLoadingActionType("decline");
                         try {
-                          await fetch("/api/protected/friend/cancelRequest", {
+                          await fetchWithAuth("/api/protected/friend/cancelRequest", {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({ userId2: profile.userId }),
@@ -174,7 +175,7 @@ export default function UserProfile() {
                     onClick={async () => {
                       setLoadingActionType("unfriend");
                       try {
-                        await fetch("/api/protected/friend/unfriend", {
+                        await fetchWithAuth("/api/protected/friend/unfriend", {
                           method: "POST",
                           headers: { "Content-Type": "application/json" },
                           body: JSON.stringify({ userId2: profile.userId }),

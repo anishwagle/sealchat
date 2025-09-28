@@ -8,6 +8,7 @@ import PostList from "@/components/posts/PostList";
 import CreatePostButton from "@/components/posts/CreatePostButton";
 import Snackbar from "@/components/SnackBar";
 import UserListModal from "@/components/modals/UserListModal";
+import { fetchWithAuth } from "@/lib/auth/fetchWithAuth";
 
 export default function Profile() {
   const [profile, setProfile] = useState<ProfileType | null>(null);
@@ -25,7 +26,7 @@ export default function Profile() {
 
     const fetchProfile = async () => {
       try {
-        const profileResponse = await fetch(`/api/protected/profile`, {
+        const profileResponse = await fetchWithAuth(`/api/protected/profile`, {
           method: "GET",
         });
         const profileData = await profileResponse.json();
@@ -47,7 +48,7 @@ export default function Profile() {
   const handleShowFriends = async () => {
     if (profile?.profileFriendCount && profile.profileFriendCount > 0) {
       try {
-        const response = await fetch('/api/protected/friend');
+        const response = await fetchWithAuth('/api/protected/friend');
         const data = await response.json();
         setFriendsList(data.users || []);
         setShowFriendsModal(true);
@@ -60,7 +61,7 @@ export default function Profile() {
   const handleShowProfileLikes = async () => {
     if (profile?.profileLikeCount && profile.profileLikeCount > 0) {
       try {
-        const response = await fetch('/api/protected/friend/profileLikeList');
+        const response = await fetchWithAuth('/api/protected/friend/profileLikeList');
         const data = await response.json();
         setProfileLikesList(data.users || []);
         setShowProfileLikesModal(true);

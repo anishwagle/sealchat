@@ -3,6 +3,7 @@ import { Notification } from "@/types/notification";
 import { getTimeSince } from "@/utils/dateConveter";
 import { useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
+import { fetchWithAuth } from "@/lib/auth/fetchWithAuth";
 
 type ProcessedNotification = Notification & {
   otherUsers?: Notification[];
@@ -26,7 +27,7 @@ export default function NotificationComponent() {
 
       if (unreadIds.length === 0) return;
 
-      await fetch("/api/protected/notification/markasread", {
+      await fetchWithAuth("/api/protected/notification/markasread", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -52,7 +53,7 @@ export default function NotificationComponent() {
     try {
       setLoading(true);
       let apiUrl = `/api/protected/notification`;
-      const data = await fetch(apiUrl);
+      const data = await fetchWithAuth(apiUrl);
       const results = await data.json();
       setNotifications(results.notifications.map((x: Notification) => x));
       setError(null);

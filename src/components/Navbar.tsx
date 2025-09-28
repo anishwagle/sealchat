@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useRef, useEffect, SetStateAction } from "react";
 import NotificationComponent from "./Notification";
+import { fetchWithAuth } from "@/lib/auth/fetchWithAuth";
 
 export default function Navbar() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -30,7 +31,7 @@ export default function Navbar() {
 
       // TODO: Replace with actual API call
       try {
-        const users = await fetch(`/api/protected/friend/findFriend/${value}`, {
+        const users = await fetchWithAuth(`/api/protected/friend/findFriend/${value}`, {
           method: "GET",
         });
         const results = await users.json();

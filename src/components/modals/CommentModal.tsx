@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Comment, PostType } from "@/types/post";
 import CommentItem from "./CommentItem";
+import { fetchWithAuth } from "@/lib/auth/fetchWithAuth";
 
 interface CommentModalProps {
   isOpen: boolean;
@@ -32,7 +33,7 @@ export default function CommentModal({
   const handleCommentSubmit = async (content: string) => {
     setIsCommenting(true);
 
-    const response = await fetch('/api/protected/posts/comment/create', {
+    const response = await fetchWithAuth('/api/protected/posts/comment/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content,postId: postId }),
@@ -54,7 +55,7 @@ export default function CommentModal({
       if(postType=='friend_post') apiUrl+=`/friendComment/${postId}`;
       else if(postType=='public_opinion') apiUrl+=`/publicComment/${postId}`;
 
-      const data = await fetch(apiUrl);
+      const data = await fetchWithAuth(apiUrl);
       const results = await data.json();
       setComments(results.comments.map((x: Comment) => x));
       } catch (error) {
@@ -73,7 +74,7 @@ export default function CommentModal({
 
   const loadFriends = async () => {
     try {
-      const data = await fetch('/api/protected/friend');
+      const data = await fetchWithAuth('/api/protected/friend');
       const results = await data.json();
       setFriends(results.users);
     } catch (err) {
