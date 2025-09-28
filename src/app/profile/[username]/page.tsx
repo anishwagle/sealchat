@@ -12,7 +12,7 @@ export default function UserProfile() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [error, setError] = useState('');
   const [loadingActionType, setLoadingActionType] = useState<null | "accept" | "decline" | "send" | "cancel" | "unfriend">(null);
-  const { isAuthenticated, currentUserId, isLoading, error: authError } = useAuth();
+  const { isAuthenticated, currentUserId, error: authError } = useAuth();
   const router = useRouter();
   const { username } = useParams();
 
@@ -39,9 +39,6 @@ export default function UserProfile() {
     fetchProfile();
   }, [isAuthenticated, authError, currentUserId, username, router]);
 
-  if (isLoading) {
-    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
-  }
 
   if (authError || error) {
     return (

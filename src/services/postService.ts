@@ -362,13 +362,19 @@ export class PostService implements IPostService {
 
   async getPublicOpinions(
     userId: string,
-    currentUserId: string
+    currentUserId: string,
+    cursorCreatedAt?: string,
+    direction = "older",
+    limit: number = 20
   ): Promise<Post[]> {
     const FUNCTION = "getPublicOpinions";
     try {
-      let results: QueryResult;
+
+      let query = "";
+      let params:string[] = [];
       if (currentUserId != userId) {
-        results = await executeQuery(
+
+        query =
           `SELECT 
             p.id,
             p.user_id,
@@ -407,20 +413,10 @@ export class PostService implements IPostService {
                 WHERE user_id = ?  -- pass current user ID here
             ) ul ON p.id = ul.post_id
                 WHERE p.user_id = ? AND p.type = 'public_opinion' AND p.is_archived = false
-                AND (p.expires_at IS NULL OR p.expires_at > NOW())`,
-          [currentUserId, userId]
-        );
-        Logger.log(
-          COMPONENT,
-          FUNCTION,
-          "debug",
-          "Public opinion Fetched for profile Successfully",
-          {
-            userId,
-          }
-        );
+                AND (p.expires_at IS NULL OR p.expires_at > NOW())`;
+        params =  [currentUserId, userId];
       } else {
-        results = await executeQuery(
+        query =
           `SELECT 
     p.id,
     p.user_id,
@@ -467,20 +463,22 @@ export class PostService implements IPostService {
                SELECT 1 FROM follows fo
                WHERE fo.followed_id = p.user_id AND fo.follower_id = ?
              )
-           )`,
-          [currentUserId, currentUserId, currentUserId, currentUserId]
-        );
-        Logger.log(
-          COMPONENT,
-          FUNCTION,
-          "debug",
-          "Public opinion Fetched for feed Successfully",
-          {
-            userId,
-          }
-        );
+           )`;
+       params=   [currentUserId, currentUserId, currentUserId, currentUserId];
+        
       }
 
+      if (cursorCreatedAt) {
+      query +=
+        direction === "older"
+          ? ` AND p.created_at < STR_TO_DATE(?, '%Y-%m-%d %H:%i:%s') `
+          : ` AND p.created_at > STR_TO_DATE(?, '%Y-%m-%d %H:%i:%s') `;
+      params.push(cursorCreatedAt);
+    }
+
+    query += ` ORDER BY p.created_at DESC LIMIT ? `;
+    params.push(`${limit}`);
+      const results = await executeQuery(query,params);
       return (results as any[]).map((post) => ({
         id: post.id,
         userId: post.user_id,
