@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import PostComponent from "./Post";
 import InfiniteScroll from "react-infinite-scroll-component";
 import { fetchWithAuth } from "@/lib/auth/fetchWithAuth";
+import { formatToMySQLDate } from "@/utils/dateConveter";
 
 interface PostListProps {
   userId?: string;
@@ -20,7 +21,6 @@ export default function PostList({ userId, isPublic, isProfile }: PostListProps)
   const [hasMore, setHasMore] = useState(true);
   const [newPostsCount, setNewPostsCount] = useState(0);
   const [lastKnownCreatedAt, setLastKnownCreatedAt] = useState('1970-01-01 00:00:00');
-  const [lastKnownId, setLastKnownId] = useState<string | null>(null);
 
   const fetchPosts = async (direction = 'older', cursor = nextCursor) => {
     if (fetching || (direction === 'older' && !hasMore)) return; // Block concurrent/unnecessary fetches
@@ -52,15 +52,16 @@ export default function PostList({ userId, isPublic, isProfile }: PostListProps)
         setPosts((prev) => [...prev, ...uniqueNewPosts]);
         setNextCursor(newCursor);
         setHasMore(!!newCursor);
-        if (posts.length === 0 && uniqueNewPosts.length > 0) {
-          setLastKnownCreatedAt(`${uniqueNewPosts[0].createdAt}`);
-          setLastKnownId(uniqueNewPosts[0].id);
+        if (uniqueNewPosts.length > 0) {
+          const newest = [...posts, ...uniqueNewPosts].sort(
+            (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          )[0];
+          setLastKnownCreatedAt(formatToMySQLDate(newest.createdAt));
         }
       } else {
         setPosts((prev) => [...uniqueNewPosts, ...prev]);
         if (uniqueNewPosts.length > 0) {
-          setLastKnownCreatedAt(`${uniqueNewPosts[0].createdAt}`);
-          setLastKnownId(uniqueNewPosts[0].id);
+          setLastKnownCreatedAt(formatToMySQLDate(uniqueNewPosts[0].createdAt));
         }
         setNewPostsCount(0);
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -101,7 +102,6 @@ export default function PostList({ userId, isPublic, isProfile }: PostListProps)
     setNextCursor(null);
     setHasMore(true);
     setLastKnownCreatedAt('1970-01-01 00:00:00');
-    setLastKnownId(null);
     setLoading(true);
     // Let the InfiniteScroll component handle the initial fetch
     // by ensuring it has a clean slate to work with.
@@ -112,7 +112,7 @@ export default function PostList({ userId, isPublic, isProfile }: PostListProps)
   useEffect(() => {
     const interval = setInterval(checkForNewPosts, 30000);
     return () => clearInterval(interval);
-  }, [lastKnownCreatedAt, lastKnownId, userId, isPublic, isProfile]);
+  }, [lastKnownCreatedAt, userId, isPublic, isProfile]);
 
   // This handles the very first fetch when the component is ready.
   useEffect(() => {

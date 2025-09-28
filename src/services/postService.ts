@@ -240,8 +240,8 @@ export class PostService implements IPostService {
     if (cursorCreatedAt) {
       query +=
         direction === "older"
-          ? ` AND p.created_at < ? `
-          : ` AND p.created_at > ? `;
+          ? ` AND p.created_at < STR_TO_DATE(?, '%Y-%m-%d %H:%i:%s') `
+          : ` AND p.created_at > STR_TO_DATE(?, '%Y-%m-%d %H:%i:%s') `;
       params.push(cursorCreatedAt);
     }
 
@@ -324,9 +324,9 @@ export class PostService implements IPostService {
 
     if (cursorCreatedAt) {
       if (direction === "older") {
-        query += ` AND p.created_at < ? `;
+        query += ` AND p.created_at < STR_TO_DATE(?, '%Y-%m-%d %H:%i:%s') `;
       } else {
-        query += ` AND p.created_at > ? `;
+        query += ` AND p.created_at > STR_TO_DATE(?, '%Y-%m-%d %H:%i:%s') `;
       }
       params.push(cursorCreatedAt);
     }
