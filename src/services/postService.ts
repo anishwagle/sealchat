@@ -99,7 +99,7 @@ export class PostService implements IPostService {
       createdAt: new Date(post.created_at),
       commentCount: post.comment_count,
       likeCount: post.like_count,
-      isLikedByCurrentUser:post.is_liked_by_current_user
+      isLikedByCurrentUser: post.is_liked_by_current_user,
     };
   }
   async createPost(
@@ -183,7 +183,12 @@ export class PostService implements IPostService {
       throw new Error("Failed to create post: " + error.message);
     }
   }
-  async getUserPaginatedPosts(userId: string,cursorCreatedAt?:string,direction = 'older',limit:number = 20): Promise<Post[]> {
+  async getUserPaginatedPosts(
+    userId: string,
+    cursorCreatedAt?: string,
+    direction = "older",
+    limit: number = 20
+  ): Promise<Post[]> {
     const FUNCTION = "getUserPosts";
     Logger.log(COMPONENT, FUNCTION, "debug", "get user's post", {
       userId,
@@ -191,7 +196,7 @@ export class PostService implements IPostService {
     if (!userId) {
       throw new Error("User ID is required");
     }
-    
+
     let query = `SELECT 
     p.id,
     p.user_id,
@@ -231,22 +236,23 @@ export class PostService implements IPostService {
     ) ul ON p.id = ul.post_id
        WHERE p.user_id = ? AND p.is_archived = false
        AND (p.expires_at IS NULL OR p.expires_at > NOW())`;
-  const params = [userId,userId];
-  if (cursorCreatedAt) {
-    query += direction === 'older' ? ` AND p.created_at < ? ` : ` AND p.created_at > ? `;
-    params.push(cursorCreatedAt);
-  }
+    const params = [userId, userId];
+    if (cursorCreatedAt) {
+      query +=
+        direction === "older"
+          ? ` AND p.created_at < ? `
+          : ` AND p.created_at > ? `;
+      params.push(cursorCreatedAt);
+    }
 
-  query += ` ORDER BY p.created_at ${direction === 'older' ? 'DESC' : 'ASC'} LIMIT ? `;
-  params.push(`${limit}`);
-
+    query += ` ORDER BY p.created_at ${
+      direction === "older" ? "DESC" : "ASC"
+    } LIMIT ? `;
+    params.push(`${limit}`);
 
     try {
-      const queryResult = await executeQuery(
-        query,
-        params
-      );
-      const posts:Post[]= (queryResult as any[]).map((post) => ({
+      const queryResult = await executeQuery(query, params);
+      const posts: Post[] = (queryResult as any[]).map((post) => ({
         id: post.id,
         userId: post.user_id,
         username: post.username,
@@ -259,38 +265,28 @@ export class PostService implements IPostService {
         createdAt: new Date(post.created_at),
         commentCount: post.comment_count,
         likeCount: post.like_count,
-        isLikedByCurrentUser:post.is_liked_by_current_user
+        isLikedByCurrentUser: post.is_liked_by_current_user,
       }));
-      return direction === 'older' ? posts : posts.reverse();
+      return direction === "older" ? posts : posts.reverse();
     } catch (error: any) {
       throw new Error("Failed to fetch user posts: " + error.message);
     }
   }
 
-  async getFriendPosts(userId: string, currentUserId: string): Promise<Post[]> {
+  async getFriendPosts(
+    userId: string,
+    currentUserId: string,
+    cursorCreatedAt?: string,
+    direction = "older",
+    limit: number = 20
+  ): Promise<Post[]> {
     const FUNCTION = "getFriendPosts";
     if (!userId || !currentUserId) {
       throw new Error("User ID and current user ID are required");
     }
 
-    // Check if users are friends
-    const friendResults = await executeQuery(
-      "SELECT id FROM friends WHERE (user_id_1 = ? AND user_id_2 = ?) OR (user_id_1 = ? AND user_id_2 = ?)",
-      [currentUserId, userId, userId, currentUserId]
-    );
-    const isFriend = (friendResults as any[]).length > 0;
-
-    if (!isFriend) {
-      Logger.log(COMPONENT, FUNCTION, "debug", "Users are not friends", {
-        userId,
-        currentUserId,
-      });
-      return []; // Return empty array if not friends
-    }
-
     try {
-      const results = await executeQuery(
-        `SELECT 
+      let query = `SELECT 
     p.id,
     p.user_id,
     u.username,
@@ -327,13 +323,26 @@ export class PostService implements IPostService {
         FROM likes
         WHERE user_id = ?  -- pass current user ID here
     ) ul ON p.id = ul.post_id
-         WHERE p.user_id = ? AND p.type = 'friend_post' AND p.is_archived = false`,
-        [currentUserId, userId]
-      );
+         WHERE p.user_id = ? AND p.is_archived = false`;
+      let params = [currentUserId, userId];
+      if (cursorCreatedAt) {
+        query +=
+          direction === "older"
+            ? ` AND p.created_at < ? `
+            : ` AND p.created_at > ? `;
+        params.push(cursorCreatedAt);
+      }
+
+      query += ` ORDER BY p.created_at ${
+        direction === "older" ? "DESC" : "ASC"
+      } LIMIT ? `;
+      params.push(`${limit}`);
+
+      const results = await executeQuery(query, params);
       Logger.log(COMPONENT, FUNCTION, "debug", "Post Fetched Successfully", {
         userId,
       });
-      return (results as any[]).map((post) => ({
+      const posts: Post[] =  (results as any[]).map((post) => ({
         id: post.id,
         userId: post.user_id,
         username: post.username,
@@ -346,8 +355,9 @@ export class PostService implements IPostService {
         createdAt: new Date(post.created_at),
         commentCount: post.comment_count,
         likeCount: post.like_count,
-        isLikedByCurrentUser:post.is_liked_by_current_user
+        isLikedByCurrentUser: post.is_liked_by_current_user,
       }));
+      return direction === "older" ? posts : posts.reverse();
     } catch (error: any) {
       throw new Error("Failed to fetch friend posts: " + error.message);
     }
@@ -360,7 +370,7 @@ export class PostService implements IPostService {
     const FUNCTION = "getPublicOpinions";
     try {
       let results: QueryResult;
-      if (currentUserId!= userId) {
+      if (currentUserId != userId) {
         results = await executeQuery(
           `SELECT 
     p.id,
@@ -401,7 +411,7 @@ export class PostService implements IPostService {
     ) ul ON p.id = ul.post_id
          WHERE p.user_id = ? AND p.type = 'public_opinion' AND p.is_archived = false
          AND (p.expires_at IS NULL OR p.expires_at > NOW())`,
-          [currentUserId,userId]
+          [currentUserId, userId]
         );
         Logger.log(
           COMPONENT,
@@ -461,7 +471,7 @@ export class PostService implements IPostService {
                WHERE fo.followed_id = p.user_id AND fo.follower_id = ?
              )
            )`,
-          [currentUserId,currentUserId, currentUserId, currentUserId]
+          [currentUserId, currentUserId, currentUserId, currentUserId]
         );
         Logger.log(
           COMPONENT,
@@ -487,7 +497,7 @@ export class PostService implements IPostService {
         createdAt: new Date(post.created_at),
         commentCount: post.comment_count,
         likeCount: post.like_count,
-        isLikedByCurrentUser:post.is_liked_by_current_user
+        isLikedByCurrentUser: post.is_liked_by_current_user,
       }));
     } catch (error: any) {
       throw new Error("Failed to fetch public opinions: " + error.message);
@@ -541,7 +551,7 @@ export class PostService implements IPostService {
     ) ul ON p.id = ul.post_id
          JOIN friends f ON (f.user_id_1 = p.user_id AND f.user_id_2 = ?) OR (f.user_id_1 = ? AND f.user_id_2 = p.user_id)
          WHERE p.type = 'friend_post' AND p.is_archived = false`,
-        [currentUserId,currentUserId, currentUserId]
+        [currentUserId, currentUserId, currentUserId]
       );
       Logger.log(COMPONENT, FUNCTION, "debug", "Post Fetched Successfully", {
         currentUserId,
@@ -559,14 +569,14 @@ export class PostService implements IPostService {
         createdAt: new Date(post.created_at),
         commentCount: post.comment_count,
         likeCount: post.like_count,
-        isLikedByCurrentUser:post.is_liked_by_current_user
+        isLikedByCurrentUser: post.is_liked_by_current_user,
       }));
     } catch (error: any) {
       throw new Error("Failed to fetch private posts: " + error.message);
     }
   }
 
-  async getAllPublicOpinions(currentUserId:string): Promise<Post[]> {
+  async getAllPublicOpinions(currentUserId: string): Promise<Post[]> {
     try {
       const FUNCTION = "getPrivatePosts";
       const results = await executeQuery(
@@ -609,8 +619,9 @@ export class PostService implements IPostService {
     ) ul ON p.id = ul.post_id
          WHERE p.type = 'public_opinion' AND p.is_archived = false
          AND (p.expires_at IS NULL OR p.expires_at > NOW())
-         ORDER BY p.created_at DESC`
-      ,[currentUserId]);
+         ORDER BY p.created_at DESC`,
+        [currentUserId]
+      );
       Logger.log(COMPONENT, FUNCTION, "debug", "Post Fetched Successfully");
       return (results as any[]).map((post) => ({
         id: post.id,
@@ -625,7 +636,7 @@ export class PostService implements IPostService {
         createdAt: new Date(post.created_at),
         commentCount: post.comment_count,
         likeCount: post.like_count,
-        isLikedByCurrentUser:post.is_liked_by_current_user
+        isLikedByCurrentUser: post.is_liked_by_current_user,
       }));
     } catch (error: any) {
       throw new Error("Failed to fetch all public opinions: " + error.message);

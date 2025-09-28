@@ -12,4 +12,5 @@ getFriendCount(userId:string):Promise<number>;
 getFriendShipStatus(sender_id: string, receiver_id: string): Promise<FriendshipStatus>;
 getCurrentFriend(userId:string):Promise<User[]>;
 getCurrentProfileLikeList(userId:string):Promise<User[]>;
+checkFriendship(userId1:string,userId2:string):Promise<boolean>;
 }

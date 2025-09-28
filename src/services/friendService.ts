@@ -26,6 +26,14 @@ export class FriendService implements IFriendService {
       password: "",
     }));
   }
+  async checkFriendship(userId1:string,userId2:string):Promise<boolean>{
+    // Check if users are friends
+    const friendResults = await executeQuery(
+      "SELECT id FROM friends WHERE (user_id_1 = ? AND user_id_2 = ?) OR (user_id_1 = ? AND user_id_2 = ?)",
+      [userId1, userId2, userId2, userId1]
+    );
+    return (friendResults as any[]).length > 0;
+  }
   async getFriendCount(userId: string): Promise<number> {
     const FUNCTION = "getFriendCount";
     Logger.log(COMPONENT, FUNCTION, "debug", "get User's Friend Count", {

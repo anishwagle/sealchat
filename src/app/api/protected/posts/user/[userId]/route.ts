@@ -4,6 +4,7 @@ import { Logger } from "@/lib/logger";
 import { postService } from "@/services/serviceProvider";
 import { ApiError } from "@/lib/errors";
 import { Post } from "@/types/post";
+import { friendService } from "@/services/friendService";
 
 const COMPONENT = "api/protected/posts/user/[userId]";
 const FUNCTION = "GET";
@@ -22,15 +23,30 @@ export async function GET(request: Request,{ params }: { params: { userId: strin
         { status: 404 }
       );
     }
+    const { searchParams } = new URL(request.url);
+    const cursorCreatedAt = searchParams.get('cursorCreatedAt') ;
+    const sinceCreatedAt = searchParams.get('sinceCreatedAt');
+    const limit = searchParams.get('limit') ? parseInt(`${searchParams.get('limit')}`) : 20;
+
+    const direction = sinceCreatedAt ? 'newer' : 'older';
+    const cursor = sinceCreatedAt || cursorCreatedAt;
     let posts:Post[] = [];
+    
     if(currentUserId==p.userId){
-      const userPost = await postService.getUserPosts(currentUserId);
-      posts = [...userPost].sort((a,b)=>b.createdAt.getTime()- a.createdAt.getTime());
+      const userPost = await postService.getUserPaginatedPosts( currentUserId,`${cursor}`,direction,limit );
+      posts = [...userPost];
     }else{
-    const friendPosts = await postService.getFriendPosts(p.userId,currentUserId);
-    const publicOpinions = await postService.getPublicOpinions(p.userId,currentUserId);
-    posts = [...friendPosts, ...publicOpinions].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+      const areFriends = await friendService.checkFriendship(p.userId,currentUserId)
+      Logger.log(COMPONENT, FUNCTION, "error", "Checking user's friendship",{areFriends});
+      if(areFriends) {
+        const friendPosts = await postService.getFriendPosts(p.userId,currentUserId);
+        posts=[...friendPosts];
+      }else{
+        const publicOpinions = await postService.getPublicOpinions(p.userId,currentUserId);
+        posts = [ ...publicOpinions];
+      }
     }
+    const nextCursor = direction === 'older' && posts.length === limit ? posts[posts.length - 1].createdAt : null;
 
     
     if (!posts) {
@@ -42,7 +58,7 @@ export async function GET(request: Request,{ params }: { params: { userId: strin
     }
 
     Logger.log(COMPONENT, FUNCTION, "info", "Post fetched");
-    return NextResponse.json({ posts: posts }, { status: 200 });
+    return NextResponse.json({ posts,nextCursor }, { status: 200 });
   } catch (error: any) {
     const apiError = new ApiError(
       "Failed to fetch Post",
