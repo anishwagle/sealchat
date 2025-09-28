@@ -370,44 +370,44 @@ export class PostService implements IPostService {
       if (currentUserId != userId) {
         results = await executeQuery(
           `SELECT 
-    p.id,
-    p.user_id,
-    u.username,
-    p.original_content,
-    p.type,
-    p.content,
-    p.duration_days,
-    p.expires_at,
-    p.is_archived,
-    p.created_at,
-    -- Pre-aggregated comment count
-    COALESCE(c.comment_count, 0) AS comment_count,
-    -- Pre-aggregated like count
-    COALESCE(l.like_count, 0) AS like_count,
-    -- Check if current user liked the post
-    CASE WHEN ul.user_id IS NULL THEN FALSE ELSE TRUE END AS is_liked_by_current_user
-    FROM posts p
-    JOIN users u ON p.user_id = u.id
-    -- Aggregate comments
-    LEFT JOIN (
-        SELECT post_id, COUNT(*) AS comment_count
-        FROM comments
-        GROUP BY post_id
-    ) c ON p.id = c.post_id
-    -- Aggregate likes
-    LEFT JOIN (
-        SELECT post_id, COUNT(*) AS like_count
-        FROM likes
-        GROUP BY post_id
-    ) l ON p.id = l.post_id
-    -- Check if current user liked this post
-    LEFT JOIN (
-        SELECT post_id, user_id
-        FROM likes
-        WHERE user_id = ?  -- pass current user ID here
-    ) ul ON p.id = ul.post_id
-         WHERE p.user_id = ? AND p.type = 'public_opinion' AND p.is_archived = false
-         AND (p.expires_at IS NULL OR p.expires_at > NOW())`,
+            p.id,
+            p.user_id,
+            u.username,
+            p.original_content,
+            p.type,
+            p.content,
+            p.duration_days,
+            p.expires_at,
+            p.is_archived,
+            p.created_at,
+            -- Pre-aggregated comment count
+            COALESCE(c.comment_count, 0) AS comment_count,
+            -- Pre-aggregated like count
+            COALESCE(l.like_count, 0) AS like_count,
+            -- Check if current user liked the post
+            CASE WHEN ul.user_id IS NULL THEN FALSE ELSE TRUE END AS is_liked_by_current_user
+            FROM posts p
+            JOIN users u ON p.user_id = u.id
+            -- Aggregate comments
+            LEFT JOIN (
+                SELECT post_id, COUNT(*) AS comment_count
+                FROM comments
+                GROUP BY post_id
+            ) c ON p.id = c.post_id
+            -- Aggregate likes
+            LEFT JOIN (
+                SELECT post_id, COUNT(*) AS like_count
+                FROM likes
+                GROUP BY post_id
+            ) l ON p.id = l.post_id
+            -- Check if current user liked this post
+            LEFT JOIN (
+                SELECT post_id, user_id
+                FROM likes
+                WHERE user_id = ?  -- pass current user ID here
+            ) ul ON p.id = ul.post_id
+                WHERE p.user_id = ? AND p.type = 'public_opinion' AND p.is_archived = false
+                AND (p.expires_at IS NULL OR p.expires_at > NOW())`,
           [currentUserId, userId]
         );
         Logger.log(

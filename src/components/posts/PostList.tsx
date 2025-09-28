@@ -17,7 +17,7 @@ export default function PostList({ userId, isPublic, isProfile }: PostListProps)
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true); // Start in a loading state
   const [fetching, setFetching] = useState(false); // Prevent concurrent fetches
-  const [nextCursor, setNextCursor] = useState<{ created_at: string; id: string } | null>(null);
+  const [nextCursor, setNextCursor] = useState<string| null>(null);
   const [hasMore, setHasMore] = useState(true);
   const [newPostsCount, setNewPostsCount] = useState(0);
   const [lastKnownCreatedAt, setLastKnownCreatedAt] = useState('1970-01-01 00:00:00');
@@ -27,7 +27,7 @@ export default function PostList({ userId, isPublic, isProfile }: PostListProps)
     setFetching(true);
     try {
       const param = direction === 'older'
-        ? `cursorCreatedAt=${encodeURIComponent(cursor?.created_at || '')}`
+        ? `cursorCreatedAt=${encodeURIComponent(cursor || '')}`
         : `sinceCreatedAt=${encodeURIComponent(lastKnownCreatedAt)}`;
       let apiUrl = `/api/protected/posts`;
       if (isPublic) apiUrl += `/public`;
@@ -47,10 +47,10 @@ export default function PostList({ userId, isPublic, isProfile }: PostListProps)
       // Deduplicate posts
       const existingIds = new Set(posts.map(p => p.id));
       const uniqueNewPosts:Post[] = newPosts.filter((post: Post) => !existingIds.has(post.id));
-
+      debugger;
       if (direction === 'older') {
         setPosts((prev) => [...prev, ...uniqueNewPosts]);
-        setNextCursor(newCursor);
+        setNextCursor(formatToMySQLDate(newCursor));
         setHasMore(!!newCursor);
         if (uniqueNewPosts.length > 0) {
           const newest = [...posts, ...uniqueNewPosts].sort(

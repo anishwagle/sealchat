@@ -47,7 +47,9 @@ export async function GET(request: Request,{ params }: { params: { userId: strin
         posts = [ ...publicOpinions];
       }
     }
-    const nextCursor = direction === 'older' && posts.length === limit ? posts[posts.length - 1].createdAt : null;
+    const nextCursor = direction === 'older' 
+      && posts.length === limit 
+      ? posts[posts.length - 1].createdAt : null;
 
     
     if (!posts) {
@@ -58,7 +60,7 @@ export async function GET(request: Request,{ params }: { params: { userId: strin
       );
     }
 
-    Logger.log(COMPONENT, FUNCTION, "info", "Post fetched");
+    Logger.log(COMPONENT, FUNCTION, "info", "Post fetched",{posts,nextCursor});
     return NextResponse.json({ posts,nextCursor }, { status: 200 });
   } catch (error: any) {
     const apiError = new ApiError(

@@ -29,7 +29,9 @@ export async function GET(request: Request) {
     const direction = sinceCreatedAt ? 'newer' : 'older';
     const cursor = sinceCreatedAt || cursorCreatedAt;
     const posts = await postService.getUserPaginatedPosts( userId,`${cursor}`,direction,limit );
-    const nextCursor = direction === 'older' && posts.length === limit ? posts[posts.length - 1].createdAt : null;
+    const nextCursor = direction === 'older' 
+      && posts.length === limit ? 
+      posts[posts.length - 1].createdAt : null;
     if (!posts) {
       Logger.log(COMPONENT, FUNCTION, "error", "Posts not found", {
         userId: userId,
@@ -39,7 +41,7 @@ export async function GET(request: Request) {
         { status: 404 }
       );
     }
-    Logger.log(COMPONENT, FUNCTION, "info", "Post fetched");
+    Logger.log(COMPONENT, FUNCTION, "info", "Post fetched",{posts,nextCursor});
     return NextResponse.json({ posts,nextCursor }, { status: 200 });
   } catch (error: any) {
     const apiError = new ApiError(

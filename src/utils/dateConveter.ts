@@ -23,12 +23,11 @@ const getTimeSince = (date: Date) => {
   };
 const formatToMySQLDate = (input: Date | string): string => {
   const date = typeof input === 'string' ? new Date(input) : input;
-  if (isNaN(date.getTime())) {
-    console.error('Invalid date:', input);
+  if (isNaN(date?.getTime())) {
     return '1970-01-01 00:00:00';
   }
   const nptOffset = (5 * 60 + 45) * 60 * 1000; // +05:45 in ms
   const nptDate = new Date(date.getTime() + nptOffset);
   return nptDate.toISOString().slice(0, 19).replace('T', ' ');
 };
-  export {getTimeSince,getTimeUntil,formatToMySQLDate};
+export {getTimeSince,getTimeUntil,formatToMySQLDate};
