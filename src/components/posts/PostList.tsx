@@ -27,13 +27,13 @@ export default function PostList({ userId, isPublic, isProfile }: PostListProps)
     setFetching(true);
     try {
       const param = direction === 'older'
-        ? `cursorCreatedAt=${encodeURIComponent(cursor?.created_at || '')}&cursorId=${encodeURIComponent(cursor?.id || '')}`
-        : `sinceCreatedAt=${encodeURIComponent(lastKnownCreatedAt)}&sinceId=${encodeURIComponent(lastKnownId || '')}`;
+        ? `cursorCreatedAt=${encodeURIComponent(cursor?.created_at || '')}`
+        : `sinceCreatedAt=${encodeURIComponent(lastKnownCreatedAt)}`;
       let apiUrl = `/api/protected/posts`;
       if (isPublic) apiUrl += `/public`;
       else if (isProfile) {
         apiUrl += `/user`;
-        if (userId) apiUrl += `?userId=${userId}`;
+        if (userId) apiUrl += `/${userId}`;
       }
       
       apiUrl += `?${param}&limit=20`;
@@ -82,7 +82,7 @@ export default function PostList({ userId, isPublic, isProfile }: PostListProps)
       else if (isProfile) apiUrl += `/user`;
       if (isProfile && userId) apiUrl += `/${userId}`;
       
-      apiUrl += `?sinceCreatedAt=${encodeURIComponent(lastKnownCreatedAt)}&sinceId=${encodeURIComponent(lastKnownId || '')}`;
+      apiUrl += `?sinceCreatedAt=${encodeURIComponent(lastKnownCreatedAt)}`;
       const response = await fetchWithAuth(apiUrl, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
