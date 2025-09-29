@@ -21,9 +21,18 @@ export async function GET(request: Request) {
         { status: 404 }
       );
     }
-    const publicOpinion = await postService.getAllPublicOpinions(userId);
-    Logger.log(COMPONENT, FUNCTION, "info", "User's Own Post Count:",{count:publicOpinion.length});
-    const posts = [...publicOpinion].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
+    const { searchParams } = new URL(request.url);
+    const cursorCreatedAt = searchParams.get('cursorCreatedAt') ;
+    const sinceCreatedAt = searchParams.get('sinceCreatedAt');
+    const limit = searchParams.get('limit') ? parseInt(`${searchParams.get('limit')}`) : 20;
+
+    const direction = sinceCreatedAt ? 'newer' : 'older';
+    const cursor = sinceCreatedAt || cursorCreatedAt;
+    const posts = await postService.getAllPublicOpinions( userId,`${cursor}`,direction,limit );
+    const nextCursor = direction === 'older' 
+      && posts.length === limit ? 
+      posts[posts.length - 1].createdAt : null;
     Logger.log(COMPONENT, FUNCTION, "info", "User's Total Post Count:",{count:posts.length});
     if (!posts) {
       Logger.log(COMPONENT, FUNCTION, "error", "Posts not found");
@@ -34,7 +43,7 @@ export async function GET(request: Request) {
     }
 
     Logger.log(COMPONENT, FUNCTION, "info", "Post fetched");
-    return NextResponse.json({ posts: posts.sort((a:Post,b:Post)=>b.createdAt.getDate()-a.createdAt.getDate()) }, { status: 200 });
+    return NextResponse.json({ posts,nextCursor }, { status: 200 });
   } catch (error: any) {
     const apiError = new ApiError(
       "Failed to fetch Post",

@@ -29,6 +29,11 @@ export interface IPostService {
     limit?: number
   ): Promise<Post[]>;
   getPrivatePosts(currentUserId: string): Promise<Post[]>;
-  getAllPublicOpinions(currentUserId: string): Promise<Post[]>;
+  getAllPublicOpinions(
+    currentUserId: string,
+    cursorCreatedAt?: string,
+    direction?: string,
+    limit?: number
+  ): Promise<Post[]>;
   deletePost(userId: string, postId: string): Promise<void>;
 }

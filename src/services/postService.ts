@@ -272,19 +272,19 @@ export class PostService implements IPostService {
   }
 
   async getFriendPosts(
-  userId: string,
-  currentUserId: string,
-  cursorCreatedAt?: string,
-  direction: "older" | "newer" = "older",
-  limit: number = 20
-): Promise<Post[]> {
-  const FUNCTION = "getFriendPosts";
-  if (!userId || !currentUserId) {
-    throw new Error("User ID and current user ID are required");
-  }
+    userId: string,
+    currentUserId: string,
+    cursorCreatedAt?: string,
+    direction: "older" | "newer" = "older",
+    limit: number = 20
+  ): Promise<Post[]> {
+    const FUNCTION = "getFriendPosts";
+    if (!userId || !currentUserId) {
+      throw new Error("User ID and current user ID are required");
+    }
 
-  try {
-    let query = `
+    try {
+      let query = `
       SELECT 
         p.id,
         p.user_id,
@@ -320,45 +320,45 @@ export class PostService implements IPostService {
         AND p.is_archived = false
     `;
 
-    const params = [currentUserId, userId];
+      const params = [currentUserId, userId];
 
-    if (cursorCreatedAt) {
-      if (direction === "older") {
-        query += ` AND p.created_at < STR_TO_DATE(?, '%Y-%m-%d %H:%i:%s') `;
-      } else {
-        query += ` AND p.created_at > STR_TO_DATE(?, '%Y-%m-%d %H:%i:%s') `;
+      if (cursorCreatedAt) {
+        if (direction === "older") {
+          query += ` AND p.created_at < STR_TO_DATE(?, '%Y-%m-%d %H:%i:%s') `;
+        } else {
+          query += ` AND p.created_at > STR_TO_DATE(?, '%Y-%m-%d %H:%i:%s') `;
+        }
+        params.push(cursorCreatedAt);
       }
-      params.push(cursorCreatedAt);
+
+      query += ` ORDER BY p.created_at DESC LIMIT ? `;
+      params.push(limit.toString());
+
+      const results = await executeQuery(query, params);
+
+      Logger.log(COMPONENT, FUNCTION, "debug", "Post Fetched Successfully", {
+        userId,
+      });
+
+      return (results as any[]).map((post) => ({
+        id: post.id,
+        userId: post.user_id,
+        username: post.username,
+        originalContent: post.original_content,
+        type: post.type,
+        content: post.content,
+        durationDays: post.duration_days,
+        expiresAt: post.expires_at ? new Date(post.expires_at) : null,
+        isArchived: post.is_archived,
+        createdAt: new Date(post.created_at),
+        commentCount: post.comment_count,
+        likeCount: post.like_count,
+        isLikedByCurrentUser: post.is_liked_by_current_user,
+      }));
+    } catch (error: any) {
+      throw new Error("Failed to fetch friend posts: " + error.message);
     }
-
-    query += ` ORDER BY p.created_at DESC LIMIT ? `;
-    params.push(limit.toString());
-    
-    const results = await executeQuery(query, params);
-
-    Logger.log(COMPONENT, FUNCTION, "debug", "Post Fetched Successfully", {
-      userId
-    });
-
-    return (results as any[]).map((post) => ({
-      id: post.id,
-      userId: post.user_id,
-      username: post.username,
-      originalContent: post.original_content,
-      type: post.type,
-      content: post.content,
-      durationDays: post.duration_days,
-      expiresAt: post.expires_at ? new Date(post.expires_at) : null,
-      isArchived: post.is_archived,
-      createdAt: new Date(post.created_at),
-      commentCount: post.comment_count,
-      likeCount: post.like_count,
-      isLikedByCurrentUser: post.is_liked_by_current_user,
-    }));
-  } catch (error: any) {
-    throw new Error("Failed to fetch friend posts: " + error.message);
   }
-}
 
   async getPublicOpinions(
     userId: string,
@@ -369,13 +369,10 @@ export class PostService implements IPostService {
   ): Promise<Post[]> {
     const FUNCTION = "getPublicOpinions";
     try {
-
       let query = "";
-      let params:string[] = [];
+      let params: string[] = [];
       if (currentUserId != userId) {
-
-        query =
-          `SELECT 
+        query = `SELECT 
             p.id,
             p.user_id,
             u.username,
@@ -414,10 +411,9 @@ export class PostService implements IPostService {
             ) ul ON p.id = ul.post_id
                 WHERE p.user_id = ? AND p.type = 'public_opinion' AND p.is_archived = false
                 AND (p.expires_at IS NULL OR p.expires_at > NOW())`;
-        params =  [currentUserId, userId];
+        params = [currentUserId, userId];
       } else {
-        query =
-          `SELECT 
+        query = `SELECT 
     p.id,
     p.user_id,
     u.username,
@@ -464,21 +460,20 @@ export class PostService implements IPostService {
                WHERE fo.followed_id = p.user_id AND fo.follower_id = ?
              )
            )`;
-       params=   [currentUserId, currentUserId, currentUserId, currentUserId];
-        
+        params = [currentUserId, currentUserId, currentUserId, currentUserId];
       }
 
       if (cursorCreatedAt) {
-      query +=
-        direction === "older"
-          ? ` AND p.created_at < STR_TO_DATE(?, '%Y-%m-%d %H:%i:%s') `
-          : ` AND p.created_at > STR_TO_DATE(?, '%Y-%m-%d %H:%i:%s') `;
-      params.push(cursorCreatedAt);
-    }
+        query +=
+          direction === "older"
+            ? ` AND p.created_at < STR_TO_DATE(?, '%Y-%m-%d %H:%i:%s') `
+            : ` AND p.created_at > STR_TO_DATE(?, '%Y-%m-%d %H:%i:%s') `;
+        params.push(cursorCreatedAt);
+      }
 
-    query += ` ORDER BY p.created_at DESC LIMIT ? `;
-    params.push(`${limit}`);
-      const results = await executeQuery(query,params);
+      query += ` ORDER BY p.created_at DESC LIMIT ? `;
+      params.push(`${limit}`);
+      const results = await executeQuery(query, params);
       return (results as any[]).map((post) => ({
         id: post.id,
         userId: post.user_id,
@@ -571,11 +566,15 @@ export class PostService implements IPostService {
     }
   }
 
-  async getAllPublicOpinions(currentUserId: string): Promise<Post[]> {
+  async getAllPublicOpinions(
+    currentUserId: string,
+    cursorCreatedAt?: string,
+    direction = "older",
+    limit: number = 20
+  ): Promise<Post[]> {
     try {
       const FUNCTION = "getPrivatePosts";
-      const results = await executeQuery(
-        `SELECT 
+      let query = `SELECT 
     p.id,
     p.user_id,
     u.username,
@@ -614,10 +613,21 @@ export class PostService implements IPostService {
     ) ul ON p.id = ul.post_id
          WHERE p.type = 'public_opinion' AND p.is_archived = false
          AND (p.expires_at IS NULL OR p.expires_at > NOW())
-         ORDER BY p.created_at DESC`,
-        [currentUserId]
-      );
+         ORDER BY p.created_at DESC`;
+      let params = [currentUserId];
+
       Logger.log(COMPONENT, FUNCTION, "debug", "Post Fetched Successfully");
+      if (cursorCreatedAt) {
+        query +=
+          direction === "older"
+            ? ` AND p.created_at < STR_TO_DATE(?, '%Y-%m-%d %H:%i:%s') `
+            : ` AND p.created_at > STR_TO_DATE(?, '%Y-%m-%d %H:%i:%s') `;
+        params.push(cursorCreatedAt);
+      }
+
+      query += ` ORDER BY p.created_at DESC LIMIT ? `;
+      params.push(`${limit}`);
+      const results = await executeQuery(query, params);
       return (results as any[]).map((post) => ({
         id: post.id,
         userId: post.user_id,
