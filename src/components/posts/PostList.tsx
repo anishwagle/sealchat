@@ -47,7 +47,6 @@ export default function PostList({ userId, isPublic, isProfile }: PostListProps)
       // Deduplicate posts
       const existingIds = new Set(posts.map(p => p.id));
       const uniqueNewPosts:Post[] = newPosts.filter((post: Post) => !existingIds.has(post.id));
-      debugger;
       if (direction === 'older') {
         setPosts((prev) => [...prev, ...uniqueNewPosts]);
         setNextCursor(formatToMySQLDate(newCursor));

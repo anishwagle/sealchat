@@ -647,7 +647,133 @@ export class PostService implements IPostService {
       throw new Error("Failed to fetch all public opinions: " + error.message);
     }
   }
+async getUserFeed(
+  currentUserId: string,
+  cursorCreatedAt?: string,
+  direction: "older" | "newer" = "older",
+  limit: number = 20
+): Promise<Post[]> {
+  const FUNCTION = "getUserFeed";
+  if (!currentUserId) throw new Error("Current user ID is required");
+  Logger.log(COMPONENT, FUNCTION, "debug", "Fetching Users Feed",{currentUserId,cursorCreatedAt,direction,limit});
+  try {
+    let query = `
+      SELECT 
+    p.id,
+    p.user_id,
+    u.username,
+    p.original_content,
+    p.type,
+    p.content,
+    p.duration_days,
+    p.expires_at,
+    p.is_archived,
+    p.created_at,
+    -- Pre-aggregated comment count
+    COALESCE(c.comment_count, 0) AS comment_count,
+    -- Pre-aggregated like count
+    COALESCE(l.like_count, 0) AS like_count,
+    -- Check if current user liked the post
+    CASE WHEN ul.user_id IS NULL THEN FALSE ELSE TRUE END AS is_liked_by_current_user
+    FROM posts p
+    JOIN users u ON p.user_id = u.id
+    -- Aggregate comments
+    LEFT JOIN (
+        SELECT post_id, COUNT(*) AS comment_count
+        FROM comments
+        GROUP BY post_id
+    ) c ON p.id = c.post_id
+    -- Aggregate likes
+    LEFT JOIN (
+        SELECT post_id, COUNT(*) AS like_count
+        FROM likes
+        GROUP BY post_id
+    ) l ON p.id = l.post_id
+    -- Check if current user liked this post
+    LEFT JOIN (
+        SELECT post_id, user_id
+        FROM likes
+        WHERE user_id = ?  -- pass current user ID here
+    ) ul ON p.id = ul.post_id
+      WHERE p.is_archived = false
+        AND (p.expires_at IS NULL OR p.expires_at > NOW())
+        AND (
+          -- Own posts
+          p.user_id = ?
+          OR
+          -- Friend posts
+          (
+            p.type = 'friend_post'
+            AND EXISTS (
+              SELECT 1 FROM friends f
+              WHERE (f.user_id_1 = p.user_id AND f.user_id_2 = ?)
+                 OR (f.user_id_1 = ? AND f.user_id_2 = p.user_id)
+            )
+          )
+          OR
+          -- Public opinions
+          (
+            p.type = 'public_opinion'
+            AND (
+              p.user_id = ?
+              OR EXISTS (
+                SELECT 1 FROM friends f
+                WHERE (f.user_id_1 = p.user_id AND f.user_id_2 = ?)
+                   OR (f.user_id_1 = ? AND f.user_id_2 = p.user_id)
+              )
+              OR EXISTS (
+                SELECT 1 FROM follows fo
+                WHERE fo.followed_id = p.user_id AND fo.follower_id = ?
+              )
+            )
+          )
+        )
+    `;
 
+    const params: string[] = [
+      currentUserId, // liked posts check
+      currentUserId, // own posts
+      currentUserId, // friend posts (f.user_id_2 = ?)
+      currentUserId, // friend posts (f.user_id_1 = ?)
+      currentUserId, // own public opinions
+      currentUserId, // public opinions via friends (f.user_id_2 = ?)
+      currentUserId, // public opinions via friends (f.user_id_1 = ?)
+      currentUserId  // public opinions via follows (fo.follower_id = ?)
+    ];
+
+    if (cursorCreatedAt) {
+      query +=
+        direction === "older"
+          ? ` AND p.created_at < STR_TO_DATE(?, '%Y-%m-%d %H:%i:%s') `
+          : ` AND p.created_at > STR_TO_DATE(?, '%Y-%m-%d %H:%i:%s') `;
+      params.push(cursorCreatedAt);
+    }
+
+    query += ` ORDER BY p.created_at DESC LIMIT ? `;
+    params.push(limit.toString());
+    Logger.log(COMPONENT, FUNCTION, "debug", "Fetching Users Feed,params:",{params});
+
+    const results = await executeQuery(query, params);
+
+    return (results as any[]).map((post) => ({
+      id: post.id,
+      userId: post.user_id,
+      username: post.username,
+      originalContent: post.original_content,
+      type: post.type,
+      content: post.content,
+      durationDays: post.duration_days,
+      expiresAt: post.expires_at ? new Date(post.expires_at) : null,
+      isArchived: post.is_archived,
+      createdAt: new Date(post.created_at),
+      commentCount: post.comment_count,
+      likeCount: post.like_count,
+      isLikedByCurrentUser: post.is_liked_by_current_user,
+    }));
+  } catch (error: any) {
+    throw new Error("Failed to fetch user feed: " + error.message);
+  }
+}
   async deletePost(userId: string, postId: string): Promise<void> {
     const FUNCTION = "deletePost";
     if (!userId || !postId) {
