@@ -35,7 +35,7 @@ export default function UserProfile() {
   };
 
   useEffect(() => {
-    // We should only fetch the profile if authentication is not loading and is successful.
+    if (!isAuthenticated || authError) return;
     if (!isLoading && isAuthenticated) {
       fetchProfile();
     }

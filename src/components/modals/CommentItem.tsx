@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Comment } from "@/types/post";
 import { getTimeSince } from "@/utils/dateConveter";
 import RenderedContent from "../RenderedContent";
+import { useAuth } from "@/lib/auth/useAuth";
 
 interface CommentItemProps {
   comment: Comment;
@@ -13,6 +14,7 @@ export default function CommentItem({ comment,onNavigate}: CommentItemProps) {
   const [showOptions, setShowOptions] = useState(false);
   const [isLiking, setIsLiking] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const {currentUserId} = useAuth();
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -67,14 +69,16 @@ export default function CommentItem({ comment,onNavigate}: CommentItemProps) {
 
             {showOptions && (
               <div className="absolute right-0 mt-1 w-48 bg-white rounded-md shadow-[0_3px_10px_-3px_rgba(0,0,0,0.1)] py-1 z-10 ring-1 ring-gray-100">
-                <button className="w-full text-left px-4 py-1.5 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-700">
+                {/* <button className="w-full text-left px-4 py-1.5 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-700">
                   Edit Comment
                 </button>
-                <div className="h-[1px] bg-gray-100 my-1"></div>
+                <div className="h-[1px] bg-gray-100 my-1"></div> */}
+                {currentUserId==comment.userId?<>
                 <button className="w-full text-left px-4 py-1.5 text-sm text-red-500 hover:bg-gray-50 hover:text-red-600">
                   Delete Comment
                 </button>
                 <div className="h-[1px] bg-gray-100 my-1"></div>
+                </>:null}
                 <button className="w-full text-left px-4 py-1.5 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-700">
                   Report Comment
                 </button>

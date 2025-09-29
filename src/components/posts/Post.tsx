@@ -8,6 +8,7 @@ import UserListModal from "../modals/UserListModal";
 import Snackbar from "../SnackBar";
 import { useAuth } from "@/lib/auth/useAuth";
 import RenderedContent from "../RenderedContent";
+import { fetchWithAuth } from "@/lib/auth/fetchWithAuth";
 
 export default function PostComponent(post: Post) {
   const [showOptions, setShowOptions] = useState(false);
@@ -61,7 +62,7 @@ export default function PostComponent(post: Post) {
 
     const toggleLikeUrl = `/api/protected/posts/toggleLike/${post.id}`;
     try {
-      const response = await fetch(toggleLikeUrl, { method: 'GET' });
+      const response = await fetchWithAuth(toggleLikeUrl, { method: 'GET' });
       if (!response.ok) {
         // Revert on error
         setIsLikedByCurrentUser(originallyLiked);
@@ -80,21 +81,13 @@ export default function PostComponent(post: Post) {
   
 
   const handleDeletePost = async () => {
-    // Mock API call
-    
+    const apiUrl = `/api/protected/posts/delete/${post.id}`;
+    const response = await fetchWithAuth(apiUrl)
     setShowDeleteConfirm(false);
   
     // In a real app, you'd remove the post from the list here.
   };
 
-  const formatLikesText = (likes: { username: string }[]) => {
-    if (likes.length === 0) return null;
-    if (likes.length === 2)
-      return `${likes[0].username} and ${likes[1].username} liked this`;
-    return `${likes[0].username}, ${likes[1].username} and ${
-      likes.length - 2
-    } others liked this`;
-  };
 
 
   return (
@@ -156,13 +149,15 @@ export default function PostComponent(post: Post) {
 
             {showOptions && (
               <div className="absolute right-0 mt-1 w-48 bg-white rounded-md shadow-[0_3px_10px_-3px_rgba(0,0,0,0.1)] py-1 z-10 ring-1 ring-gray-100">
-                <button className="w-full text-left px-4 py-1.5 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-700">
+                { currentUserId == post.userId?(
+                  <>
+                {/* <button className="w-full text-left px-4 py-1.5 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-700">
                   Edit Post
                 </button>
                 <button className="w-full text-left px-4 py-1.5 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-700">
                   Change Privacy
                 </button>
-                <div className="h-[1px] bg-gray-100 my-1"></div>
+                <div className="h-[1px] bg-gray-100 my-1"></div> */}
                 <button
                   onClick={() => {
                     setShowDeleteConfirm(true);
@@ -172,7 +167,8 @@ export default function PostComponent(post: Post) {
                 >
                   Delete Post
                 </button>
-                <div className="h-[1px] bg-gray-100 my-1"></div>
+                <div className="h-[1px] bg-gray-100 my-1"></div> </>):null
+}
                 <button className="w-full text-left px-4 py-1.5 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-700">
                   Report Post
                 </button>

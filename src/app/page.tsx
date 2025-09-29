@@ -8,7 +8,11 @@ import { useAuth } from "@/lib/auth/useAuth";
 
 export default function Dashboard() {
   const [isPublic, setIsPublic] = useState(false);
-  const { isAuthenticated, isLoading, error } = useAuth();
+  const { isAuthenticated, isLoading, error: authError } = useAuth();
+useEffect(() => {
+    if (!isAuthenticated || authError) return;
+  
+  }, [isAuthenticated, isLoading]); // Dependencies that trigger fetching.
 
   return (
     <div className="min-h-screen bg-gray-50">

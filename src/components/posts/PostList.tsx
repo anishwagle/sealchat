@@ -137,6 +137,7 @@ export default function PostList({ userId, isPublic, isProfile }: PostListProps)
         dataLength={posts.length}
         next={() => fetchPosts('older', nextCursor)}
         hasMore={hasMore}
+        className="space-y-4"
         loader={
           <div className="text-center py-4">
             <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-500 border-t-transparent" />
