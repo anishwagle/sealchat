@@ -46,26 +46,29 @@ export default function PostList({ userId, isPublic, isProfile }: PostListProps)
       if (!response.ok) throw new Error(`Failed to fetch ${direction} posts`);
       const { posts: newPosts, nextCursor: newCursor } = await response.json();
       // Deduplicate posts
-      const existingIds = new Set(posts.map(p => p.id));
-      const uniqueNewPosts:Post[] = newPosts.filter((post: Post) => !existingIds.has(post.id));
       if (direction === 'older') {
-        setPosts((prev) => [...prev, ...uniqueNewPosts]);
+        setPosts((prevPosts) => {
+          const allPosts = [...prevPosts, ...newPosts];
+          const uniquePosts = Array.from(new Map(allPosts.map(post => [post.id, post])).values());
+          return uniquePosts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        });
         setNextCursor(formatToMySQLDate(newCursor));
         setHasMore(!!newCursor);
-        if (uniqueNewPosts.length > 0) {
-          const newest = [...posts, ...uniqueNewPosts].sort(
-            (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-          )[0];
-          setLastKnownCreatedAt(formatToMySQLDate(newest.createdAt));
-        }
       } else {
-        setPosts((prev) => [...uniqueNewPosts, ...prev]);
-        if (uniqueNewPosts.length > 0) {
-          setLastKnownCreatedAt(formatToMySQLDate(uniqueNewPosts[0].createdAt));
-        }
+        setPosts((prevPosts) => {
+          const allPosts = [...newPosts, ...prevPosts];
+          const uniquePosts = Array.from(new Map(allPosts.map(post => [post.id, post])).values());
+          return uniquePosts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        });
         setNewPostsCount(0);
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
+
+      // Update lastKnownCreatedAt after state update
+      setPosts(currentPosts => {
+        if (currentPosts.length > 0) setLastKnownCreatedAt(formatToMySQLDate(currentPosts[0].createdAt));
+        return currentPosts;
+      });
       setError(null);
     } catch (err: any) {
       setError("Failed to load posts: " + err.message);
@@ -100,7 +103,7 @@ export default function PostList({ userId, isPublic, isProfile }: PostListProps)
   useEffect(() => {
     // Reset state whenever the feed type changes
     setPosts([]);
-    setNextCursor(null);
+    setNextCursor(null); // Important to reset cursor
     setHasMore(true);
     setLastKnownCreatedAt('1970-01-01 00:00:00');
     setNewPostsCount(0);
@@ -110,6 +113,8 @@ export default function PostList({ userId, isPublic, isProfile }: PostListProps)
   // This effect triggers the initial fetch after the state has been reset.
   useEffect(() => {
     if (loading && posts.length === 0) {
+      // Temporarily disable InfiniteScroll's fetcher to prevent race conditions
+      setHasMore(false); 
       fetchPosts('older', null);
     }
   }, [loading, posts.length]);
