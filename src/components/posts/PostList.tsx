@@ -30,10 +30,11 @@ export default function PostList({ userId, isPublic, isProfile }: PostListProps)
         ? `cursorCreatedAt=${encodeURIComponent(cursor || '')}`
         : `sinceCreatedAt=${encodeURIComponent(lastKnownCreatedAt)}`;
       let apiUrl = `/api/protected/posts`;
-      if (isPublic) apiUrl += `/public`;
-      else if (isProfile) {
+      if (isProfile) {
         apiUrl += `/user`;
         if (userId) apiUrl += `/${userId}`;
+      } else if (isPublic) {
+        apiUrl += `/public`;
       }
       
       apiUrl += `?${param}&limit=20`;
@@ -97,28 +98,25 @@ export default function PostList({ userId, isPublic, isProfile }: PostListProps)
   };
 
   useEffect(() => {
-    setPosts([]); // Reset posts on prop change
+    // Reset state whenever the feed type changes
+    setPosts([]);
     setNextCursor(null);
     setHasMore(true);
     setLastKnownCreatedAt('1970-01-01 00:00:00');
-    setLoading(true);
-    // Let the InfiniteScroll component handle the initial fetch
-    // by ensuring it has a clean slate to work with.
-    // We set loading to false to signal that initialization is complete.
-    setLoading(false);
+    setNewPostsCount(0);
+    setLoading(true); // Set loading to true to trigger the fetch effect
   }, [userId, isPublic, isProfile]);
 
+  // This effect triggers the initial fetch after the state has been reset.
+  useEffect(() => {
+    if (loading && posts.length === 0) {
+      fetchPosts('older', null);
+    }
+  }, [loading, posts.length]);
   useEffect(() => {
     const interval = setInterval(checkForNewPosts, 30000);
     return () => clearInterval(interval);
   }, [lastKnownCreatedAt, userId, isPublic, isProfile]);
-
-  // This handles the very first fetch when the component is ready.
-  useEffect(() => {
-    if (!loading && posts.length === 0) {
-      fetchPosts('older', null);
-    }
-  }, [loading]);
   return (
     <div className="space-y-4">
       {newPostsCount > 0 && (

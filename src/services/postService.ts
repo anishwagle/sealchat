@@ -573,7 +573,7 @@ export class PostService implements IPostService {
     limit: number = 20
   ): Promise<Post[]> {
     try {
-      const FUNCTION = "getPrivatePosts";
+      const FUNCTION = "getAllPublicOpinions";
       let query = `SELECT 
     p.id,
     p.user_id,
@@ -613,10 +613,9 @@ export class PostService implements IPostService {
     ) ul ON p.id = ul.post_id
          WHERE p.type = 'public_opinion' AND p.is_archived = false
          AND (p.expires_at IS NULL OR p.expires_at > NOW())
-         ORDER BY p.created_at DESC`;
+         `;
       let params = [currentUserId];
 
-      Logger.log(COMPONENT, FUNCTION, "debug", "Post Fetched Successfully");
       if (cursorCreatedAt) {
         query +=
           direction === "older"
