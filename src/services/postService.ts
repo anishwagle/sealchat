@@ -750,7 +750,6 @@ async getUserFeed(
 
     query += ` ORDER BY p.created_at DESC LIMIT ? `;
     params.push(limit.toString());
-    Logger.log(COMPONENT, FUNCTION, "debug", "Fetching Users Feed,params:",{params});
 
     const results = await executeQuery(query, params);
 

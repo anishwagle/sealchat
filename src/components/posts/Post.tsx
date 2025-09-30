@@ -1,5 +1,5 @@
 "use client";
-import { Post, Comment, Like } from "@/types/post";
+import { Post, Like } from "@/types/post";
 import { getTimeSince, getTimeUntil } from "@/utils/dateConveter";
 import { useRouter, usePathname } from "next/navigation";
 import { useState, useEffect, useRef, useCallback } from "react";

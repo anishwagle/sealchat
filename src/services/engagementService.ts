@@ -1,6 +1,7 @@
 import { Logger } from "@/lib/logger";
 import executeQuery from "../db";
-import { Comment, Like, PostType } from "../types/post";
+import {Like, PostType } from "../types/post";
+import { Comment } from "@/types/comment";
 import { v4 } from "uuid";
 import { QueryResult } from "mysql2";
 import {} from "./INotificationService";
@@ -398,6 +399,57 @@ WHERE c.parent_comment_id = ?`;
       found: !!result,
     });
     return !!result;
+  }
+  async toggleCommentLike(userId: string, commentId: string): Promise<void> {
+    const FUNCTION = "togglePostLike";
+    Logger.log(COMPONENT, FUNCTION, "debug", "toggle comment like status", {
+      userId,
+      commentId,
+    });
+    const result = await this.getPostLikeStatus(userId, commentId);
+    const queryResult = await executeQuery(
+      `SELECT id,type,user_id
+         FROM comments
+         WHERE id = ?`,
+      [commentId]
+    );
+
+    const comment = (queryResult as any[])[0];
+    Logger.log(COMPONENT, FUNCTION, "debug", "Fetched the comment", {
+      comment,
+    });
+    if (result) {
+      const notifications =
+        await notificationService.getNotificationByUserIdAndType(
+          comment.user_id,
+          "comment_like",
+          userId,
+          comment.post_id
+        );
+      notifications.forEach(async (x) => {
+        await notificationService.deleteNotification(x.id, x.userId);
+      });
+      Logger.log(COMPONENT, FUNCTION, "debug", "Post dis-liked");
+      await executeQuery("DELETE FROM comment_likes WHERE comment_id=? AND user_id=?", [
+        commentId,
+        userId,
+      ]);
+    } else {
+      Logger.log(COMPONENT, FUNCTION, "debug", "Post Liked");
+      await executeQuery("INSERT INTO comment_likes (user_id,comment_id) VALUES(?,?)", [
+        userId,
+        commentId,
+      ]);
+      if (comment.user_id != userId) {
+        await notificationService.createNotification(
+          comment.user_id,
+          "comment_like",
+          userId,
+          comment.post_id
+        );
+      }
+    }
+    Logger.log(COMPONENT, FUNCTION, "debug", "Like status toggled");
   }
   async togglePostLike(userId: string, postId: string): Promise<void> {
     const FUNCTION = "togglePostLike";

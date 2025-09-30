@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { Comment, PostType } from "@/types/post";
+import { Comment } from "@/types/comment";
 import { getTimeSince, formatToMySQLDate } from "@/utils/dateConveter";
 import RenderedContent from "../RenderedContent";
 import { useAuth } from "@/lib/auth/useAuth";

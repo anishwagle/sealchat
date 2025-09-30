@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from "react";
-import { Comment, PostType } from "@/types/post";
+import { Comment } from "@/types/comment";
 import CommentItem from "./CommentItem";
 import InfiniteScroll from "react-infinite-scroll-component";
 import { fetchWithAuth } from "@/lib/auth/fetchWithAuth";
 import { formatToMySQLDate } from "@/utils/dateConveter";
+import { PostType } from "@/types/post";
 
 interface CommentModalProps {
   isOpen: boolean;

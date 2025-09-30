@@ -1,5 +1,5 @@
-import { Comment, Like } from "@/types/post";
-
+import { Like } from "@/types/post";
+import { Comment } from "@/types/comment";
 export interface IEngagementService {
   createComment(
     userId: string,
@@ -25,6 +25,6 @@ export interface IEngagementService {
   ): Promise<Comment[]>;
   deleteComment(userId: string, commentId: string): Promise<void>;
   togglePostLike(userId: string, postId: string): Promise<void>;
-  getPostLikeList(postId: string): Promise<Like[]>;
+  toggleCommentLike(userId: string, commentId: string): Promise<void>;
   getPostLikeList(postId: string): Promise<Like[]>;
 }
