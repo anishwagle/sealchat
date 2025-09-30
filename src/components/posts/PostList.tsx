@@ -87,11 +87,7 @@ export default function PostList({ userId, isPublic, isProfile }: PostListProps)
       if (isProfile && userId) apiUrl += `/${userId}`;
       
       apiUrl += `?sinceCreatedAt=${encodeURIComponent(lastKnownCreatedAt)}`;
-      const response = await fetchWithAuth(apiUrl, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('accessToken')}`,
-        },
-      });
+      const response = await fetchWithAuth(apiUrl);
       if (!response.ok) throw new Error('Failed to check new posts');
       const { posts: newPosts } = await response.json();
       setNewPostsCount(newPosts.length);
