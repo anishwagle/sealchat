@@ -1,14 +1,13 @@
 import { NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 import { Logger } from "@/lib/logger";
-import { postService } from "@/services/serviceProvider";
 import { ApiError } from "@/lib/errors";
-import { engagementService } from "@/services/engagementService";
+import { engagementService } from "@/services/serviceProvider";
 
 const COMPONENT = "api/protected/posts/comment/delete/[commentId]";
-const FUNCTION = "GET";
+const FUNCTION = "DELETE";
 
-export async function GET(request: Request,{ params }: { params: { commentId: string }}) {
+export async function DELETE(request: Request,{ params }: { params: { commentId: string }}) {
   const p = await params;
     Logger.log(COMPONENT, FUNCTION, 'info', 'Deleting Users Comment', { commentId: p.commentId });
 

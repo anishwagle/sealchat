@@ -10,12 +10,15 @@ interface CommentItemProps {
   comment: Comment;
   onNavigate?: () => void;
   onReply: (newComment: Comment) => void;
+  onDelete: (commentId: string) => void;
   postId: string;
 }
 
-export default function CommentItem({ comment, onNavigate, onReply, postId }: CommentItemProps) {
+export default function CommentItem({ comment, onNavigate, onReply, onDelete, postId }: CommentItemProps) {
   const [showOptions, setShowOptions] = useState(false);
   const [isLiking, setIsLiking] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showReply, setShowReply] = useState(false);
   const [replyContent, setReplyContent] = useState("");
   const [isReplying, setIsReplying] = useState(false);
@@ -80,6 +83,27 @@ export default function CommentItem({ comment, onNavigate, onReply, postId }: Co
       setIsReplying(false);
     }
   };
+
+  const handleDeleteComment = async () => {
+    setIsDeleting(true);
+    try {
+      const response = await fetchWithAuth(`/api/protected/posts/comment/delete/${comment.id}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        onDelete(comment.id);
+        setShowDeleteConfirm(false);
+      } else {
+        console.error("Failed to delete comment");
+        // Optionally show a snackbar for the error
+      }
+    } catch (error) {
+      console.error("Error deleting comment:", error);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
   return (
     <div className="sbg-white rounded-lg border border-gray-100 p-5 relative">
       <div className="flex-1">
@@ -124,7 +148,12 @@ export default function CommentItem({ comment, onNavigate, onReply, postId }: Co
                 </button>
                 <div className="h-[1px] bg-gray-100 my-1"></div> */}
                 {currentUserId==comment.userId?<>
-                <button className="w-full text-left px-4 py-1.5 text-sm text-red-500 hover:bg-gray-50 hover:text-red-600">
+                <button 
+                  onClick={() => {
+                    setShowDeleteConfirm(true);
+                    setShowOptions(false);
+                  }}
+                  className="w-full text-left px-4 py-1.5 text-sm text-red-500 hover:bg-gray-50 hover:text-red-600">
                   Delete Comment
                 </button>
                 <div className="h-[1px] bg-gray-100 my-1"></div>
@@ -210,6 +239,34 @@ export default function CommentItem({ comment, onNavigate, onReply, postId }: Co
           </div>
         )}
       </div>
+
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
+            <h3 className="text-lg font-semibold mb-4">Delete Comment</h3>
+            <p className="text-gray-600">
+              Are you sure you want to delete this comment? This action cannot be
+              undone.
+            </p>
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={isDeleting}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-300 transition-all duration-200 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteComment}
+                disabled={isDeleting}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-500 rounded-lg hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-all duration-200 disabled:bg-red-300 disabled:cursor-not-allowed"
+              >
+                {isDeleting ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

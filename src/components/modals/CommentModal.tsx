@@ -188,6 +188,10 @@ export default function CommentModal({
     setComments(prev => [...prev, newReply]);
   };
 
+  const handleCommentDeleted = (deletedCommentId: string) => {
+    setComments(prevComments => prevComments.filter(comment => comment.id !== deletedCommentId));
+  };
+
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-opacity duration-300 ease-in-out">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl h-[85vh] flex flex-col transform transition-all duration-300 ease-in-out scale-95 opacity-0 animate-fade-in-scale">
@@ -218,6 +222,7 @@ export default function CommentModal({
                   comment={comment}
                   onNavigate={onClose}
                   onReply={handleNewReply}
+                  onDelete={handleCommentDeleted}
                   postId={postId}
                 />
               ))}
