@@ -33,7 +33,7 @@ export async function GET(request: Request, { params }: { params: { postId: stri
       );
     }
     Logger.log(COMPONENT, FUNCTION, "info", "Post fetched");
-    return NextResponse.json({ posts: post }, { status: 200 });
+    return NextResponse.json({ post: post }, { status: 200 });
   } catch (error: any) {
     const apiError = new ApiError(
       "Failed to fetch Post",
