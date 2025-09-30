@@ -150,13 +150,21 @@ export class EngagementService implements IEngagementService {
   }
 
   async getPublicOpinionComment(
+    currentUserId:string,
     postId: string,
     cursorCreatedAt?: string | null,
     limit: number = 10
   ): Promise<Comment[]> {
     const FUNCTION = "getPublicOpinionComment";
     try {
-      let query = `SELECT c.id, c.user_id,c.post_id,COALESCE(cm.reply_count, 0) AS reply_count,
+      let query = `SELECT c.id,
+       c.user_id,
+       c.post_id,
+       COALESCE(cm.reply_count, 0) AS reply_count,
+       -- Pre-aggregated like count
+    COALESCE(l.like_count, 0) AS like_count,
+    -- Check if current user liked the post
+    CASE WHEN ul.user_id IS NULL THEN FALSE ELSE TRUE END AS is_liked_by_current_user
          u.username,
          c.parent_comment_id,
          c.content,
@@ -168,9 +176,21 @@ export class EngagementService implements IEngagementService {
           FROM comments
           GROUP BY parent_comment_id
          ) cm ON c.id = c.parent_comment_id
+          -- Aggregate likes
+    LEFT JOIN (
+        SELECT comment_id, COUNT(*) AS like_count
+        FROM comment_likes
+        GROUP BY comment_id
+    ) l ON c.id = l.comment_id
+    -- Check if current user liked this post
+    LEFT JOIN (
+        SELECT comment_id, user_id
+        FROM comment_likes
+        WHERE user_id = ?  -- pass current user ID here
+    ) ul ON c.id = ul.comment_id
          JOIN users u ON c.user_id = u.id
          WHERE c.post_id = ? AND c.parent_comment_id IS NULL`;
-      let params: string[] = [postId];
+      let params: string[] = [currentUserId,postId];
       if (cursorCreatedAt) {
         query += ` AND c.created_at < STR_TO_DATE(?, '%Y-%m-%d %H:%i:%s')`;
         params.push(cursorCreatedAt);
@@ -200,13 +220,16 @@ export class EngagementService implements IEngagementService {
         parentCommentId: comment.parent_comment_id,
         postId: comment.post_id,
         createdAt: new Date(comment.created_at),
-        replyCount:comment.reply_count
+        replyCount:comment.reply_count,
+        likeCount:comment.like_count,
+        isLikedByCurrentUser:comment.is_liked_by_current_user
       }));
     } catch (error: any) {
       throw new Error("Failed to fetch public opinions: " + error.message);
     }
   }
 async getCommentReplies(
+    currentUserId:string,
     commentId: string,
     cursorCreatedAt?: string | null,
     limit: number = 10
@@ -222,7 +245,11 @@ async getCommentReplies(
     c.content,
     c.original_content,
     c.created_at,
-    COALESCE(cm.reply_count, 0) AS reply_count
+    COALESCE(cm.reply_count, 0) AS reply_count,
+    -- Pre-aggregated like count
+    COALESCE(l.like_count, 0) AS like_count,
+    -- Check if current user liked the post
+    CASE WHEN ul.user_id IS NULL THEN FALSE ELSE TRUE END AS is_liked_by_current_user
 FROM comments c
 JOIN users u ON c.user_id = u.id
 LEFT JOIN (
@@ -231,8 +258,20 @@ LEFT JOIN (
     WHERE parent_comment_id IS NOT NULL
     GROUP BY parent_comment_id
 ) cm ON c.id = cm.parent_comment_id
+ -- Aggregate likes
+    LEFT JOIN (
+        SELECT comment_id, COUNT(*) AS like_count
+        FROM comment_likes
+        GROUP BY comment_id
+    ) l ON c.id = l.comment_id
+    -- Check if current user liked this post
+    LEFT JOIN (
+        SELECT comment_id, user_id
+        FROM comment_likes
+        WHERE user_id = ?  -- pass current user ID here
+    ) ul ON c.id = ul.comment_id
 WHERE c.parent_comment_id = ?`;
-      let params: string[] = [commentId];
+      let params: string[] = [currentUserId, commentId];
       if (cursorCreatedAt) {
         query += ` AND c.created_at < STR_TO_DATE(?, '%Y-%m-%d %H:%i:%s')`;
         params.push(cursorCreatedAt);
@@ -262,7 +301,9 @@ WHERE c.parent_comment_id = ?`;
         parentCommentId: comment.parent_comment_id,
         postId: comment.post_id,
         createdAt: new Date(comment.created_at),
-        replyCount:comment.reply_count
+        replyCount:comment.reply_count,
+        likeCount:comment.like_count,
+        isLikedByCurrentUser:comment.is_liked_by_current_user
       }));
     } catch (error: any) {
       throw new Error("Failed to fetch public opinions: " + error.message);
@@ -315,7 +356,11 @@ WHERE c.parent_comment_id = ?`;
       c.content,
       c.original_content,
       c.created_at,
-      COALESCE(r.reply_count, 0) AS reply_count
+      COALESCE(r.reply_count, 0) AS reply_count,
+      -- Pre-aggregated like count
+    COALESCE(l.like_count, 0) AS like_count,
+    -- Check if current user liked the post
+    CASE WHEN ul.user_id IS NULL THEN FALSE ELSE TRUE END AS is_liked_by_current_user
    FROM comments c
    JOIN users u ON c.user_id = u.id
    LEFT JOIN (
@@ -324,9 +369,21 @@ WHERE c.parent_comment_id = ?`;
        WHERE parent_comment_id IS NOT NULL
        GROUP BY parent_comment_id
    ) r ON c.id = r.parent_comment_id
+    -- Aggregate likes
+    LEFT JOIN (
+        SELECT comment_id, COUNT(*) AS like_count
+        FROM comment_likes
+        GROUP BY comment_id
+    ) l ON c.id = l.comment_id
+    -- Check if current user liked this post
+    LEFT JOIN (
+        SELECT comment_id, user_id
+        FROM comment_likes
+        WHERE user_id = ?  -- pass current user ID here
+    ) ul ON c.id = ul.comment_id
    WHERE c.post_id = ? AND c.parent_comment_id IS NULL
    `;
-      let params = [postId];
+      let params = [currentUserId,postId];
       if (cursorCreatedAt) {
         query += ` AND c.created_at < STR_TO_DATE(?, '%Y-%m-%d %H:%i:%s')`;
         params.push(cursorCreatedAt);
@@ -356,6 +413,8 @@ WHERE c.parent_comment_id = ?`;
         postId: comment.post_id,
         createdAt: new Date(comment.created_at),
         replyCount: comment.reply_count,
+        likeCount:comment.like_count,
+        isLikedByCurrentUser:comment.is_liked_by_current_user
       }));
     } catch (error: any) {
       throw new Error("Failed to fetch Comment: " + error.message);
@@ -408,7 +467,7 @@ WHERE c.parent_comment_id = ?`;
     });
     const result = await this.getPostLikeStatus(userId, commentId);
     const queryResult = await executeQuery(
-      `SELECT id,type,user_id
+      `SELECT id,user_id
          FROM comments
          WHERE id = ?`,
       [commentId]

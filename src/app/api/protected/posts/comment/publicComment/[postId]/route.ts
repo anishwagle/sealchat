@@ -26,7 +26,7 @@ export async function GET(request: Request,{ params }: { params: { postId: strin
     const limit = searchParams.get("limit")
       ? parseInt(`${searchParams.get("limit")}`)
       : 10;
-    const userComments = await engagementService.getPublicOpinionComment(p.postId,cursorCreatedAt,limit);
+    const userComments = await engagementService.getPublicOpinionComment(currentUserId,p.postId,cursorCreatedAt,limit);
     const nextCursor = userComments.length === limit
         ? userComments[userComments.length - 1].createdAt
         : null;

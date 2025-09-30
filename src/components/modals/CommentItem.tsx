@@ -19,6 +19,8 @@ const REPLY_PAGE_SIZE = 5;
 export default function CommentItem({ comment, onNavigate, onDelete, postId }: CommentItemProps) {
   const [showOptions, setShowOptions] = useState(false);
   const [isLiking, setIsLiking] = useState(false);
+  const [isLiked, setIsLiked] = useState(comment.isLikedByCurrentUser || false);
+  const [currentLikeCount, setCurrentLikeCount] = useState(comment.likeCount || 0);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showReplyInput, setShowReplyInput] = useState(false);
@@ -143,6 +145,30 @@ export default function CommentItem({ comment, onNavigate, onDelete, postId }: C
     setReplies(prevReplies => prevReplies.filter(reply => reply.id !== deletedReplyId));
   }
 
+  const handleToggleLike = async () => {
+    if (isLiking) return;
+
+    setIsLiking(true);
+
+    // Optimistic update
+    const originalLikedState = isLiked;
+    const originalLikeCount = currentLikeCount;
+    setIsLiked(prev => !prev);
+    setCurrentLikeCount(prev => (originalLikedState ? prev - 1 : prev + 1));
+
+    try {
+      const response = await fetchWithAuth(`/api/protected/posts/comment/toggleLike/${comment.id}`, {
+        method: 'POST',
+      });
+      if (!response.ok) {
+        // Revert on failure
+        setIsLiked(originalLikedState);
+        setCurrentLikeCount(originalLikeCount);
+      }
+    } finally {
+      setIsLiking(false);
+    }
+  };
   const handleDeleteComment = async () => {
     setIsDeleting(true);
     try {
@@ -229,25 +255,26 @@ export default function CommentItem({ comment, onNavigate, onDelete, postId }: C
         <RenderedContent htmlContent={comment.content} className="mt-2 text-gray-600 prose max-w-none prose-sm prose-p:leading-normal prose-a:text-blue-500 prose-a:no-underline hover:prose-a:underline" />
         <div className="flex gap-4 text-sm mt-1.5">
           <button
+            onClick={handleToggleLike}
             disabled={isLiking}
             className={`flex items-center gap-1.5 transition-colors duration-200 ${
-              true ? "text-blue-500" : "text-gray-500 hover:text-blue-500"
+              isLiked ? "text-blue-500" : "text-gray-500 hover:text-blue-500"
             }`}
           >
             <svg
               className={`w-4 h-4 ${isLiking ? "animate-pulse" : ""}`}
-              fill={true ? "currentColor" : "none"}
+              fill={isLiked ? "currentColor" : "none"}
               stroke="currentColor"
               viewBox="0 0 24 24"
             >
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                strokeWidth="1.5"
+                strokeWidth={isLiked ? 0 : 1.5}
                 d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
               />
             </svg>
-            <span>Like</span>
+            <span>{currentLikeCount > 0 ? `${currentLikeCount} Like` : 'Like'}</span>
           </button>
           <button
             onClick={handleToggleReplyInput}

@@ -8,6 +8,7 @@ export interface IEngagementService {
     parentCommentId?: string | null
   ): Promise<Comment>;
   getPublicOpinionComment(
+    currentUserId:string,
     postId: string,
     cursorCreatedAt?: string | null,
     limit?: number
@@ -19,6 +20,7 @@ export interface IEngagementService {
     limit?: number
   ): Promise<Comment[]>;
   getCommentReplies(
+    currentUserId:string,
     commentId: string,
     cursorCreatedAt?: string | null,
     limit?: number

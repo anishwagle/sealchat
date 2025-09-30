@@ -9,6 +9,7 @@ export interface Comment {
   parentCommentId?: string | null;
   replyCount?:number;
   likeCount?:number;
+  isLikedByCurrentUser?:boolean;
 }
 export interface CommentLike {
   id:number;
