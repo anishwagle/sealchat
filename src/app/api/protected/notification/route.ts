@@ -21,7 +21,20 @@ export async function GET(request: Request) {
         { status: 404 }
       );
     }
-    const notifications = await notificationService.getUserNotifications(userId);
+
+    const { searchParams } = new URL(request.url);
+    const cursorCreatedAt = searchParams.get("cursorCreatedAt");
+    const limit = searchParams.get("limit")
+      ? parseInt(`${searchParams.get("limit")}`)
+      : 10;
+    const notifications = await notificationService.getUserNotifications(
+      userId,
+      cursorCreatedAt,
+      limit
+    );
+    const nextCursor = notifications.length === limit
+        ? notifications[notifications.length - 1].createdAt
+        : null;
     Logger.log(COMPONENT, FUNCTION, "info", "User's Notification Count:",{count:notifications.length});
     
     if (!notifications) {
@@ -33,7 +46,7 @@ export async function GET(request: Request) {
     }
 
     Logger.log(COMPONENT, FUNCTION, "info", "NOTIFICATION fetched");
-    return NextResponse.json({ notifications: notifications }, { status: 200 });
+    return NextResponse.json({ notifications, nextCursor }, { status: 200 });
   } catch (error: any) {
     const apiError = new ApiError(
       "Failed to fetch Notification",

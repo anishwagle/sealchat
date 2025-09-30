@@ -55,21 +55,28 @@ export class NotificationService implements INotificationService {
       );
     }
   }
-  async getUserNotifications(userId: string): Promise<Notification[]> {
+  async getUserNotifications(userId: string,cursorCreatedAt?: string|null,
+    limit: number = 10): Promise<Notification[]> {
     const FUNCTION = "getUserNotifications";
     if (!userId) {
       throw new Error(`[${COMPONENT}][${FUNCTION}]User ID is required`);
     }
 
     try {
-      const results = await executeQuery(
-        `SELECT n.*, u.username AS source_username
+      let query =  `SELECT n.*, u.username AS source_username
          FROM notifications n
          JOIN users u ON n.source_user_id = u.id
-         WHERE n.user_id = ?
-         ORDER BY n.created_at DESC`,
-        [userId]
-      );
+         WHERE n.user_id = ?`;
+        let params= [userId];
+
+      if (cursorCreatedAt) {
+        query += ` AND n.created_at < STR_TO_DATE(?, '%Y-%m-%d %H:%i:%s')`;
+        params.push(cursorCreatedAt);
+      }
+
+      query += ` ORDER BY n.created_at DESC LIMIT ? `;
+      params.push(`${limit}`);
+      const results = await executeQuery( query,params);
       Logger.log(
         COMPONENT,
         FUNCTION,
@@ -77,7 +84,8 @@ export class NotificationService implements INotificationService {
         "Notification pulled successfully",
         {
           userId,
-          count: (results as any[]).length,
+          results,
+          cursorCreatedAt
         }
       );
       return (results as any[]).map((notification) => ({
