@@ -128,7 +128,8 @@ export class NotificationService implements INotificationService {
 async getNotificationByUserIdAndType(
     userId: string,
     type:NotificationType,
-    sourceUserId:string
+    sourceUserId:string,
+    postId:string
   ): Promise<Notification[]> {
     const FUNCTION = "getNotificationByUserIdAndType";
     if (!userId || !type || !sourceUserId) {
@@ -138,13 +139,17 @@ async getNotificationByUserIdAndType(
     }
 
     try {
-      const results = await executeQuery(
-        `SELECT n.*, u.username AS source_username
+
+      let query = `SELECT n.*, u.username AS source_username
          FROM notifications n
          JOIN users u ON n.source_user_id = u.id
-         WHERE n.user_id=? AND type=? AND n.source_user_id = ?`,
-        [ userId, type, sourceUserId]
-      );
+         WHERE n.user_id=? AND type=? AND n.source_user_id = ?`;
+      let params = [ userId, type, sourceUserId];
+      if(postId){
+        query += `AND n.post_id=?`;
+        params.push(postId);
+      }
+      const results = await executeQuery(query,params);
       Logger.log(COMPONENT, FUNCTION, "debug", "User check complete", {
             found: !!results,
           });

@@ -312,7 +312,8 @@ export class EngagementService implements IEngagementService {
         await notificationService.getNotificationByUserIdAndType(
           post.user_id,
           "post_like",
-          userId
+          userId,
+          post.id
         );
       notifications.forEach(async (x) => {
         await notificationService.deleteNotification(x.id, x.userId);

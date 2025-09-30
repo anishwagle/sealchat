@@ -16,7 +16,8 @@ export interface INotificationService {
   getNotificationByUserIdAndType(
     userId: string,
     type:NotificationType,
-    sourceUserId:string
+    sourceUserId:string,
+    postId?:string
   ): Promise<Notification[]> ;
   deleteNotification(
     notificationId: number,
