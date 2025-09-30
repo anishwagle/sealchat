@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { Comment, PostType } from "@/types/post";
 import CommentItem from "./CommentItem";
+import InfiniteScroll from "react-infinite-scroll-component";
 import { fetchWithAuth } from "@/lib/auth/fetchWithAuth";
+import { formatToMySQLDate } from "@/utils/dateConveter";
 
 interface CommentModalProps {
   isOpen: boolean;
@@ -9,6 +11,8 @@ interface CommentModalProps {
   postId:string;
   postType:PostType;
 }
+
+const COMMENT_PAGE_SIZE = 10;
 
 export default function CommentModal({
   isOpen,
@@ -19,6 +23,9 @@ export default function CommentModal({
   const [newComment, setNewComment] = useState("");
   const [isCommenting,setIsCommenting] = useState(false);
   const [isLoadingComments, setIsLoadingComments] = useState(true);
+  const [isMoreCommentsLoading,setIsMoreCommentsLoading] = useState(false);
+  const [hasMoreComments, setHasMoreComments] = useState(true);
+  const [lastCommentCreatedAt, setLastCommentCreatedAt] = useState<string | null>(null);
   const [comments,setComments] = useState<Comment[]>([]);
   const commentsContainerRef = useRef<HTMLDivElement>(null);
 
@@ -49,29 +56,55 @@ export default function CommentModal({
       setIsCommenting(false);
   };
   const fetchComments = async()=>{
-      setIsLoadingComments(true);
+      if (isMoreCommentsLoading && !lastCommentCreatedAt) return; // Prevent re-fetch on initial load
+      
+      setIsMoreCommentsLoading(true);
       try {
       let apiUrl = `/api/protected/posts/comment`;
       if(postType=='friend_post') apiUrl+=`/friendComment/${postId}`;
       else if(postType=='public_opinion') apiUrl+=`/publicComment/${postId}`;
 
-      const data = await fetchWithAuth(apiUrl);
+      const params = new URLSearchParams();
+      params.append('limit', String(COMMENT_PAGE_SIZE));
+      if (lastCommentCreatedAt) params.append('cursorCreatedAt', lastCommentCreatedAt);
+      apiUrl += `?${params.toString()}`;
+
+      const data = await fetchWithAuth(apiUrl, {method: 'GET'});
       const results = await data.json();
-      setComments(results.comments || []);
+      const newComments = results.comments || [];
+
+      setComments(prevComments => [...prevComments, ...newComments]);
+      if (newComments.length < COMMENT_PAGE_SIZE) {
+        setHasMoreComments(false);
+      }
       } catch (error) {
         console.error("Failed to fetch comments:", error);
-      } finally {
-        setIsLoadingComments(false);
       }
+
+      setIsMoreCommentsLoading(false);
     }
+
+    useEffect(() => {
+      if (comments.length > 0) {
+        // Assuming 'createdAt' is a string in ISO format
+        setLastCommentCreatedAt(formatToMySQLDate(comments[comments.length - 1].createdAt));
+      }
+    }, [comments]);
   // Effect to handle clicks outside of the active menu to close it
   useEffect(() => {
-    if (isOpen) {
-      fetchComments();
+    if (isOpen) {      
+      resetAndFetchComments();
       loadFriends();
     }
   }, [isOpen]);
 
+  const resetAndFetchComments = async () => {
+    setIsLoadingComments(true);
+    setComments([]);
+    setLastCommentCreatedAt(null);
+    setHasMoreComments(true);
+    await fetchComments().finally(() => setIsLoadingComments(false));
+  };
   const loadFriends = async () => {
     try {
       const data = await fetchWithAuth('/api/protected/friend');
@@ -174,6 +207,13 @@ export default function CommentModal({
     if (newComment.trim()) {
       handleCommentSubmit(newComment);
       setNewComment("");
+      if (commentsContainerRef.current) {
+        // Scroll to the top after submitting a new comment
+        commentsContainerRef.current.scrollTo({
+          top: 0,
+          behavior: 'smooth' // Optional: Add smooth scrolling
+        });
+      }
     }
   };
 
@@ -200,21 +240,28 @@ export default function CommentModal({
           </button>
         </div>
 
-        <div ref={commentsContainerRef} className="flex-1 overflow-y-auto p-6">
+        <div id="commentScrollableDiv" ref={commentsContainerRef} className="flex-1 overflow-y-auto p-6">
           {isLoadingComments ? (
             <div className="text-center py-16 text-gray-500">Loading comments...</div>
           ) : comments.length > 0 ? (
-            <div className="space-y-4">
-              {comments.map((comment) => (
-                <CommentItem
-                  key={comment.id}
-                  comment={comment}
-                  onNavigate={onClose}
-                  onDelete={handleCommentDeleted}
-                  postId={postId}
-                />
-              ))}
-            </div>
+            <InfiniteScroll
+              dataLength={comments.length}
+              next={fetchComments}
+              hasMore={hasMoreComments}
+              loader={<div className="text-center py-4">Loading more comments...</div>}
+              scrollableTarget="commentScrollableDiv"
+              className="space-y-4"
+            >
+                {comments.map((comment) => (
+                  <CommentItem
+                    key={comment.id}
+                    comment={comment}
+                    onNavigate={onClose}
+                    onDelete={handleCommentDeleted}
+                    postId={postId}
+                  />
+                ))}
+            </InfiniteScroll>
           ) : (
             <div className="text-center py-16">
               <p className="text-2xl mb-2">🤔</p>
