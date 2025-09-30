@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS seal_chat.notifications (
   post_id VARCHAR(255) NULL,
   is_read BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (user_id) REFERENCES users(id),
-  FOREIGN KEY (source_user_id) REFERENCES users(id),
-  FOREIGN KEY (post_id) REFERENCES posts(id)
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (source_user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE
 );

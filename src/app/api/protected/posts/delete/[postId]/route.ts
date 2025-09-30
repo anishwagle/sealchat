@@ -5,9 +5,9 @@ import { postService } from "@/services/serviceProvider";
 import { ApiError } from "@/lib/errors";
 
 const COMPONENT = "api/protected/posts/delete/[postId]";
-const FUNCTION = "GET";
+const FUNCTION = "DELETE";
 
-export async function GET(request: Request,{ params }: { params: { postId: string }}) {
+export async function DELETE(request: Request,{ params }: { params: { postId: string }}) {
   const p = await params;
     Logger.log(COMPONENT, FUNCTION, 'info', 'Deleting Users Post', { postId: p.postId });
 

@@ -1,7 +1,7 @@
 "use client";
 import { Post, Comment, Like } from "@/types/post";
 import { getTimeSince, getTimeUntil } from "@/utils/dateConveter";
-import Link from "next/link";
+import { useRouter, usePathname } from "next/navigation";
 import { useState, useEffect, useRef, useCallback } from "react";
 import CommentModal from "../modals/CommentModal";
 import UserListModal from "../modals/UserListModal";
@@ -9,17 +9,24 @@ import Snackbar from "../SnackBar";
 import { useAuth } from "@/lib/auth/useAuth";
 import RenderedContent from "../RenderedContent";
 import { fetchWithAuth } from "@/lib/auth/fetchWithAuth";
+import Link from "next/link";
+interface PostComponentProps extends Post {
+  onPostDeleted: (postId: string) => void;
+}
 
-export default function PostComponent(post: Post) {
+export default function PostComponent({ onPostDeleted, ...post }: PostComponentProps) {
   const [showOptions, setShowOptions] = useState(false);
   const [showCommentModal, setShowCommentModal] = useState(false);
   const [showLikesModal, setShowLikesModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [isLiking, setIsLiking] = useState(false);
   const { currentUserId } = useAuth();
   const [isLikedByCurrentUser, setIsLikedByCurrentUser] = useState(!!post.isLikedByCurrentUser);
   const [likeCount, setLikeCount] = useState(post.likeCount);
   const [localLikes, setLocalLikes] = useState<Like[]>([]); // This could be fetched on modal open
+  const router = useRouter();
+  const pathname = usePathname();
   const dropdownRef = useRef<HTMLDivElement>(null);
   
   const fetchLikeList = useCallback(async () => {
@@ -81,11 +88,27 @@ export default function PostComponent(post: Post) {
   
 
   const handleDeletePost = async () => {
-    const apiUrl = `/api/protected/posts/delete/${post.id}`;
-    const response = await fetchWithAuth(apiUrl)
-    setShowDeleteConfirm(false);
-  
-    // In a real app, you'd remove the post from the list here.
+    setIsDeleting(true);
+    try {
+      const apiUrl = `/api/protected/posts/delete/${post.id}`;
+      const response = await fetchWithAuth(apiUrl, { method: 'DELETE' });
+
+      if (response.ok) {
+        setShowDeleteConfirm(false);
+        if (pathname.startsWith('/posts/')) {
+          router.push('/');
+        } else {
+          onPostDeleted(post.id);
+        }
+      } else {
+        console.error("Failed to delete post");
+        // Optionally, show a snackbar or toast for the error
+      }
+    } catch (error) {
+      console.error("Error deleting post:", error);
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
 
@@ -272,21 +295,20 @@ export default function PostComponent(post: Post) {
               Are you sure you want to delete this post? This action cannot be
               undone.
             </p>
-            <div className="flex justify-end gap-3">
+            <div className="flex justify-end gap-3 mt-6">
               <button
                 onClick={() => setShowDeleteConfirm(false)}
-                className="px-4 py-2 text-gray-600 hover:text-gray-700"
+                disabled={isDeleting}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-300 transition-all duration-200 disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
-                onClick={() => {
-                  handleDeletePost();
-                  setShowDeleteConfirm(false);
-                }}
-                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+                onClick={handleDeletePost}
+                disabled={isDeleting}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-500 rounded-lg hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-all duration-200 disabled:bg-red-300 disabled:cursor-not-allowed"
               >
-                Delete
+                {isDeleting ? 'Deleting...' : 'Delete'}
               </button>
             </div>
           </div>

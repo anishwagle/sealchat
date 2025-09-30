@@ -100,6 +100,10 @@ export default function PostList({ userId, isPublic, isProfile }: PostListProps)
     }
   };
 
+  const handlePostDeleted = (deletedPostId: string) => {
+    setPosts(prevPosts => prevPosts.filter(post => post.id !== deletedPostId));
+  };
+
   useEffect(() => {
     // Reset state whenever the feed type changes
     setPosts([]);
@@ -150,7 +154,7 @@ export default function PostList({ userId, isPublic, isProfile }: PostListProps)
         }
       >
         {posts.map((post) => (
-          <PostComponent key={post.id} {...post} />
+          <PostComponent key={post.id} {...post} onPostDeleted={handlePostDeleted} />
         ))}
       </InfiniteScroll>
 
