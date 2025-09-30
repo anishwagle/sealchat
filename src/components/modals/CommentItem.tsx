@@ -1,20 +1,27 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { Comment } from "@/types/post";
+import { Comment, PostType } from "@/types/post";
 import { getTimeSince } from "@/utils/dateConveter";
 import RenderedContent from "../RenderedContent";
 import { useAuth } from "@/lib/auth/useAuth";
+import { fetchWithAuth } from "@/lib/auth/fetchWithAuth";
 
 interface CommentItemProps {
   comment: Comment;
   onNavigate?: () => void;
+  onReply: (newComment: Comment) => void;
+  postId: string;
 }
 
-export default function CommentItem({ comment,onNavigate}: CommentItemProps) {
+export default function CommentItem({ comment, onNavigate, onReply, postId }: CommentItemProps) {
   const [showOptions, setShowOptions] = useState(false);
   const [isLiking, setIsLiking] = useState(false);
+  const [showReply, setShowReply] = useState(false);
+  const [replyContent, setReplyContent] = useState("");
+  const [isReplying, setIsReplying] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const {currentUserId} = useAuth();
+  const replyTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const { currentUserId } = useAuth();
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -30,6 +37,49 @@ export default function CommentItem({ comment,onNavigate}: CommentItemProps) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    if (showReply) {
+      const textarea = replyTextareaRef.current;
+      if (textarea) {
+        setTimeout(() => {
+          textarea.focus();
+          const end = textarea.value.length;
+          textarea.setSelectionRange(end, end);
+        }, 0);
+      }
+    }
+  }, [showReply]);
+
+  const handleReplyClick = () => {
+    setShowReply(!showReply);
+    if (!showReply) {
+      setReplyContent(`@${comment.username} `);
+    }
+  };
+
+  const handleReplySubmit = async () => {
+    if (!replyContent.trim() || isReplying) return;
+    setIsReplying(true);
+    try {
+      const response = await fetchWithAuth('/api/protected/posts/comment/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          content: replyContent,
+          postId: postId,
+          parentCommentId: comment.id
+        }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        onReply(data.comment);
+        setShowReply(false);
+        setReplyContent("");
+      }
+    } finally {
+      setIsReplying(false);
+    }
+  };
   return (
     <div className="sbg-white rounded-lg border border-gray-100 p-5 relative">
       <div className="flex-1">
@@ -111,7 +161,10 @@ export default function CommentItem({ comment,onNavigate}: CommentItemProps) {
             </svg>
             <span>Like</span>
           </button>
-          <button className="flex items-center gap-1.5 text-gray-500 hover:text-blue-500 transition-colors duration-200">
+          <button
+            onClick={handleReplyClick}
+            className="flex items-center gap-1.5 text-gray-500 hover:text-blue-500 transition-colors duration-200"
+          >
             <svg
               className="w-4 h-4"
               fill="none"
@@ -128,6 +181,34 @@ export default function CommentItem({ comment,onNavigate}: CommentItemProps) {
             <span>Reply</span>
           </button>
         </div>
+        {showReply && (
+          <div className="mt-4 flex items-start gap-3">
+            <div className="w-8 h-8 rounded-full bg-gray-200 flex-shrink-0"></div>
+            <div className="flex-1">
+              <textarea
+                ref={replyTextareaRef}
+                value={replyContent}
+                onChange={(e) => setReplyContent(e.target.value)}
+                placeholder={`Replying to @${comment.username}...`}
+                className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
+                rows={2}
+              />
+              <div className="mt-2 flex justify-end">
+                <button
+                  onClick={handleReplySubmit}
+                  disabled={isReplying || !replyContent.trim()}
+                  className={`px-4 py-1.5 text-sm font-semibold text-white rounded-full transition-colors ${
+                    isReplying || !replyContent.trim()
+                      ? "bg-blue-300 cursor-not-allowed"
+                      : "bg-blue-500 hover:bg-blue-600"
+                  }`}
+                >
+                  {isReplying ? "..." : "Reply"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

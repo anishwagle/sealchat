@@ -41,7 +41,7 @@ export default function CommentModal({
       });
 
       const data = await response.json();
-      setComments([...comments, data.comment]);
+      setComments(prev => [...prev, data.comment]);
       if (!response.ok) {
         throw new Error(data.error || 'Failed to create comment');
       }
@@ -57,7 +57,7 @@ export default function CommentModal({
 
       const data = await fetchWithAuth(apiUrl);
       const results = await data.json();
-      setComments(results.comments.map((x: Comment) => x));
+      setComments(results.comments || []);
       } catch (error) {
         console.error("Failed to fetch comments:", error);
       } finally {
@@ -159,12 +159,19 @@ export default function CommentModal({
   };
 
   const insertMention = (username: string) => {
-    const cursorPosition = commentInputRef.current?.selectionStart || 0;
-    const textBefore = newComment.substring(0, cursorPosition - mentionQuery.length - 1);
-    const textAfter = newComment.substring(cursorPosition);
-    setNewComment(`${textBefore}@${username} ${textAfter}`);
+    const textarea = commentInputRef.current;
+    if (!textarea) return;
+
+    const startPos = textarea.selectionStart;
+    const textBefore = newComment.substring(0, startPos - mentionQuery.length - 1);
+    const textAfter = newComment.substring(startPos);
+    const newText = `${textBefore}@${username} ${textAfter}`;
+    const newCursorPosition = `${textBefore}@${username} `.length;
+
+    setNewComment(newText);
     setShowSuggestions(false);
-    commentInputRef.current?.focus();
+    textarea.setSelectionRange(newCursorPosition, newCursorPosition);
+    textarea.focus();
   };
 
   if (!isOpen) return null;
@@ -175,6 +182,10 @@ export default function CommentModal({
       handleCommentSubmit(newComment);
       setNewComment("");
     }
+  };
+
+  const handleNewReply = (newReply: Comment) => {
+    setComments(prev => [...prev, newReply]);
   };
 
   return (
@@ -202,7 +213,13 @@ export default function CommentModal({
           ) : comments.length > 0 ? (
             <div className="space-y-4">
               {comments.map((comment) => (
-                <CommentItem key={comment.id} comment={comment} onNavigate={onClose} />
+                <CommentItem
+                  key={comment.id}
+                  comment={comment}
+                  onNavigate={onClose}
+                  onReply={handleNewReply}
+                  postId={postId}
+                />
               ))}
             </div>
           ) : (
