@@ -20,9 +20,15 @@ export async function GET(request: Request,{ params }: { params: { postId: strin
         { status: 404 }
       );
     }
-
-    const userComments = await engagementService.getFriendPostComment(currentUserId,p.postId);
-    
+const { searchParams } = new URL(request.url);
+    const cursorCreatedAt = searchParams.get("cursorCreatedAt");
+    const limit = searchParams.get("limit")
+      ? parseInt(`${searchParams.get("limit")}`)
+      : 10;
+    const userComments = await engagementService.getFriendPostComment(currentUserId, p.postId,cursorCreatedAt,limit);
+    const nextCursor = userComments.length === limit
+        ? userComments[userComments.length - 1].createdAt
+        : null;
     if (!userComments) {
       Logger.log(COMPONENT, FUNCTION, "error", "Comments not found", {
         postId: p.postId,
@@ -34,11 +40,8 @@ export async function GET(request: Request,{ params }: { params: { postId: strin
       );
     }
 
-    const comments = [...userComments].sort(
-      (a, b) => a.createdAt.getTime() - b.createdAt.getTime()
-    );
     Logger.log(COMPONENT, FUNCTION, "info", "Comments fetched");
-    return NextResponse.json({ comments: comments }, { status: 200 });
+    return NextResponse.json({ comments:userComments, nextCursor }, { status: 200 });
   } catch (error: any) {
     const apiError = new ApiError(
       "Failed to fetch Post",

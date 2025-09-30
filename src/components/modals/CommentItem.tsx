@@ -9,12 +9,11 @@ import { fetchWithAuth } from "@/lib/auth/fetchWithAuth";
 interface CommentItemProps {
   comment: Comment;
   onNavigate?: () => void;
-  onReply: (newComment: Comment) => void;
   onDelete: (commentId: string) => void;
   postId: string;
 }
 
-export default function CommentItem({ comment, onNavigate, onReply, onDelete, postId }: CommentItemProps) {
+export default function CommentItem({ comment, onNavigate, onDelete, postId }: CommentItemProps) {
   const [showOptions, setShowOptions] = useState(false);
   const [isLiking, setIsLiking] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -22,6 +21,8 @@ export default function CommentItem({ comment, onNavigate, onReply, onDelete, po
   const [showReply, setShowReply] = useState(false);
   const [replyContent, setReplyContent] = useState("");
   const [isReplying, setIsReplying] = useState(false);
+  const [replies, setReplies] = useState<Comment[]>([]);
+  const [isLoadingReplies, setIsLoadingReplies] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const replyTextareaRef = useRef<HTMLTextAreaElement>(null);
   const { currentUserId } = useAuth();
@@ -53,9 +54,32 @@ export default function CommentItem({ comment, onNavigate, onReply, onDelete, po
     }
   }, [showReply]);
 
+  useEffect(() => {
+    if (showReply) {
+      fetchReplies();
+    }
+  }, [showReply]);
+
+  const fetchReplies = async () => {
+    if (comment.replyCount === 0 || replies.length > 0) return;
+    setIsLoadingReplies(true);
+    try {
+      const response = await fetchWithAuth(`/api/protected/posts/comment/getReply/${comment.id}`);
+      if (response.ok) {
+        const data = await response.json();
+        setReplies(data.replies || []);
+      }
+    } catch (error) {
+      console.error("Failed to fetch replies:", error);
+    } finally {
+      setIsLoadingReplies(false);
+    }
+  };
+
   const handleReplyClick = () => {
-    setShowReply(!showReply);
-    if (!showReply) {
+    const willShow = !showReply;
+    setShowReply(willShow);
+    if (willShow) {
       setReplyContent(`@${comment.username} `);
     }
   };
@@ -75,7 +99,7 @@ export default function CommentItem({ comment, onNavigate, onReply, onDelete, po
       });
       const data = await response.json();
       if (response.ok) {
-        onReply(data.comment);
+        setReplies(prev => [data.comment, ...prev]);
         setShowReply(false);
         setReplyContent("");
       }
@@ -83,6 +107,10 @@ export default function CommentItem({ comment, onNavigate, onReply, onDelete, po
       setIsReplying(false);
     }
   };
+
+  const handleReplyDeleted = (deletedReplyId: string) => {
+    setReplies(prevReplies => prevReplies.filter(reply => reply.id !== deletedReplyId));
+  }
 
   const handleDeleteComment = async () => {
     setIsDeleting(true);
@@ -207,11 +235,12 @@ export default function CommentItem({ comment, onNavigate, onReply, onDelete, po
                 d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
               />
             </svg>
-            <span>Reply</span>
+            <span>Reply {" "}
+                {comment.replyCount}</span>
           </button>
         </div>
         {showReply && (
-          <div className="mt-4 flex items-start gap-3">
+          <div className="mt-4 flex items-start gap-3 pl-8 border-l-2 border-gray-100 pt-4">
             <div className="w-8 h-8 rounded-full bg-gray-200 flex-shrink-0"></div>
             <div className="flex-1">
               <textarea
@@ -235,6 +264,23 @@ export default function CommentItem({ comment, onNavigate, onReply, onDelete, po
                   {isReplying ? "..." : "Reply"}
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {showReply && (
+          <div className="mt-4 pl-8 border-l-2 border-gray-100 pt-4">
+            {isLoadingReplies && <p className="text-sm text-gray-500">Loading replies...</p>}
+            <div className="space-y-4">
+              {replies.map(reply => (
+                <CommentItem
+                  key={reply.id}
+                  comment={reply}
+                  onNavigate={onNavigate}
+                  onDelete={handleReplyDeleted}
+                  postId={postId}
+                />
+              ))}
             </div>
           </div>
         )}

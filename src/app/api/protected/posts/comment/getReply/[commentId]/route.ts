@@ -4,12 +4,12 @@ import { Logger } from "@/lib/logger";
 import { engagementService } from "@/services/serviceProvider";
 import { ApiError } from "@/lib/errors";
 
-const COMPONENT = "api/protected/posts/comment/publicComment/[postId]";
+const COMPONENT = "api/protected/posts/comment/getReply/[commentId]";
 const FUNCTION = "GET";
 
-export async function GET(request: Request,{ params }: { params: { postId: string }}) {
+export async function GET(request: Request,{ params }: { params: { commentId: string }}) {
   const p = await params;
-    Logger.log(COMPONENT, FUNCTION, 'info', 'Fetching Users Comment', { postId: p.postId });
+    Logger.log(COMPONENT, FUNCTION, 'info', 'Fetching Users Reply', { commentId: p.commentId });
 
   try {
     const currentUserId = request.headers.get("x-user-id");
@@ -26,13 +26,13 @@ export async function GET(request: Request,{ params }: { params: { postId: strin
     const limit = searchParams.get("limit")
       ? parseInt(`${searchParams.get("limit")}`)
       : 10;
-    const userComments = await engagementService.getPublicOpinionComment(p.postId,cursorCreatedAt,limit);
-    const nextCursor = userComments.length === limit
-        ? userComments[userComments.length - 1].createdAt
+    const userReply = await engagementService.getCommentReplies(p.commentId,cursorCreatedAt,limit);
+    const nextCursor = userReply.length === limit
+        ? userReply[userReply.length - 1].createdAt
         : null;
-    if (!userComments) {
+    if (!userReply) {
       Logger.log(COMPONENT, FUNCTION, "error", "Comments not found", {
-        postId: p.postId,
+        commentId: p.commentId,
       });
 
       return NextResponse.json(
@@ -42,7 +42,7 @@ export async function GET(request: Request,{ params }: { params: { postId: strin
     }
 
     Logger.log(COMPONENT, FUNCTION, "info", "Comments fetched");
-    return NextResponse.json({ comments:userComments, nextCursor }, { status: 200 });
+    return NextResponse.json({ replies:userReply, nextCursor }, { status: 200 });
   } catch (error: any) {
     const apiError = new ApiError(
       "Failed to fetch Post",

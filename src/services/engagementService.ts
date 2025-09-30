@@ -148,16 +148,36 @@ export class EngagementService implements IEngagementService {
     }
   }
 
-  async getPublicOpinionComment(postId: string): Promise<Comment[]> {
+  async getPublicOpinionComment(
+    postId: string,
+    cursorCreatedAt?: string | null,
+    limit: number = 10
+  ): Promise<Comment[]> {
     const FUNCTION = "getPublicOpinionComment";
     try {
-      const results = await executeQuery(
-        `SELECT c.id, c.user_id,c.post_id, u.username,c.parent_comment_id, c.content,c.original_content, c.created_at
+      let query = `SELECT c.id, c.user_id,c.post_id,COALESCE(cm.reply_count, 0) AS reply_count,
+         u.username,
+         c.parent_comment_id,
+         c.content,
+         c.original_content,
+         c.created_at
          FROM comments c
+         LEFT JOIN (
+          SELECT parent_comment_id, COUNT(*) AS reply_count
+          FROM comments
+          GROUP BY parent_comment_id
+         ) cm ON c.id = c.parent_comment_id
          JOIN users u ON c.user_id = u.id
-         WHERE c.post_id = ?`,
-        [postId]
-      );
+         WHERE c.post_id = ? AND c.parent_comment_id IS NULL`;
+      let params: string[] = [postId];
+      if (cursorCreatedAt) {
+        query += ` AND c.created_at < STR_TO_DATE(?, '%Y-%m-%d %H:%i:%s')`;
+        params.push(cursorCreatedAt);
+      }
+
+      query += ` ORDER BY c.created_at DESC LIMIT ? `;
+      params.push(`${limit}`);
+      const results = await executeQuery(query, params);
 
       Logger.log(
         COMPONENT,
@@ -166,6 +186,7 @@ export class EngagementService implements IEngagementService {
         "Comments Fetched for feed Successfully",
         {
           postId,
+          results,
         }
       );
 
@@ -178,6 +199,69 @@ export class EngagementService implements IEngagementService {
         parentCommentId: comment.parent_comment_id,
         postId: comment.post_id,
         createdAt: new Date(comment.created_at),
+        replyCount:comment.reply_count
+      }));
+    } catch (error: any) {
+      throw new Error("Failed to fetch public opinions: " + error.message);
+    }
+  }
+async getCommentReplies(
+    commentId: string,
+    cursorCreatedAt?: string | null,
+    limit: number = 10
+  ): Promise<Comment[]> {
+    const FUNCTION = "getPublicOpinionComment";
+    try {
+      let query = `SELECT 
+    c.id,
+    c.user_id,
+    c.post_id,
+    u.username,
+    c.parent_comment_id,
+    c.content,
+    c.original_content,
+    c.created_at,
+    COALESCE(cm.reply_count, 0) AS reply_count
+FROM comments c
+JOIN users u ON c.user_id = u.id
+LEFT JOIN (
+    SELECT parent_comment_id, COUNT(*) AS reply_count
+    FROM comments
+    WHERE parent_comment_id IS NOT NULL
+    GROUP BY parent_comment_id
+) cm ON c.id = cm.parent_comment_id
+WHERE c.parent_comment_id = ?`;
+      let params: string[] = [commentId];
+      if (cursorCreatedAt) {
+        query += ` AND c.created_at < STR_TO_DATE(?, '%Y-%m-%d %H:%i:%s')`;
+        params.push(cursorCreatedAt);
+      }
+
+      query += ` ORDER BY c.created_at DESC LIMIT ? `;
+      params.push(`${limit}`);
+      const results = await executeQuery(query, params);
+
+      Logger.log(
+        COMPONENT,
+        FUNCTION,
+        "debug",
+        "Comments Fetched for feed Successfully",
+        {
+          commentId,
+          results,
+        }
+      );
+
+      return (results as any[]).map((comment) => ({
+        id: comment.id,
+        userId: comment.user_id,
+        username: comment.username,
+        originalContent: comment.original_content,
+        content: comment.content,
+        parentCommentId: comment.parent_comment_id,
+        postId: comment.post_id,
+        createdAt: new Date(comment.created_at),
+        replyCount:comment.reply_count
       }));
     } catch (error: any) {
       throw new Error("Failed to fetch public opinions: " + error.message);
@@ -186,7 +270,9 @@ export class EngagementService implements IEngagementService {
 
   async getFriendPostComment(
     currentUserId: string,
-    postId: string
+    postId: string,
+    cursorCreatedAt?: string | null,
+    limit: number=10
   ): Promise<Comment[]> {
     const FUNCTION = "getFriendPostComment";
     if (!postId || !currentUserId) {
@@ -219,13 +305,35 @@ export class EngagementService implements IEngagementService {
       }
     }
     try {
-      const results = await executeQuery(
-        `SELECT c.id, c.user_id,c.post_id, u.username,c.parent_comment_id, c.content,c.original_content, c.created_at
-         FROM comments c
-         JOIN users u ON c.user_id = u.id
-         WHERE c.post_id = ?`,
-        [postId]
-      );
+      let query = `SELECT 
+      c.id,
+      c.user_id,
+      u.username,
+      c.post_id,
+      c.parent_comment_id,
+      c.content,
+      c.original_content,
+      c.created_at,
+      COALESCE(r.reply_count, 0) AS reply_count
+   FROM comments c
+   JOIN users u ON c.user_id = u.id
+   LEFT JOIN (
+       SELECT parent_comment_id, COUNT(*) AS reply_count
+       FROM comments
+       WHERE parent_comment_id IS NOT NULL
+       GROUP BY parent_comment_id
+   ) r ON c.id = r.parent_comment_id
+   WHERE c.post_id = ? AND c.parent_comment_id IS NULL
+   `;
+      let params = [postId];
+      if (cursorCreatedAt) {
+        query += ` AND c.created_at < STR_TO_DATE(?, '%Y-%m-%d %H:%i:%s')`;
+        params.push(cursorCreatedAt);
+      }
+
+      query += ` ORDER BY c.created_at DESC LIMIT ? `;
+      params.push(`${limit}`);
+      const results = await executeQuery(query, params);
 
       Logger.log(
         COMPONENT,
@@ -233,7 +341,7 @@ export class EngagementService implements IEngagementService {
         "debug",
         "Comments Fetched for feed Successfully",
         {
-          postId,
+          postId
         }
       );
 
@@ -246,6 +354,7 @@ export class EngagementService implements IEngagementService {
         parentCommentId: comment.parent_comment_id,
         postId: comment.post_id,
         createdAt: new Date(comment.created_at),
+        replyCount: comment.reply_count,
       }));
     } catch (error: any) {
       throw new Error("Failed to fetch Comment: " + error.message);
@@ -285,7 +394,8 @@ export class EngagementService implements IEngagementService {
     );
     const result = (queryResult as any[])[0];
     Logger.log(COMPONENT, FUNCTION, "debug", "Get Post Like Status", {
-      result,found:!!result
+      result,
+      found: !!result,
     });
     return !!result;
   }
@@ -329,14 +439,14 @@ export class EngagementService implements IEngagementService {
         userId,
         postId,
       ]);
-      if(post.user_id!=userId){
-      await notificationService.createNotification(
-        post.user_id,
-        "post_like",
-        userId,
-        postId
-      );
-    }
+      if (post.user_id != userId) {
+        await notificationService.createNotification(
+          post.user_id,
+          "post_like",
+          userId,
+          postId
+        );
+      }
     }
     Logger.log(COMPONENT, FUNCTION, "debug", "Like status toggled");
   }

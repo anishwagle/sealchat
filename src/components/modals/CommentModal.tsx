@@ -41,7 +41,7 @@ export default function CommentModal({
       });
 
       const data = await response.json();
-      setComments(prev => [...prev, data.comment]);
+      setComments(prev => [data.comment, ...prev]);
       if (!response.ok) {
         throw new Error(data.error || 'Failed to create comment');
       }
@@ -132,13 +132,6 @@ export default function CommentModal({
     return () => window.removeEventListener('resize', updateSuggestionPosition);
   }, [showSuggestions]);
 
-  useEffect(() => {
-    // Scroll to the bottom when comments change
-    if (commentsContainerRef.current) {
-      commentsContainerRef.current.scrollTop = commentsContainerRef.current.scrollHeight;
-    }
-  }, [comments]);
-
   const handleCommentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
     setNewComment(value);
@@ -184,10 +177,6 @@ export default function CommentModal({
     }
   };
 
-  const handleNewReply = (newReply: Comment) => {
-    setComments(prev => [...prev, newReply]);
-  };
-
   const handleCommentDeleted = (deletedCommentId: string) => {
     setComments(prevComments => prevComments.filter(comment => comment.id !== deletedCommentId));
   };
@@ -221,7 +210,6 @@ export default function CommentModal({
                   key={comment.id}
                   comment={comment}
                   onNavigate={onClose}
-                  onReply={handleNewReply}
                   onDelete={handleCommentDeleted}
                   postId={postId}
                 />

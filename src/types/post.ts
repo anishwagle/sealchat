@@ -9,6 +9,8 @@ export interface Comment {
   createdAt: Date;
   postId: string;
   parentCommentId?: string | null;
+  replyCount?:number;
+  likeCount?:number;
 }
 
 export interface Like {

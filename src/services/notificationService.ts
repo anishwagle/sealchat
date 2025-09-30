@@ -84,7 +84,6 @@ export class NotificationService implements INotificationService {
         "Notification pulled successfully",
         {
           userId,
-          results,
           cursorCreatedAt
         }
       );
