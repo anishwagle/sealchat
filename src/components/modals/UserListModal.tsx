@@ -6,9 +6,11 @@ interface UserListModalProps {
   users: { username: string }[];
   title: string;
   emptyMessage?: string;
+  actionButtonText?: string;
+  actionButtonLink?: string;
 }
 
-export default function UserListModal({ isOpen, onClose, users, title, emptyMessage = "No users to show." }: UserListModalProps) {
+export default function UserListModal({ isOpen, onClose, users, title, emptyMessage = "No users to show.", actionButtonText, actionButtonLink }: UserListModalProps) {
   if (!isOpen) return null;
 
   return (
@@ -56,6 +58,17 @@ export default function UserListModal({ isOpen, onClose, users, title, emptyMess
             <p className="text-center text-gray-500 py-10">
               {emptyMessage}
             </p>
+          )}
+          {actionButtonLink && actionButtonText && (
+            <div className="p-2 border-t border-gray-100">
+              <Link
+                href={actionButtonLink}
+                onClick={onClose}
+                className="block w-full text-center py-2.5 text-sm text-blue-600 hover:bg-blue-50 rounded-lg font-medium transition-colors"
+              >
+                {actionButtonText}
+              </Link>
+            </div>
           )}
         </div>
       </div>

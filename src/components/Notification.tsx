@@ -9,7 +9,7 @@ import UserListModal from "./modals/UserListModal";
 
 type ProcessedNotification = Notification & {
   otherUsers?: Notification[];
-};
+}; 
 
 export default function NotificationComponent() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -116,7 +116,7 @@ export default function NotificationComponent() {
         }
         break;
       case "profile_like":
-        const allLikers = [notif, ...(notif.otherUsers || [])];
+        const allLikers = [notif, ...(notif.otherUsers || [])]; 
         openUserListModal("Liked your profile", allLikers);
         break;
       default:
@@ -384,6 +384,8 @@ export default function NotificationComponent() {
           onClose={() => setIsUserListModalOpen(false)}
           title={modalContent.title}
           users={modalContent.users.map(u => ({ username: u.sourceUsername }))}
+          actionButtonText={modalContent.title === "Liked your post" ? "View Post" : "View Profile"}
+          actionButtonLink={modalContent.title === "Liked your post" ? `/posts/${modalContent.users[0].postId}` : '/profile'}
           emptyMessage="No one has liked this yet."
         />
       )}
