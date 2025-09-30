@@ -11,7 +11,7 @@ import RenderedContent from "../RenderedContent";
 import { fetchWithAuth } from "@/lib/auth/fetchWithAuth";
 import Link from "next/link";
 interface PostComponentProps extends Post {
-  onPostDeleted: (postId: string) => void;
+  onPostDeleted?: (postId: string) => void;
 }
 
 export default function PostComponent({ onPostDeleted, ...post }: PostComponentProps) {
@@ -98,7 +98,7 @@ export default function PostComponent({ onPostDeleted, ...post }: PostComponentP
         if (pathname.startsWith('/posts/')) {
           router.push('/');
         } else {
-          onPostDeleted(post.id);
+          onPostDeleted?.(post.id);
         }
       } else {
         console.error("Failed to delete post");

@@ -31,7 +31,9 @@ export default async function RootLayout({
           }
         `}</style>
       </head>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-50`}
+      >
         <Progressbar/>
         <ConditionalNavbar />
         {children}
