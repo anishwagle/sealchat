@@ -9,6 +9,8 @@ interface AuthState {
   error: string;
 }
 
+const publicPages = ['/login', '/signup'];
+
 export const useAuth = () => {
   const [authState, setAuthState] = useState<AuthState>({
     isAuthenticated: false,
@@ -23,6 +25,12 @@ export const useAuth = () => {
   const searchParams = useSearchParams();
 
   useEffect(() => {
+    // Don't run auth check on public routes
+    if (publicPages.includes(pathname)) {
+      setAuthState({ isAuthenticated: false, currentUserId: '', isLoading: false, error: '' });
+      return;
+    }
+
     const controller = new AbortController();
     const signal = controller.signal;
 
@@ -37,7 +45,7 @@ export const useAuth = () => {
           setAuthState({ isAuthenticated: true, currentUserId: data.userId, isLoading: false, error: '' });
         } else {
           setAuthState({ isAuthenticated: false, currentUserId: '', isLoading: false, error: 'Unauthorized' });
-          if (pathname !== '/login' && pathname !== '/signup') {
+          if (!publicPages.includes(pathname)) {
             router.push('/login');
           }
         }

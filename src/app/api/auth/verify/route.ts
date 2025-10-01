@@ -17,8 +17,8 @@ export async function GET(request: Request) {
   try {
     const cookies = request.headers.get('cookie') || '';
     const accessToken = cookies
-      .split('; ')
-      .find(row => row.startsWith('accessToken='))
+      ?.split('; ')
+      ?.find(row => row.startsWith('accessToken='))
       ?.split('=')[1];
 
     if (!accessToken) {

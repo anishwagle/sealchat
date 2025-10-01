@@ -21,8 +21,8 @@ export async function POST(request: Request) {
   try {
     const cookies = request.headers.get('cookie') || '';
     const refreshToken = cookies
-      .split('; ')
-      .find(row => row.startsWith('refreshToken='))
+      ?.split('; ')
+      ?.find(row => row.startsWith('refreshToken='))
       ?.split('=')[1];
 
     if (!refreshToken) {
