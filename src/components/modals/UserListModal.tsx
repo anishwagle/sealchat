@@ -1,4 +1,8 @@
+"use client";
+
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 interface UserListModalProps {
   isOpen: boolean;
@@ -10,10 +14,10 @@ interface UserListModalProps {
   actionButtonLink?: string;
 }
 
-export default function UserListModal({ isOpen, onClose, users, title, emptyMessage = "No users to show.", actionButtonText, actionButtonLink }: UserListModalProps) {
+const UserListModalContent = ({ isOpen, onClose, users, title, emptyMessage = "No users to show.", actionButtonText, actionButtonLink }: UserListModalProps) => {
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-opacity duration-300 ease-in-out">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm max-h-[70vh] flex flex-col transform transition-all duration-300 ease-in-out scale-95 opacity-0 animate-fade-in-scale">
         <div className="flex justify-between items-center p-5 border-b border-gray-200">
@@ -73,5 +77,20 @@ export default function UserListModal({ isOpen, onClose, users, title, emptyMess
         </div>
       </div>
     </div>
+    , document.body
   );
+}
+
+export default function UserListModal(props: UserListModalProps) {
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted) {
+    return null;
+  }
+
+  return <UserListModalContent {...props} />;
 }
