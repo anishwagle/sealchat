@@ -3,13 +3,13 @@ import { Post, Like } from "@/types/post";
 import { getTimeSince, getTimeUntil } from "@/utils/dateConveter";
 import { useRouter, usePathname } from "next/navigation";
 import { useState, useEffect, useRef, useCallback } from "react";
-import CommentModal from "../modals/CommentModal";
 import UserListModal from "../modals/UserListModal";
-import Snackbar from "../SnackBar";
 import { useAuth } from "@/lib/auth/useAuth";
 import RenderedContent from "../RenderedContent";
 import { fetchWithAuth } from "@/lib/auth/fetchWithAuth";
 import Link from "next/link";
+import CreateShareModal from "./CreateShareModal";
+import CommentModal from "../modals/CommentModal";
 interface PostComponentProps extends Post {
   onPostDeleted?: (postId: string) => void;
 }
@@ -18,6 +18,7 @@ export default function PostComponent({ onPostDeleted, ...post }: PostComponentP
   const [showOptions, setShowOptions] = useState(false);
   const [showCommentModal, setShowCommentModal] = useState(false);
   const [showLikesModal, setShowLikesModal] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isLiking, setIsLiking] = useState(false);
@@ -109,6 +110,10 @@ export default function PostComponent({ onPostDeleted, ...post }: PostComponentP
     } finally {
       setIsDeleting(false);
     }
+  };
+
+  const handleShare = () => {
+    setShowShareModal(true);
   };
 
 
@@ -272,9 +277,30 @@ export default function PostComponent({ onPostDeleted, ...post }: PostComponentP
                 {post.commentCount}
               </span>
             </button>
+            {post.type === "public_opinion" ? (
+            <button
+              onClick={handleShare}
+              className="flex items-center gap-1.5 text-gray-500 hover:text-blue-500 transition-colors duration-200"
+            >
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="1.5"
+                  d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8m-4-6l-4-4-4 4m4-4v12"
+                ></path>
+              </svg>
+              <span>Share {post.shareCount}</span>
+            </button>):null}
           </div>
         </div>
       </div>
+
       <CommentModal
         isOpen={showCommentModal}
         onClose={() => setShowCommentModal(false)}
@@ -286,6 +312,11 @@ export default function PostComponent({ onPostDeleted, ...post }: PostComponentP
         onClose={() => setShowLikesModal(false)}
         users={localLikes}
         title="Liked by"
+      />
+      <CreateShareModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        post={post}
       />
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -314,7 +345,6 @@ export default function PostComponent({ onPostDeleted, ...post }: PostComponentP
           </div>
         </div>
       )}
-     
     </>
   );
 }

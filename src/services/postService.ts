@@ -141,7 +141,7 @@ export class PostService implements IPostService {
 
     // Store original content and initialize embed section
     let processedContent = content;
-    let embedSection = getEmbedSection(content);
+    let embedSection:string|null = sharedPostId?null: getEmbedSection(content);
     processedContent = getLinksFromString(processedContent);
     processedContent = await convertMentionsIntoLinks(
       processedContent,
@@ -156,11 +156,19 @@ export class PostService implements IPostService {
       `;
 
     try {
-      const expiresAt =
+      let expiresAt =
         type === "public_opinion"
           ? new Date(Date.now() + durationDays! * 24 * 60 * 60 * 1000)
           : null;
       const postId = v4();
+      if(sharedPostId){
+        const post =await this.getPostById(sharedPostId,userId);
+        if(post){
+          type=post.type;
+          durationDays=post.durationDays;
+          expiresAt=post.expiresAt || null;
+        }
+      }
       await executeQuery(
         "INSERT INTO posts (id,user_id, type, content,original_content,shared_post_id, duration_days, expires_at, is_archived) VALUES (?,?,?,?, ?, ?, ?, ?, ?)",
         [

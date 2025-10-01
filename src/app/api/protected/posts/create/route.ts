@@ -19,12 +19,13 @@ export async function POST(request: Request) {
         { status: 404 }
       );
     }
-    const { content, type, durationDays } = (await request.json()) as {
+    const { content, type, durationDays,sharedPostId } = (await request.json()) as {
       content: string;
       type: "friend_post" | "public_opinion";
       durationDays?: number;
+      sharedPostId?:string;
     };
-    await postService.createPost(userId, content, type, durationDays);
+    await postService.createPost(userId, content, type, durationDays,sharedPostId);
     Logger.log(COMPONENT, FUNCTION, "info", "Post Created Successfully");
     return NextResponse.json(
       { message: "Post Created Successfully" },

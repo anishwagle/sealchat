@@ -1,7 +1,7 @@
 import { fetchWithAuth } from '@/lib/auth/fetchWithAuth';
-import { useAuth } from '@/lib/auth/useAuth';
 import { PostType } from '@/types/post';
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
+import MentionTextarea from '../MentionTextarea';
 
 export default function CreatePostModal({ onClose, onPostCreated }: { onClose: () => void; onPostCreated: () => void }) {
   const [content, setContent] = useState('');
@@ -9,106 +9,6 @@ export default function CreatePostModal({ onClose, onPostCreated }: { onClose: (
   const [durationDays, setDurationDays] = useState<number | undefined>(1);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [mentionQuery, setMentionQuery] = useState('');
-  const [friends, setFriends] = useState<{ username: string }[]>([]);
-  const [filteredFriends, setFilteredFriends] = useState<{ username: string }[]>([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [suggestionPosition, setSuggestionPosition] = useState({ top: 0, left: 0 });
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  useEffect(() => {
-    const loadFriends = async () => {
-      try {
-        const data = await fetchWithAuth('/api/protected/friend');
-        const results = await data.json();
-        
-        setFriends(results.users);
-      } catch (err) {
-        console.error('Failed to load friends');
-      }
-    };
-    loadFriends();
-  }, []);
-
-  const getCaretCoordinates = () => {
-    const textarea = textareaRef.current;
-    if (!textarea) return { top: 0, left: 0 };
-
-    const { selectionStart } = textarea;
-    const textBeforeCaret = textarea.value.substring(0, selectionStart);
-    const lines = textBeforeCaret.split('\n');
-    const currentLineNumber = lines.length;
-    const currentLineText = lines[lines.length - 1];
-    
-    // Find the last @ position
-    const lastAtSymbol = currentLineText.lastIndexOf('@');
-    const textUpToAt = lastAtSymbol >= 0 ? currentLineText.substring(0, lastAtSymbol + 1) : currentLineText;
-
-    const computedStyle = window.getComputedStyle(textarea);
-    const lineHeight = parseInt(computedStyle.lineHeight || '20');
-    const paddingLeft = parseInt(computedStyle.paddingLeft || '12');
-    
-    const canvas = document.createElement('canvas');
-    const context = canvas.getContext('2d');
-    if (context) {
-      context.font = `${computedStyle.fontSize} ${computedStyle.fontFamily}`;
-      const textWidth = context.measureText(textUpToAt).width;
-
-      return {
-        top: (currentLineNumber - 1) * lineHeight,
-        left: Math.min(textWidth + paddingLeft, textarea.offsetWidth - 200) // Give more space for dropdown
-      };
-    }
-
-    return { top: 0, left: 0 };
-  };
-
-  const updateSuggestionPosition = () => {
-    if (!showSuggestions || !textareaRef.current) return;
-
-    const { top, left } = getCaretCoordinates();
-    const lineHeight = parseInt(window.getComputedStyle(textareaRef.current).lineHeight || '20');
-    const isMobile = window.innerWidth < 640;
-
-    setSuggestionPosition({
-      top: top + lineHeight + 8,
-      left: isMobile ? 8 : left
-    });
-  };
-
-  useEffect(() => {
-    window.addEventListener('resize', updateSuggestionPosition);
-    return () => window.removeEventListener('resize', updateSuggestionPosition);
-  }, [showSuggestions]);
-
-  const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const value = e.target.value;
-    setContent(value);
-
-    const cursorPosition = e.target.selectionStart;
-    const textBeforeCursor = value.substring(0, cursorPosition);
-    const mentionMatch = textBeforeCursor.match(/@(\w*)$/);
-    
-    if (mentionMatch) {
-      const query = mentionMatch[1];
-      setMentionQuery(query);
-      setFilteredFriends(friends.filter(f => 
-        f.username.toLowerCase().startsWith(query.toLowerCase())
-      ));
-      setShowSuggestions(true);
-      updateSuggestionPosition();
-    } else {
-      setShowSuggestions(false);
-    }
-  };
-
-  const insertMention = (username: string) => {
-    const cursorPosition = textareaRef.current?.selectionStart || 0;
-    const textBefore = content.substring(0, cursorPosition - mentionQuery.length - 1);
-    const textAfter = content.substring(cursorPosition);
-    setContent(`${textBefore}@${username} ${textAfter}`);
-    setShowSuggestions(false);
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -156,40 +56,14 @@ export default function CreatePostModal({ onClose, onPostCreated }: { onClose: (
               <label htmlFor="content" className="block text-sm font-medium text-gray-700 mb-1">
                 What's on your mind?
               </label>
-              <div className="relative">
-                <textarea
-                  ref={textareaRef}
-                  id="content"
-                  value={content}
-                  onChange={handleContentChange}
-                  className="w-full rounded-lg border-gray-200 bg-gray-50/50 p-3 text-gray-700 focus:border-blue-500 focus:ring-blue-500 focus:ring-1 transition-all duration-200 min-h-[100px]"
-                  placeholder="Write your post... (use @username to mention friends)"
-                  required
-                />
-                {showSuggestions && filteredFriends.length > 0 && (
-                  <ul 
-                    className="absolute bg-white rounded-md shadow-lg border border-gray-100 max-h-32 overflow-y-auto py-1 z-50 sm:w-48 w-[calc(100%-16px)]"
-                    style={{
-                      top: `${suggestionPosition.top}px`,
-                      left: `${suggestionPosition.left}px`,
-                      transform: 'translateY(2px)' // Slight offset for better visibility
-                    }}
-                  >
-                    {filteredFriends.map((friend) => (
-                      <li
-                        key={friend.username}
-                        onClick={() => insertMention(friend.username)}
-                        className="px-3 py-1.5 hover:bg-gray-50 cursor-pointer flex items-center gap-2 text-sm text-gray-700"
-                      >
-                        <span className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-xs font-medium">
-                          {friend.username[0].toUpperCase()}
-                        </span>
-                        <span>@{friend.username}</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
+              <MentionTextarea
+                id="content"
+                value={content}
+                onValueChange={setContent}
+                className="w-full rounded-lg border-gray-200 bg-gray-50/50 p-3 text-gray-700 focus:border-blue-500 focus:ring-blue-500 focus:ring-1 transition-all duration-200 min-h-[100px]"
+                placeholder="Write your post... (use @username to mention friends)"
+                required
+              />
             </div>
 
             <div className="space-y-3">
