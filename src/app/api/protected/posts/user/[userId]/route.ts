@@ -31,22 +31,44 @@ export async function GET(request: Request,{ params }: { params: { userId: strin
     const direction = sinceCreatedAt ? 'newer' : 'older';
     const cursor = sinceCreatedAt || cursorCreatedAt;
     Logger.log(COMPONENT, FUNCTION, "info", "Params:",{cursorCreatedAt,sinceCreatedAt,limit,direction,cursor});
-    let posts:Post[] = [];
+    let feedPosts:Post[] = [];
     
     if(currentUserId==p.userId){
       const userPost = await postService.getUserPaginatedPosts( currentUserId,`${cursor}`,direction,limit );
-      posts = [...userPost];
+      feedPosts = [...userPost];
     }else{
       const areFriends = await friendService.checkFriendship(p.userId,currentUserId)
       Logger.log(COMPONENT, FUNCTION, "error", "Checking user's friendship",{areFriends});
       if(areFriends) {
         const friendPosts = await postService.getFriendPosts(p.userId,currentUserId,`${cursor}`,direction,limit);
-        posts=[...friendPosts];
+        feedPosts=[...friendPosts];
       }else{
         const publicOpinions = await postService.getPublicOpinions(p.userId,currentUserId,`${cursor}`,direction,limit);
-        posts = [ ...publicOpinions];
+        feedPosts = [ ...publicOpinions];
       }
     }
+    const sharedPostIds = feedPosts
+    .filter((p) => p.sharedPostId)   // only posts that are sharing another post
+    .map((p) => p.sharedPostId!)     // non-null assertion
+    .filter((v, i, a) => a.indexOf(v) === i); // remove duplicates
+
+  let sharedPostsMap: Record<string, Post> = {};
+  if (sharedPostIds.length > 0) {
+    const sharedPosts = await postService.getPostsByIds(sharedPostIds, currentUserId);
+    sharedPostsMap = sharedPosts.reduce((acc, post) => {
+      acc[post.id] = post;
+      return acc;
+    }, {} as Record<string, Post>);
+  }
+
+  const posts : Post[]= feedPosts.map((post) => {
+    if (post.sharedPostId && sharedPostsMap[post.sharedPostId]) {
+      return {
+        ...post,
+        sharedPost: sharedPostsMap[post.sharedPostId] // hydrate
+      };
+    }return post;
+  });
     const nextCursor = direction === 'older' 
       && posts.length === limit 
       ? posts[posts.length - 1].createdAt : null;

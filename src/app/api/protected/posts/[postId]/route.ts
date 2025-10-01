@@ -23,6 +23,12 @@ export async function GET(request: Request, { params }: { params: { postId: stri
       );
     }
     const post = await postService.getPostById(p.postId,userId);
+
+  if (post?.sharedPostId) {
+    const sharedPosts = await postService.getPostsByIds([post.sharedPostId], userId);
+    post.sharedPost=sharedPosts[0];
+  }
+
     Logger.log(COMPONENT, FUNCTION, "info", " Post :",{post});
     
     if (!post) {

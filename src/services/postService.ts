@@ -37,6 +37,7 @@ export class PostService implements IPostService {
     p.expires_at,
     p.is_archived,
     p.created_at,
+    p.shared_post_id,
     -- Pre-aggregated comment count
     COALESCE(c.comment_count, 0) AS comment_count,
     -- Pre-aggregated like count
@@ -100,13 +101,15 @@ export class PostService implements IPostService {
       commentCount: post.comment_count,
       likeCount: post.like_count,
       isLikedByCurrentUser: post.is_liked_by_current_user,
+      sharedPostId:post.shared_post_id
     };
   }
   async createPost(
     userId: string,
     content: string,
     type: PostType,
-    durationDays?: number
+    durationDays?: number,
+    sharedPostId?:string
   ): Promise<void> {
     const FUNCTION = "createPost";
     Logger.log(COMPONENT, FUNCTION, "debug", "creating new post", {
@@ -150,13 +153,14 @@ export class PostService implements IPostService {
           : null;
       const postId = v4();
       await executeQuery(
-        "INSERT INTO posts (id,user_id, type, content,original_content, duration_days, expires_at, is_archived) VALUES (?,?,?, ?, ?, ?, ?, ?)",
+        "INSERT INTO posts (id,user_id, type, content,original_content,shared_post_id, duration_days, expires_at, is_archived) VALUES (?,?,?,?, ?, ?, ?, ?, ?)",
         [
           postId,
           userId,
           type,
           finalContent,
           content,
+          sharedPostId||null,
           durationDays || null,
           expiresAt,
           false,
@@ -183,6 +187,81 @@ export class PostService implements IPostService {
       throw new Error("Failed to create post: " + error.message);
     }
   }
+  async getPostsByIds(
+  postIds: string[],   // array of shared_post_id
+  currentUserId: string
+): Promise<Post[]> {
+  const FUNCTION = "getPostsByIds";
+
+  if (!postIds || postIds.length === 0) return [];
+
+  // Use placeholders for IN clause
+  const placeholders = postIds.map(() => '?').join(',');
+
+  const query = `
+    SELECT 
+      p.id,
+      p.user_id,
+      u.username,
+      p.original_content,
+      p.type,
+      p.content,
+      p.duration_days,
+      p.expires_at,
+      p.is_archived,
+      p.created_at,
+      p.shared_post_id,
+      -- Pre-aggregated comment count
+      COALESCE(c.comment_count, 0) AS comment_count,
+      -- Pre-aggregated like count
+      COALESCE(l.like_count, 0) AS like_count,
+      -- Check if current user liked the post
+      CASE WHEN ul.user_id IS NULL THEN FALSE ELSE TRUE END AS is_liked_by_current_user
+    FROM posts p
+    JOIN users u ON p.user_id = u.id
+    LEFT JOIN (
+      SELECT post_id, COUNT(*) AS comment_count
+      FROM comments
+      GROUP BY post_id
+    ) c ON p.id = c.post_id
+    LEFT JOIN (
+      SELECT post_id, COUNT(*) AS like_count
+      FROM likes
+      GROUP BY post_id
+    ) l ON p.id = l.post_id
+    LEFT JOIN (
+      SELECT post_id, user_id
+      FROM likes
+      WHERE user_id = ?
+    ) ul ON p.id = ul.post_id
+    WHERE p.id IN (${placeholders}) AND p.is_archived = FALSE
+      AND (p.expires_at IS NULL OR p.expires_at > NOW())
+  `;
+
+  const params = [currentUserId, ...postIds];
+
+  try {
+    const results = await executeQuery(query, params);
+    return (results as any[]).map((post) => ({
+      id: post.id,
+      userId: post.user_id,
+      username: post.username,
+      originalContent: post.original_content,
+      type: post.type,
+      content: post.content,
+      durationDays: post.duration_days,
+      expiresAt: post.expires_at ? new Date(post.expires_at) : null,
+      isArchived: post.is_archived,
+      createdAt: new Date(post.created_at),
+      commentCount: post.comment_count,
+      likeCount: post.like_count,
+      isLikedByCurrentUser: post.is_liked_by_current_user,
+      sharedPostId: post.shared_post_id
+    }));
+  } catch (error: any) {
+    throw new Error("Failed to fetch shared posts: " + error.message);
+  }
+}
   async getUserPaginatedPosts(
     userId: string,
     cursorCreatedAt?: string,
@@ -208,6 +287,7 @@ export class PostService implements IPostService {
     p.expires_at,
     p.is_archived,
     p.created_at,
+    p.shared_post_id,
     -- Pre-aggregated comment count
     COALESCE(c.comment_count, 0) AS comment_count,
     -- Pre-aggregated like count
@@ -264,6 +344,7 @@ export class PostService implements IPostService {
         commentCount: post.comment_count,
         likeCount: post.like_count,
         isLikedByCurrentUser: post.is_liked_by_current_user,
+        sharedPostId:post.shared_post_id
       }));
       return posts;
     } catch (error: any) {
@@ -296,6 +377,7 @@ export class PostService implements IPostService {
         p.expires_at,
         p.is_archived,
         p.created_at,
+        p.shared_post_id,
         COALESCE(c.comment_count, 0) AS comment_count,
         COALESCE(l.like_count, 0) AS like_count,
         CASE WHEN ul.user_id IS NULL THEN FALSE ELSE TRUE END AS is_liked_by_current_user
@@ -354,6 +436,7 @@ export class PostService implements IPostService {
         commentCount: post.comment_count,
         likeCount: post.like_count,
         isLikedByCurrentUser: post.is_liked_by_current_user,
+        sharedPostId:post.shared_post_id
       }));
     } catch (error: any) {
       throw new Error("Failed to fetch friend posts: " + error.message);
@@ -383,6 +466,7 @@ export class PostService implements IPostService {
             p.expires_at,
             p.is_archived,
             p.created_at,
+            p.shared_post_id,
             -- Pre-aggregated comment count
             COALESCE(c.comment_count, 0) AS comment_count,
             -- Pre-aggregated like count
@@ -424,6 +508,7 @@ export class PostService implements IPostService {
     p.expires_at,
     p.is_archived,
     p.created_at,
+    p.shared_post_id,
     -- Pre-aggregated comment count
     COALESCE(c.comment_count, 0) AS comment_count,
     -- Pre-aggregated like count
@@ -488,6 +573,7 @@ export class PostService implements IPostService {
         commentCount: post.comment_count,
         likeCount: post.like_count,
         isLikedByCurrentUser: post.is_liked_by_current_user,
+        sharedPostId:post.shared_post_id
       }));
     } catch (error: any) {
       throw new Error("Failed to fetch public opinions: " + error.message);
@@ -513,6 +599,7 @@ export class PostService implements IPostService {
     p.expires_at,
     p.is_archived,
     p.created_at,
+    p.shared_post_id,
     -- Pre-aggregated comment count
     COALESCE(c.comment_count, 0) AS comment_count,
     -- Pre-aggregated like count
@@ -560,6 +647,7 @@ export class PostService implements IPostService {
         commentCount: post.comment_count,
         likeCount: post.like_count,
         isLikedByCurrentUser: post.is_liked_by_current_user,
+        sharedPostId:post.shared_post_id
       }));
     } catch (error: any) {
       throw new Error("Failed to fetch private posts: " + error.message);
@@ -585,6 +673,7 @@ export class PostService implements IPostService {
     p.expires_at,
     p.is_archived,
     p.created_at,
+    p.shared_post_id,
     -- Pre-aggregated comment count
     COALESCE(c.comment_count, 0) AS comment_count,
     -- Pre-aggregated like count
@@ -641,6 +730,7 @@ export class PostService implements IPostService {
         commentCount: post.comment_count,
         likeCount: post.like_count,
         isLikedByCurrentUser: post.is_liked_by_current_user,
+        sharedPostId:post.shared_post_id
       }));
     } catch (error: any) {
       throw new Error("Failed to fetch all public opinions: " + error.message);
@@ -668,6 +758,7 @@ async getUserFeed(
     p.expires_at,
     p.is_archived,
     p.created_at,
+    p.shared_post_id,
     -- Pre-aggregated comment count
     COALESCE(c.comment_count, 0) AS comment_count,
     -- Pre-aggregated like count
@@ -767,6 +858,7 @@ async getUserFeed(
       commentCount: post.comment_count,
       likeCount: post.like_count,
       isLikedByCurrentUser: post.is_liked_by_current_user,
+      sharedPostId:post.shared_post_id
     }));
   } catch (error: any) {
     throw new Error("Failed to fetch user feed: " + error.message);

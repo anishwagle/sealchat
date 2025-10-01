@@ -21,5 +21,7 @@ export interface Post {
   createdAt: Date;
   likeCount:number;
   commentCount:number;
+  sharedPostId:string|null;
+  sharedPost?:Post;
   isLikedByCurrentUser:boolean;
 }

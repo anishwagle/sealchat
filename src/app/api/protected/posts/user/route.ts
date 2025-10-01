@@ -11,9 +11,9 @@ const FUNCTION = "GET";
 export async function GET(request: Request) {
   try {
 
-    const userId = request.headers.get("x-user-id");
-    Logger.log(COMPONENT, FUNCTION, "info", "Fetching users Post", { userId });
-    if (!userId) {
+    const currentUserId = request.headers.get("x-user-id");
+    Logger.log(COMPONENT, FUNCTION, "info", "Fetching users Post", { currentUserId });
+    if (!currentUserId) {
       Logger.log(COMPONENT, FUNCTION, "error", "Current User not found");
       return NextResponse.json(
         { message: "Current User not Found", code: "USER_NOT_FOUND" },
@@ -28,13 +28,37 @@ export async function GET(request: Request) {
 
     const direction = sinceCreatedAt ? 'newer' : 'older';
     const cursor = sinceCreatedAt || cursorCreatedAt;
-    const posts = await postService.getUserPaginatedPosts( userId,`${cursor}`,direction,limit );
+    const feedPosts = await postService.getUserPaginatedPosts( currentUserId,`${cursor}`,direction,limit );
+
+    const sharedPostIds = feedPosts
+    .filter((p) => p.sharedPostId)   // only posts that are sharing another post
+    .map((p) => p.sharedPostId!)     // non-null assertion
+    .filter((v, i, a) => a.indexOf(v) === i); // remove duplicates
+
+  let sharedPostsMap: Record<string, Post> = {};
+  if (sharedPostIds.length > 0) {
+    const sharedPosts = await postService.getPostsByIds(sharedPostIds, currentUserId);
+    sharedPostsMap = sharedPosts.reduce((acc, post) => {
+      acc[post.id] = post;
+      return acc;
+    }, {} as Record<string, Post>);
+  }
+
+  const posts : Post[]= feedPosts.map((post) => {
+    if (post.sharedPostId && sharedPostsMap[post.sharedPostId]) {
+      return {
+        ...post,
+        sharedPost: sharedPostsMap[post.sharedPostId] // hydrate
+      };
+    }return post;
+  });
+
     const nextCursor = direction === 'older' 
       && posts.length === limit ? 
       posts[posts.length - 1].createdAt : null;
     if (!posts) {
       Logger.log(COMPONENT, FUNCTION, "error", "Posts not found", {
-        userId: userId,
+        userId: currentUserId,
       });
       return NextResponse.json(
         { message: "Posts not found", code: "Post_NOT_FOUND" },

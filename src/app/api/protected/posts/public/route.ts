@@ -29,7 +29,30 @@ export async function GET(request: Request) {
 
     const direction = sinceCreatedAt ? 'newer' : 'older';
     const cursor = sinceCreatedAt || cursorCreatedAt;
-    const posts = await postService.getAllPublicOpinions( userId,`${cursor}`,direction,limit );
+    const feedPosts = await postService.getAllPublicOpinions( userId,`${cursor}`,direction,limit );
+    const sharedPostIds = feedPosts
+    .filter((p) => p.sharedPostId)   // only posts that are sharing another post
+    .map((p) => p.sharedPostId!)     // non-null assertion
+    .filter((v, i, a) => a.indexOf(v) === i); // remove duplicates
+
+  let sharedPostsMap: Record<string, Post> = {};
+  if (sharedPostIds.length > 0) {
+    const sharedPosts = await postService.getPostsByIds(sharedPostIds, userId);
+    sharedPostsMap = sharedPosts.reduce((acc, post) => {
+      acc[post.id] = post;
+      return acc;
+    }, {} as Record<string, Post>);
+  }
+
+  const posts : Post[]= feedPosts.map((post) => {
+    if (post.sharedPostId && sharedPostsMap[post.sharedPostId]) {
+      return {
+        ...post,
+        sharedPost: sharedPostsMap[post.sharedPostId] // hydrate
+      };
+    }return post;
+  });
+
     const nextCursor = direction === 'older' 
       && posts.length === limit ? 
       posts[posts.length - 1].createdAt : null;
