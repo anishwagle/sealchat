@@ -41,6 +41,7 @@ export class PostService implements IPostService {
     -- Pre-aggregated comment count
     COALESCE(c.comment_count, 0) AS comment_count,
     -- Pre-aggregated like count
+    COALESCE(s.share_count, 0) AS share_count,
     COALESCE(l.like_count, 0) AS like_count,
     -- Check if current user liked the post
     CASE WHEN ul.user_id IS NULL THEN FALSE ELSE TRUE END AS is_liked_by_current_user
@@ -58,6 +59,13 @@ export class PostService implements IPostService {
         FROM likes
         GROUP BY post_id
     ) l ON p.id = l.post_id
+     -- Aggregate shares
+    LEFT JOIN (
+        SELECT shared_post_id, COUNT(*) AS share_count
+        FROM posts
+        WHERE shared_post_id IS NOT NULL
+        GROUP BY shared_post_id
+    ) s ON p.id = s.shared_post_id
     -- Check if current user liked this post
     LEFT JOIN (
         SELECT post_id, user_id
@@ -101,7 +109,8 @@ export class PostService implements IPostService {
       commentCount: post.comment_count,
       likeCount: post.like_count,
       isLikedByCurrentUser: post.is_liked_by_current_user,
-      sharedPostId:post.shared_post_id
+      sharedPostId:post.shared_post_id,
+      shareCount:post.share_count
     };
   }
   async createPost(
@@ -215,6 +224,7 @@ export class PostService implements IPostService {
       COALESCE(c.comment_count, 0) AS comment_count,
       -- Pre-aggregated like count
       COALESCE(l.like_count, 0) AS like_count,
+      COALESCE(s.share_count, 0) AS share_count,
       -- Check if current user liked the post
       CASE WHEN ul.user_id IS NULL THEN FALSE ELSE TRUE END AS is_liked_by_current_user
     FROM posts p
@@ -234,6 +244,13 @@ export class PostService implements IPostService {
       FROM likes
       WHERE user_id = ?
     ) ul ON p.id = ul.post_id
+     -- Aggregate shares
+    LEFT JOIN (
+        SELECT shared_post_id, COUNT(*) AS share_count
+        FROM posts
+        WHERE shared_post_id IS NOT NULL
+        GROUP BY shared_post_id
+    ) s ON p.id = s.shared_post_id
     WHERE p.id IN (${placeholders}) AND p.is_archived = FALSE
       AND (p.expires_at IS NULL OR p.expires_at > NOW())
   `;
@@ -256,7 +273,8 @@ export class PostService implements IPostService {
       commentCount: post.comment_count,
       likeCount: post.like_count,
       isLikedByCurrentUser: post.is_liked_by_current_user,
-      sharedPostId: post.shared_post_id
+      sharedPostId: post.shared_post_id,
+      shareCount:post.share_count
     }));
   } catch (error: any) {
     throw new Error("Failed to fetch shared posts: " + error.message);
@@ -292,6 +310,7 @@ export class PostService implements IPostService {
     COALESCE(c.comment_count, 0) AS comment_count,
     -- Pre-aggregated like count
     COALESCE(l.like_count, 0) AS like_count,
+    COALESCE(s.share_count, 0) AS share_count,
     -- Check if current user liked the post
     CASE WHEN ul.user_id IS NULL THEN FALSE ELSE TRUE END AS is_liked_by_current_user
     FROM posts p
@@ -308,6 +327,13 @@ export class PostService implements IPostService {
         FROM likes
         GROUP BY post_id
     ) l ON p.id = l.post_id
+     -- Aggregate shares
+    LEFT JOIN (
+        SELECT shared_post_id, COUNT(*) AS share_count
+        FROM posts
+        WHERE shared_post_id IS NOT NULL
+        GROUP BY shared_post_id
+    ) s ON p.id = s.shared_post_id
     -- Check if current user liked this post
     LEFT JOIN (
         SELECT post_id, user_id
@@ -344,7 +370,8 @@ export class PostService implements IPostService {
         commentCount: post.comment_count,
         likeCount: post.like_count,
         isLikedByCurrentUser: post.is_liked_by_current_user,
-        sharedPostId:post.shared_post_id
+        sharedPostId:post.shared_post_id,
+        shareCount:post.share_count
       }));
       return posts;
     } catch (error: any) {
@@ -380,6 +407,7 @@ export class PostService implements IPostService {
         p.shared_post_id,
         COALESCE(c.comment_count, 0) AS comment_count,
         COALESCE(l.like_count, 0) AS like_count,
+        COALESCE(s.share_count, 0) AS share_count,
         CASE WHEN ul.user_id IS NULL THEN FALSE ELSE TRUE END AS is_liked_by_current_user
       FROM posts p
       JOIN users u ON p.user_id = u.id
@@ -398,6 +426,13 @@ export class PostService implements IPostService {
         FROM likes
         WHERE user_id = ?
       ) ul ON p.id = ul.post_id
+       -- Aggregate shares
+      LEFT JOIN (
+          SELECT shared_post_id, COUNT(*) AS share_count
+          FROM posts
+          WHERE shared_post_id IS NOT NULL
+          GROUP BY shared_post_id
+      ) s ON p.id = s.shared_post_id
       WHERE p.user_id = ? 
         AND p.is_archived = false
     `;
@@ -436,7 +471,8 @@ export class PostService implements IPostService {
         commentCount: post.comment_count,
         likeCount: post.like_count,
         isLikedByCurrentUser: post.is_liked_by_current_user,
-        sharedPostId:post.shared_post_id
+        sharedPostId:post.shared_post_id,
+        shareCount:post.share_count
       }));
     } catch (error: any) {
       throw new Error("Failed to fetch friend posts: " + error.message);
@@ -471,6 +507,7 @@ export class PostService implements IPostService {
             COALESCE(c.comment_count, 0) AS comment_count,
             -- Pre-aggregated like count
             COALESCE(l.like_count, 0) AS like_count,
+            COALESCE(s.share_count, 0) AS share_count,
             -- Check if current user liked the post
             CASE WHEN ul.user_id IS NULL THEN FALSE ELSE TRUE END AS is_liked_by_current_user
             FROM posts p
@@ -487,6 +524,13 @@ export class PostService implements IPostService {
                 FROM likes
                 GROUP BY post_id
             ) l ON p.id = l.post_id
+             -- Aggregate shares
+            LEFT JOIN (
+                SELECT shared_post_id, COUNT(*) AS share_count
+                FROM posts
+                WHERE shared_post_id IS NOT NULL
+                GROUP BY shared_post_id
+            ) s ON p.id = s.shared_post_id
             -- Check if current user liked this post
             LEFT JOIN (
                 SELECT post_id, user_id
@@ -513,6 +557,7 @@ export class PostService implements IPostService {
     COALESCE(c.comment_count, 0) AS comment_count,
     -- Pre-aggregated like count
     COALESCE(l.like_count, 0) AS like_count,
+    COALESCE(s.share_count, 0) AS share_count,
     -- Check if current user liked the post
     CASE WHEN ul.user_id IS NULL THEN FALSE ELSE TRUE END AS is_liked_by_current_user
     FROM posts p
@@ -529,6 +574,13 @@ export class PostService implements IPostService {
         FROM likes
         GROUP BY post_id
     ) l ON p.id = l.post_id
+     -- Aggregate shares
+    LEFT JOIN (
+        SELECT shared_post_id, COUNT(*) AS share_count
+        FROM posts
+        WHERE shared_post_id IS NOT NULL
+        GROUP BY shared_post_id
+    ) s ON p.id = s.shared_post_id
     -- Check if current user liked this post
     LEFT JOIN (
         SELECT post_id, user_id
@@ -573,7 +625,8 @@ export class PostService implements IPostService {
         commentCount: post.comment_count,
         likeCount: post.like_count,
         isLikedByCurrentUser: post.is_liked_by_current_user,
-        sharedPostId:post.shared_post_id
+        sharedPostId:post.shared_post_id,
+        shareCount:post.share_count
       }));
     } catch (error: any) {
       throw new Error("Failed to fetch public opinions: " + error.message);
@@ -604,6 +657,7 @@ export class PostService implements IPostService {
     COALESCE(c.comment_count, 0) AS comment_count,
     -- Pre-aggregated like count
     COALESCE(l.like_count, 0) AS like_count,
+    COALESCE(s.share_count, 0) AS share_count,
     -- Check if current user liked the post
     CASE WHEN ul.user_id IS NULL THEN FALSE ELSE TRUE END AS is_liked_by_current_user
     FROM posts p
@@ -620,6 +674,13 @@ export class PostService implements IPostService {
         FROM likes
         GROUP BY post_id
     ) l ON p.id = l.post_id
+     -- Aggregate shares
+    LEFT JOIN (
+        SELECT shared_post_id, COUNT(*) AS share_count
+        FROM posts
+        WHERE shared_post_id IS NOT NULL
+        GROUP BY shared_post_id
+    ) s ON p.id = s.shared_post_id
     -- Check if current user liked this post
     LEFT JOIN (
         SELECT post_id, user_id
@@ -647,7 +708,8 @@ export class PostService implements IPostService {
         commentCount: post.comment_count,
         likeCount: post.like_count,
         isLikedByCurrentUser: post.is_liked_by_current_user,
-        sharedPostId:post.shared_post_id
+        sharedPostId:post.shared_post_id,
+        shareCount:post.share_count
       }));
     } catch (error: any) {
       throw new Error("Failed to fetch private posts: " + error.message);
@@ -678,6 +740,7 @@ export class PostService implements IPostService {
     COALESCE(c.comment_count, 0) AS comment_count,
     -- Pre-aggregated like count
     COALESCE(l.like_count, 0) AS like_count,
+    COALESCE(s.share_count, 0) AS share_count,
     -- Check if current user liked the post
     CASE WHEN ul.user_id IS NULL THEN FALSE ELSE TRUE END AS is_liked_by_current_user
     FROM posts p
@@ -694,6 +757,13 @@ export class PostService implements IPostService {
         FROM likes
         GROUP BY post_id
     ) l ON p.id = l.post_id
+     -- Aggregate shares
+    LEFT JOIN (
+        SELECT shared_post_id, COUNT(*) AS share_count
+        FROM posts
+        WHERE shared_post_id IS NOT NULL
+        GROUP BY shared_post_id
+    ) s ON p.id = s.shared_post_id
     -- Check if current user liked this post
     LEFT JOIN (
         SELECT post_id, user_id
@@ -730,7 +800,8 @@ export class PostService implements IPostService {
         commentCount: post.comment_count,
         likeCount: post.like_count,
         isLikedByCurrentUser: post.is_liked_by_current_user,
-        sharedPostId:post.shared_post_id
+        sharedPostId:post.shared_post_id,
+        shareCount:post.share_count
       }));
     } catch (error: any) {
       throw new Error("Failed to fetch all public opinions: " + error.message);
@@ -763,6 +834,7 @@ async getUserFeed(
     COALESCE(c.comment_count, 0) AS comment_count,
     -- Pre-aggregated like count
     COALESCE(l.like_count, 0) AS like_count,
+    COALESCE(s.share_count, 0) AS share_count,
     -- Check if current user liked the post
     CASE WHEN ul.user_id IS NULL THEN FALSE ELSE TRUE END AS is_liked_by_current_user
     FROM posts p
@@ -779,6 +851,13 @@ async getUserFeed(
         FROM likes
         GROUP BY post_id
     ) l ON p.id = l.post_id
+     -- Aggregate shares
+    LEFT JOIN (
+        SELECT shared_post_id, COUNT(*) AS share_count
+        FROM posts
+        WHERE shared_post_id IS NOT NULL
+        GROUP BY shared_post_id
+    ) s ON p.id = s.shared_post_id
     -- Check if current user liked this post
     LEFT JOIN (
         SELECT post_id, user_id
@@ -858,7 +937,8 @@ async getUserFeed(
       commentCount: post.comment_count,
       likeCount: post.like_count,
       isLikedByCurrentUser: post.is_liked_by_current_user,
-      sharedPostId:post.shared_post_id
+      sharedPostId:post.shared_post_id,
+      shareCount:post.share_count
     }));
   } catch (error: any) {
     throw new Error("Failed to fetch user feed: " + error.message);

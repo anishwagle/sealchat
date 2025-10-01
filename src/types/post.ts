@@ -23,5 +23,6 @@ export interface Post {
   commentCount:number;
   sharedPostId:string|null;
   sharedPost?:Post;
+  shareCount:number;
   isLikedByCurrentUser:boolean;
 }
