@@ -208,6 +208,10 @@ export default function PostComponent({ onPostDeleted, ...post }: PostComponentP
         {/* Content Section */}
         <RenderedContent htmlContent={post.content} className="mt-3.5 text-gray-600 prose max-w-none prose-sm prose-p:leading-relaxed prose-a:text-blue-500 prose-a:no-underline hover:prose-a:underline" />
 
+        {post.sharedPost && (
+            <PostComponent {...post.sharedPost} onPostDeleted={onPostDeleted} />
+      
+        )}
         {/* Interaction Section */}
         <div className="mt-4 pt-4 border-t border-gray-50">
           {likeCount > 0 && (
@@ -316,7 +320,7 @@ export default function PostComponent({ onPostDeleted, ...post }: PostComponentP
       <CreateShareModal
         isOpen={showShareModal}
         onClose={() => setShowShareModal(false)}
-        post={post}
+        post={post.sharedPost || post}
       />
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
