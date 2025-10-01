@@ -4,5 +4,8 @@ CREATE TABLE IF NOT EXISTS seal_chat.comment_likes (
   comment_id VARCHAR(255) NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-  FOREIGN KEY (comment_id) REFERENCES comments(id) ON DELETE CASCADE
+  FOREIGN KEY (comment_id) REFERENCES comments(id) ON DELETE CASCADE,
+  INDEX idx_created_at(created_at DESC),
+  INDEX idx_user_id(user_id),
+  INDEX idx_comment_id(comment_id)
 );

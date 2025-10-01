@@ -1,0 +1,1 @@
+DROP EVENT IF EXISTS delete_archived_posts;

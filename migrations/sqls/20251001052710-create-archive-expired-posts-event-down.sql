@@ -1,0 +1,1 @@
+DROP EVENT IF EXISTS archive_expired_posts;
