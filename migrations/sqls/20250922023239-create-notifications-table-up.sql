@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS seal_chat.notifications (
   user_id VARCHAR(255) NOT NULL,
   type ENUM('friend_request_sent',
   'friend_request_accept', 'post_mention', 
-  'post_like','comment_mention',
+  'post_like','post_share','comment_mention',
   'comment_reply','comment_like', 'comment','profile_like',
   'tipped','subscribed') NOT NULL,
   source_user_id VARCHAR(255) NOT NULL,

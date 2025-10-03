@@ -1,4 +1,7 @@
-export type NotificationType = 'friend_request_sent'|'friend_request_accept' | 'post_mention' | 'post_like'|'comment_mention'|'comment_like'|'comment_reply' | 'comment'|'profile_like'|'tipped'|'subscribed';
+export type NotificationType = 'friend_request_sent'|
+'friend_request_accept' | 'post_mention' | 
+'post_like'|'post_share'|'comment_mention'|'comment_like'|
+'comment_reply' | 'comment'|'profile_like'|'tipped'|'subscribed';
 
 export interface Notification {
   id: number;

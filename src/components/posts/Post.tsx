@@ -281,7 +281,7 @@ export default function PostComponent({ onPostDeleted, ...post }: PostComponentP
                 {post.commentCount}
               </span>
             </button>
-            {post.type === "public_opinion" ? (
+            {post.type === "public_opinion" && !post.sharedPost ? (
             <button
               onClick={handleShare}
               className="flex items-center gap-1.5 text-gray-500 hover:text-blue-500 transition-colors duration-200"

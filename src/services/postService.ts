@@ -167,7 +167,14 @@ export class PostService implements IPostService {
           type=post.type;
           durationDays=post.durationDays;
           expiresAt=post.expiresAt || null;
+          await notificationService.createNotification(
+            post?.userId,
+            "post_like",
+            userId,
+            post.id
+      );
         }
+        
       }
       await executeQuery(
         "INSERT INTO posts (id,user_id, type, content,original_content,shared_post_id, duration_days, expires_at, is_archived) VALUES (?,?,?,?, ?, ?, ?, ?, ?)",
