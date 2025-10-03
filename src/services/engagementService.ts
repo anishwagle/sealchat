@@ -157,26 +157,29 @@ export class EngagementService implements IEngagementService {
   ): Promise<Comment[]> {
     const FUNCTION = "getPublicOpinionComment";
     try {
-      let query = `SELECT c.id,
-       c.user_id,
-       c.post_id,
-       COALESCE(cm.reply_count, 0) AS reply_count,
-       -- Pre-aggregated like count
+      let query = `SELECT 
+      c.id,
+      c.user_id,
+      u.username,
+      c.post_id,
+      c.parent_comment_id,
+      c.content,
+      c.original_content,
+      c.created_at,
+      COALESCE(r.reply_count, 0) AS reply_count,
+      -- Pre-aggregated like count
     COALESCE(l.like_count, 0) AS like_count,
     -- Check if current user liked the post
     CASE WHEN ul.user_id IS NULL THEN FALSE ELSE TRUE END AS is_liked_by_current_user
-         u.username,
-         c.parent_comment_id,
-         c.content,
-         c.original_content,
-         c.created_at
-         FROM comments c
-         LEFT JOIN (
-          SELECT parent_comment_id, COUNT(*) AS reply_count
-          FROM comments
-          GROUP BY parent_comment_id
-         ) cm ON c.id = c.parent_comment_id
-          -- Aggregate likes
+   FROM comments c
+   JOIN users u ON c.user_id = u.id
+   LEFT JOIN (
+       SELECT parent_comment_id, COUNT(*) AS reply_count
+       FROM comments
+       WHERE parent_comment_id IS NOT NULL
+       GROUP BY parent_comment_id
+   ) r ON c.id = r.parent_comment_id
+    -- Aggregate likes
     LEFT JOIN (
         SELECT comment_id, COUNT(*) AS like_count
         FROM comment_likes
@@ -188,8 +191,8 @@ export class EngagementService implements IEngagementService {
         FROM comment_likes
         WHERE user_id = ?  -- pass current user ID here
     ) ul ON c.id = ul.comment_id
-         JOIN users u ON c.user_id = u.id
-         WHERE c.post_id = ? AND c.parent_comment_id IS NULL`;
+   WHERE c.post_id = ? AND c.parent_comment_id IS NULL
+   `;
       let params: string[] = [currentUserId,postId];
       if (cursorCreatedAt) {
         query += ` AND c.created_at < STR_TO_DATE(?, '%Y-%m-%d %H:%i:%s')`;
