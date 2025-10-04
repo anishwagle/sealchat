@@ -1,9 +1,7 @@
-import { mockUserService } from "./mockUserService";
 import { userService as userServiceProvider } from "./userService";
 import { friendService as friendServiceProvider } from "./friendService";
 import { IUserService } from "./IUserService";
 import { IFriendService } from "./IFriendService";
-import { mockFriendService } from "./mockFriendService";
 import { postService as postServiceProvider } from "./postService";
 import {config} from 'dotenv';
 import { IPostService } from "./IPostService";
