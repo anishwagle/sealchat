@@ -34,11 +34,14 @@ export default async function RootLayout({
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-50`}
-      >
+      suppressHydrationWarning>
         <Suspense fallback={<div className="h-1 bg-gray-200" />}>
           <Progressbar />
         </Suspense>
+        <Suspense fallback={<nav>Loading nav...</nav>}>
         <ConditionalNavbar />
+        </Suspense>
+        
         {children}
       </body>
     </html>
