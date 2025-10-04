@@ -9,8 +9,8 @@ import { Profile } from '@/types/profile';
 const COMPONENT = 'api/protected/profile/[username]';
 const FUNCTION = 'GET';
 
-export async function GET(request: Request, { params }: { params: { username: string } }) {
-  const p = await params;
+export async function GET(request: Request, context: { params: Promise<{ username: string }> }) {
+  const p = await context.params;
   Logger.log(COMPONENT, FUNCTION, 'info', 'Fetching profile', { username: p.username });
 
   try {
@@ -34,7 +34,6 @@ export async function GET(request: Request, { params }: { params: { username: st
       friendshipStatus:await friendService.getFriendShipStatus(currentUserId,user.id),
       profileLikeCount:await friendService.getProfileLikeCount(user.id),
       profileLikeStatus:await friendService.getProfileLikeStatus(currentUserId,user.id)
-
     }
     return NextResponse.json(response, { status: 200 });
   } catch (error: any) {
