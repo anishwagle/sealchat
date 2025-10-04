@@ -3,10 +3,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Profile as ProfileType } from "@/types/profile";
 import { useAuth } from "@/lib/auth/useAuth";
-import Navbar from "@/components/Navbar";
 import PostList from "@/components/posts/PostList";
 import CreatePostButton from "@/components/posts/CreatePostButton";
-import Snackbar from "@/components/SnackBar";
 import UserListModal from "@/components/modals/UserListModal";
 import { fetchWithAuth } from "@/lib/auth/fetchWithAuth";
 

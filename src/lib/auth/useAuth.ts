@@ -1,6 +1,6 @@
 "use client"
 import { useEffect, useState } from 'react';
-import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { fetchWithAuth } from './fetchWithAuth';
 
 interface AuthState {
@@ -23,7 +23,7 @@ export const useAuth = () => {
   // usePathname and useSearchParams are used to create a dependency
   // that reruns the check if the user navigates.
   const pathname = usePathname();
-  const searchParams = useSearchParams();
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   useEffect(() => {
     // Don't run auth check on public routes
@@ -54,15 +54,24 @@ export const useAuth = () => {
         if (signal.aborted) return;
         console.error('Verification failed:', error.message);
         setAuthState({ isAuthenticated: false, currentUserId: '', isLoading: false, error: 'Verification failed' });
+        if (signal.aborted) {
+          return;
+        }
+        console.error('Verification failed:', error);
+        const errorMessage =
+          error instanceof Error ? error.message : 'Verification failed';
+        setAuthState({ isAuthenticated: false, currentUserId: '', isLoading: false, error: errorMessage });
       }
     };
 
     checkAuth();
 
+    setIsInitialLoad(false);
+    
     return () => {
       controller.abort();
     };
-  }, [pathname, searchParams, router]); // Re-check auth on route change
+  }, [pathname, router]); // Re-check auth on route change
 
   return authState;
 };
