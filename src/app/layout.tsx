@@ -3,6 +3,7 @@ import "./globals.css";
 import "nprogress/nprogress.css";
 import Progressbar from "@/components/Progressbar";
 import ConditionalNavbar from "@/components/ConditionalNavbar";
+import { Suspense } from "react";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -34,7 +35,9 @@ export default async function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-50`}
       >
-        <Progressbar/>
+        <Suspense fallback={<div className="h-1 bg-gray-200" />}>
+          <Progressbar />
+        </Suspense>
         <ConditionalNavbar />
         {children}
       </body>
