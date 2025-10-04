@@ -54,7 +54,7 @@ export default function CreatePostModal({ onClose, onPostCreated }: { onClose: (
           <form onSubmit={handleSubmit} className="space-y-4 md:space-y-5">
             <div>
               <label htmlFor="content" className="block text-sm font-medium text-gray-700 mb-1">
-                What's on your mind?
+                What&apos;s on your mind?
               </label>
               <MentionTextarea
                 id="content"

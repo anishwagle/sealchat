@@ -1,4 +1,4 @@
 import { User } from "../types/user";
 
-export let users: User[] = [];
-export let  refreshTokens: { [userId: string]: string } = {};
+export const users: User[] = [];
+export const  refreshTokens: { [userId: string]: string } = {};

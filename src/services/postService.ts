@@ -141,7 +141,7 @@ export class PostService implements IPostService {
 
     // Store original content and initialize embed section
     let processedContent = content;
-    let embedSection:string|null = sharedPostId?null: getEmbedSection(content);
+    const embedSection:string|null = sharedPostId?null: getEmbedSection(content);
     processedContent = getLinksFromString(processedContent);
     processedContent = await convertMentionsIntoLinks(
       processedContent,
@@ -788,7 +788,7 @@ export class PostService implements IPostService {
          WHERE p.type = 'public_opinion' AND p.is_archived = false
          AND (p.expires_at IS NULL OR p.expires_at > NOW())
          `;
-      let params = [currentUserId];
+      const params = [currentUserId];
 
       if (cursorCreatedAt) {
         query +=

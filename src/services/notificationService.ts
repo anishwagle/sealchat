@@ -67,7 +67,7 @@ export class NotificationService implements INotificationService {
          FROM notifications n
          JOIN users u ON n.source_user_id = u.id
          WHERE n.user_id = ?`;
-        let params= [userId];
+        const params= [userId];
 
       if (cursorCreatedAt) {
         query += ` AND n.created_at < STR_TO_DATE(?, '%Y-%m-%d %H:%i:%s')`;
@@ -151,7 +151,7 @@ async getNotificationByUserIdAndType(
          FROM notifications n
          JOIN users u ON n.source_user_id = u.id
          WHERE n.user_id=? AND type=? AND n.source_user_id = ? `;
-      let params = [ userId, type, sourceUserId];
+      const params = [ userId, type, sourceUserId];
       if(postId){
         query += `AND n.post_id=?`;
         params.push(postId);

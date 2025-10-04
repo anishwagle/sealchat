@@ -193,7 +193,7 @@ export class EngagementService implements IEngagementService {
     ) ul ON c.id = ul.comment_id
    WHERE c.post_id = ? AND c.parent_comment_id IS NULL
    `;
-      let params: string[] = [currentUserId,postId];
+      const params: string[] = [currentUserId,postId];
       if (cursorCreatedAt) {
         query += ` AND c.created_at < STR_TO_DATE(?, '%Y-%m-%d %H:%i:%s')`;
         params.push(cursorCreatedAt);
@@ -274,7 +274,7 @@ LEFT JOIN (
         WHERE user_id = ?  -- pass current user ID here
     ) ul ON c.id = ul.comment_id
 WHERE c.parent_comment_id = ?`;
-      let params: string[] = [currentUserId, commentId];
+      const params: string[] = [currentUserId, commentId];
       if (cursorCreatedAt) {
         query += ` AND c.created_at < STR_TO_DATE(?, '%Y-%m-%d %H:%i:%s')`;
         params.push(cursorCreatedAt);
@@ -386,7 +386,7 @@ WHERE c.parent_comment_id = ?`;
     ) ul ON c.id = ul.comment_id
    WHERE c.post_id = ? AND c.parent_comment_id IS NULL
    `;
-      let params = [currentUserId,postId];
+      const params = [currentUserId,postId];
       if (cursorCreatedAt) {
         query += ` AND c.created_at < STR_TO_DATE(?, '%Y-%m-%d %H:%i:%s')`;
         params.push(cursorCreatedAt);

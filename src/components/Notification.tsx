@@ -50,7 +50,7 @@ export default function NotificationComponent() {
   const fetchNotifications = async () => {
     try {
       setLoading(true);
-      let apiUrl = `/api/protected/notification?limit=${5}`;
+      const apiUrl = `/api/protected/notification?limit=${5}`;
       const data = await fetchWithAuth(apiUrl);
       const results = await data.json();
       setNotifications(results.notifications.map((x: Notification) => x));

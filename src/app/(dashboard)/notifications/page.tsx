@@ -115,7 +115,7 @@ export default function NotificationPage() {
           }
           endMessage={
             notifications.length > 0 ? (
-              <p className="text-center text-gray-500 py-6">You've seen all notifications.</p>
+              <p className="text-center text-gray-500 py-6">You&apos;ve seen all notifications.</p>
             ) : null
           }
         >
