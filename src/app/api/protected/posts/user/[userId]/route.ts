@@ -9,8 +9,8 @@ import { friendService } from "@/services/friendService";
 const COMPONENT = "api/protected/posts/user/[userId]";
 const FUNCTION = "GET";
 
-export async function GET(request: Request,{ params }: { params: { userId: string }}) {
-  const p = await params;
+export async function GET(request: Request,context: { params:Promise< { userId: string }>}) {
+  const p = await context.params;
     Logger.log(COMPONENT, FUNCTION, 'info', 'Fetching Users Post', { userId: p.userId });
 
   try {

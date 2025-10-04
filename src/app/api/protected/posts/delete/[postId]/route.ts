@@ -7,8 +7,8 @@ import { ApiError } from "@/lib/errors";
 const COMPONENT = "api/protected/posts/delete/[postId]";
 const FUNCTION = "DELETE";
 
-export async function DELETE(request: Request,{ params }: { params: { postId: string }}) {
-  const p = await params;
+export async function DELETE(request: Request,context: { params:Promise< { postId: string }>}) {
+  const p = await context.params;
     Logger.log(COMPONENT, FUNCTION, 'info', 'Deleting Users Post', { postId: p.postId });
 
   try {

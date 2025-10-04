@@ -5,8 +5,8 @@ import { NextResponse } from "next/server";
 
 const COMPONENT = "api/protected/posts/toggleLike/[postId]";
 const FUNCTION = "GET";
-export async function GET(request: Request,{ params }: { params: { postId: string }}) {
-  const p = await params;
+export async function GET(request: Request,context: { params:Promise< { postId: string }>}) {
+  const p = await context.params;
   Logger.log(COMPONENT, FUNCTION, "info", "Toggle profile post for User",{postId:p.postId});
   try {
     const userId1 = request.headers.get("x-user-id");

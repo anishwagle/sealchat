@@ -7,8 +7,8 @@ import { ApiError } from "@/lib/errors";
 const COMPONENT = "api/protected/posts/comment/publicComment/[postId]";
 const FUNCTION = "GET";
 
-export async function GET(request: Request,{ params }: { params: { postId: string }}) {
-  const p = await params;
+export async function GET(request: Request,context: { params: Promise<{ postId: string }>}) {
+  const p = await context.params;
     Logger.log(COMPONENT, FUNCTION, 'info', 'Fetching Users Comment', { postId: p.postId });
 
   try {

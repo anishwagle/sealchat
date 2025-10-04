@@ -7,8 +7,8 @@ import { ApiError } from '@/lib/errors';
 const COMPONENT = 'api/protected/friend/findfriend/[searchQuery]';
 const FUNCTION = 'GET';
 
-export async function GET(request: Request, { params }: { params: { searchQuery: string } }) {
-  const p = await params;
+export async function GET(request: Request, context : { params: Promise< { searchQuery: string } >}) {
+  const p = await context.params;
   Logger.log(COMPONENT, FUNCTION, 'info', 'Fetching users', { searchQuery: p.searchQuery });
 
   try {

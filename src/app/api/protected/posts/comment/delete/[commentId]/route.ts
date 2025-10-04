@@ -7,8 +7,8 @@ import { engagementService } from "@/services/serviceProvider";
 const COMPONENT = "api/protected/posts/comment/delete/[commentId]";
 const FUNCTION = "DELETE";
 
-export async function DELETE(request: Request,{ params }: { params: { commentId: string }}) {
-  const p = await params;
+export async function DELETE(request: Request,context: { params:Promise< { commentId: string }>}) {
+  const p = await context.params;
     Logger.log(COMPONENT, FUNCTION, 'info', 'Deleting Users Comment', { commentId: p.commentId });
 
   try {

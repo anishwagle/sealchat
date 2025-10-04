@@ -8,11 +8,11 @@ import { Post } from "@/types/post";
 const COMPONENT = "api/protected/posts/[postId]";
 const FUNCTION = "GET";
 
-export async function GET(request: Request, { params }: { params: { postId: string } }) {
+export async function GET(request: Request, context: { params: Promise<{ postId: string }>}) {
   
 
   try {
-    const p = await params;
+    const p = await context.params;
     const userId = request.headers.get("x-user-id");
     Logger.log(COMPONENT, FUNCTION, "info", "Fetching users feed",{userId});
     if (!userId) {

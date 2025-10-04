@@ -5,8 +5,8 @@ import { NextResponse } from "next/server";
 
 const COMPONENT = "api/protected/posts/comment/toggleLike/[commentId]";
 const FUNCTION = "POST";
-export async function POST(request: Request,{ params }: { params: { commentId: string }}) {
-  const p = await params;
+export async function POST(request: Request,context: { params: Promise<{ commentId: string }>}) {
+  const p = await context.params;
   Logger.log(COMPONENT, FUNCTION, "info", "Toggle comment Like for User",{commentId:p.commentId});
   try {
     const userId1 = request.headers.get("x-user-id");
