@@ -108,7 +108,8 @@ export class EngagementService implements IEngagementService {
             userIdMentioned,
             "comment_mention",
             userId,
-            postId
+            postId,
+            commentId
           );
         }
       }
@@ -127,7 +128,8 @@ export class EngagementService implements IEngagementService {
           post.user_id,
           "comment",
           userId,
-          postId
+          postId,
+          commentId
         );
       }
 
@@ -462,15 +464,32 @@ WHERE c.parent_comment_id = ?`;
     });
     return !!result;
   }
+  async getCommentLikeStatus(userId: string, commentId: string): Promise<boolean> {
+    const FUNCTION = "getCommentLikeStatus";
+    Logger.log(COMPONENT, FUNCTION, "debug", "get comment like status", {
+      userId,
+      commentId,
+    });
+    const queryResult = await executeQuery(
+      "SELECT * FROM comment_likes WHERE user_id=? AND comment_id=?",
+      [userId, commentId]
+    );
+    const result = (queryResult as any[])[0];
+    Logger.log(COMPONENT, FUNCTION, "debug", "Get Comment Like Status", {
+      result,
+      found: !!result,
+    });
+    return !!result;
+  }
   async toggleCommentLike(userId: string, commentId: string): Promise<void> {
     const FUNCTION = "togglePostLike";
     Logger.log(COMPONENT, FUNCTION, "debug", "toggle comment like status", {
       userId,
       commentId,
     });
-    const result = await this.getPostLikeStatus(userId, commentId);
+    const result = await this.getCommentLikeStatus(userId, commentId);
     const queryResult = await executeQuery(
-      `SELECT id,user_id
+      `SELECT *
          FROM comments
          WHERE id = ?`,
       [commentId]
@@ -486,18 +505,19 @@ WHERE c.parent_comment_id = ?`;
           comment.user_id,
           "comment_like",
           userId,
-          comment.post_id
+          comment.post_id,
+          comment.id
         );
       notifications.forEach(async (x) => {
         await notificationService.deleteNotification(x.id, x.userId);
       });
-      Logger.log(COMPONENT, FUNCTION, "debug", "Post dis-liked");
+      Logger.log(COMPONENT, FUNCTION, "debug", "Comment dis-liked");
       await executeQuery("DELETE FROM comment_likes WHERE comment_id=? AND user_id=?", [
         commentId,
         userId,
       ]);
     } else {
-      Logger.log(COMPONENT, FUNCTION, "debug", "Post Liked");
+      Logger.log(COMPONENT, FUNCTION, "debug", "Comment Liked");
       await executeQuery("INSERT INTO comment_likes (user_id,comment_id) VALUES(?,?)", [
         userId,
         commentId,
@@ -507,7 +527,8 @@ WHERE c.parent_comment_id = ?`;
           comment.user_id,
           "comment_like",
           userId,
-          comment.post_id
+          comment.post_id,
+          comment.id
         );
       }
     }

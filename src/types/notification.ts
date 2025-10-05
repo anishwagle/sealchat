@@ -10,6 +10,7 @@ export interface Notification {
   sourceUserId: string;
   sourceUsername: string;
   postId: string | null;
+  commentId: string | null;
   isRead: boolean;
   createdAt: Date;
 }

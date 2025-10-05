@@ -1,10 +1,11 @@
 "use client";
-import { Notification } from "@/types/notification";
+import { Notification, NotificationType } from "@/types/notification";
 import { getTimeSince } from "@/utils/dateConveter";
 import { useState, useEffect, useRef, useMemo, Fragment } from "react";
 import { fetchWithAuth } from "@/lib/auth/fetchWithAuth";
 import Link from "next/link";
-import NotificationItem, { ProcessedNotification } from "./NotificationItem";
+import NotificationItem from "./NotificationItem";
+import { useProcessedNotifications } from "@/hooks/useProcessedNotifications";
 
 export default function NotificationComponent() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -15,8 +16,8 @@ export default function NotificationComponent() {
   const [error, setError] = useState<string | null>(null);
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;
-
-
+  const processedNotifications = useProcessedNotifications(notifications);
+  const groupedNotificationTypes : NotificationType[]= ['profile_like','post_like', 'comment_like'];
   const markAsRead = async () => {
     try {
       const unreadIds = notifications
@@ -78,45 +79,7 @@ export default function NotificationComponent() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const processedNotifications = useMemo(() => {
-    if (loading) return [];
 
-    const groupNotifications = (
-      notifications: Notification[],
-      type: Notification["type"],
-      keySelector: (n: Notification) => string | null
-    ): ProcessedNotification[] => {
-      const groups = new Map<string, Notification[]>();
-
-      const filteredNotifications = notifications.filter(n => n.type === type);
-
-      filteredNotifications.forEach(n => {
-        const key = keySelector(n);
-        if (key) {
-          if (!groups.has(key)) groups.set(key, []);
-          groups.get(key)!.push(n);
-        }
-      });
-
-      const result: ProcessedNotification[] = [];
-      groups.forEach(group => {
-        const [first, ...others] = group;
-        if (others.length > 0) {
-          result.push({ ...first, otherUsers: others });
-        } else {
-          result.push(first);
-        }
-      });
-      return result;
-    };
-
-    const otherNotifications = notifications.filter(n => n.type !== 'profile_like' && n.type !== 'post_like');
-    const profileLikes = groupNotifications(notifications, 'profile_like', n => 'profile_likes');
-    const postLikes = groupNotifications(notifications, 'post_like', n => n.postId);
-    return [...otherNotifications, ...profileLikes, ...postLikes].sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
-  }, [notifications, loading]);
 
   return (
     <div className="relative" ref={dropdownRef}>

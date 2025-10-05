@@ -5,7 +5,8 @@ export interface INotificationService {
     userId: string,
     type: NotificationType,
     sourceUserId: string,
-    postId?: string
+    postId?: string,
+    commentId?:string
   ): Promise<Notification>;
   getUserNotifications(
     userId: string,
@@ -17,7 +18,8 @@ export interface INotificationService {
     userId: string,
     type: NotificationType,
     sourceUserId: string,
-    postId?: string
+    postId?: string,
+    commentId?:string
   ): Promise<Notification[]>;
   deleteNotification(notificationId: number, userId: string): Promise<void>;
 }

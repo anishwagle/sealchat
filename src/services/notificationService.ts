@@ -8,7 +8,8 @@ export class NotificationService implements INotificationService {
     userId: string,
     type: NotificationType,
     sourceUserId: string,
-    postId?: string
+    postId?: string,
+    commentId?:string
   ): Promise<Notification> {
     const FUNCTION = "createNotification";
     if (!userId || !type || !sourceUserId) {
@@ -19,8 +20,8 @@ export class NotificationService implements INotificationService {
 
     try {
       const result = await executeQuery(
-        "INSERT INTO notifications (user_id, type, source_user_id, post_id, is_read) VALUES (?, ?, ?, ?, ?)",
-        [userId, type, sourceUserId, postId || null, false]
+        "INSERT INTO notifications (user_id, type, source_user_id, post_id,comment_id, is_read) VALUES (?, ?,?, ?, ?, ?)",
+        [userId, type, sourceUserId, postId || null,commentId||null, false]
       );
       const notificationId = (result as any).insertId;
       const notificationResults = await executeQuery(
@@ -45,6 +46,7 @@ export class NotificationService implements INotificationService {
         sourceUserId: notification.source_user_id,
         sourceUsername: notification.source_username,
         postId: notification.post_id,
+        commentId:notification.comment_id,
         isRead: notification.is_read,
         createdAt: new Date(notification.created_at),
       };
@@ -94,6 +96,7 @@ export class NotificationService implements INotificationService {
         sourceUserId: notification.source_user_id,
         sourceUsername: notification.source_username,
         postId: notification.post_id,
+        commentId: notification.comment_id,
         isRead: notification.is_read,
         createdAt: new Date(notification.created_at),
       }));
@@ -136,7 +139,8 @@ async getNotificationByUserIdAndType(
     userId: string,
     type:NotificationType,
     sourceUserId:string,
-    postId?:string
+    postId?:string,
+    commentId?:string
   ): Promise<Notification[]> {
     const FUNCTION = "getNotificationByUserIdAndType";
     if (!userId || !type || !sourceUserId) {
@@ -153,8 +157,12 @@ async getNotificationByUserIdAndType(
          WHERE n.user_id=? AND type=? AND n.source_user_id = ? `;
       const params = [ userId, type, sourceUserId];
       if(postId){
-        query += `AND n.post_id=?`;
+        query += `AND n.post_id=? `;
         params.push(postId);
+      }
+      if(commentId){
+        query += `AND n.comment_id=?`;
+        params.push(commentId);
       }
       const results = await executeQuery(query,params);
       Logger.log(COMPONENT, FUNCTION, "debug", "User check complete", {
@@ -167,6 +175,7 @@ async getNotificationByUserIdAndType(
         sourceUserId: notification.source_user_id,
         sourceUsername: notification.source_username,
         postId: notification.post_id,
+        commentId:notification.comment_id,
         isRead: notification.is_read,
         createdAt: new Date(notification.created_at),
       }));

@@ -4,7 +4,8 @@ import { useState, useEffect, useMemo } from "react";
 import InfiniteScroll from "react-infinite-scroll-component";
 import { fetchWithAuth } from "@/lib/auth/fetchWithAuth";
 import { formatToMySQLDate } from "@/utils/dateConveter";
-import NotificationItem, { ProcessedNotification } from "@/components/NotificationItem";
+import { useProcessedNotifications } from "@/hooks/useProcessedNotifications";
+import NotificationItem from "@/components/NotificationItem";
 
 export default function NotificationPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -13,7 +14,7 @@ export default function NotificationPage() {
   const [fetching, setFetching] = useState(false); // Prevent concurrent fetches
   const [nextCursor, setNextCursor] = useState<string| null>(null);
   const [hasMore, setHasMore] = useState(true);
-
+  const processedNotifications = useProcessedNotifications(notifications);
   const fetchNotifications = async ( cursor = nextCursor) => {
     if (fetching ||  !hasMore) return; // Block concurrent/unnecessary fetches
     setFetching(true);
@@ -28,7 +29,7 @@ export default function NotificationPage() {
         setNotifications((prevNotification) => {
           const allNotification = [...prevNotification, ...newNotifications];
           const uniqueNotification = Array.from(new Map(allNotification.map(notification => [notification.id, notification])).values());
-          return uniqueNotification.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+          return uniqueNotification.sort((a, b) => (new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
         });
         setNextCursor(formatToMySQLDate(newCursor));
         setHasMore(!!newCursor);
@@ -59,44 +60,6 @@ export default function NotificationPage() {
       fetchNotifications(null);
     }
   }, [loading, notifications.length]);
-
-  const processedNotifications = useMemo(() => {
-    const groupNotifications = (
-      notifications: Notification[],
-      type: Notification["type"],
-      keySelector: (n: Notification) => string | null
-    ): ProcessedNotification[] => {
-      const groups = new Map<string, Notification[]>();
-
-      const filteredNotifications = notifications.filter(n => n.type === type);
-
-      filteredNotifications.forEach(n => {
-        const key = keySelector(n);
-        if (key) {
-          if (!groups.has(key)) groups.set(key, []);
-          groups.get(key)!.push(n);
-        }
-      });
-
-      const result: ProcessedNotification[] = [];
-      groups.forEach(group => {
-        const [first, ...others] = group;
-        if (others.length > 0) {
-          result.push({ ...first, otherUsers: others });
-        } else {
-          result.push(first);
-        }
-      });
-      return result;
-    };
-
-    const otherNotifications = notifications.filter(n => n.type !== 'profile_like' && n.type !== 'post_like');
-    const profileLikes = groupNotifications(notifications, 'profile_like', n => 'profile_likes');
-    const postLikes = groupNotifications(notifications, 'post_like', n => n.postId);
-    return [...otherNotifications, ...profileLikes, ...postLikes].sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
-  }, [notifications]);
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-100">
