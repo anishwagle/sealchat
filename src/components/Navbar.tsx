@@ -13,10 +13,23 @@ export default function Navbar() {
   const [isSearching, setIsSearching] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const profileRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     const handleClickOutside = (event: any) => {
       if (searchRef.current && !searchRef.current.contains(event.target)) {
         setSearchResults([]);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
+        setIsProfileMenuOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -159,14 +172,21 @@ export default function Navbar() {
             
 
             {/* Profile Dropdown */}
-            <div className="relative group">
-              <button className="p-1.5 hover:bg-gray-50 rounded-full">
+            <div className="relative" ref={profileRef}>
+              <button
+                className="p-1.5 hover:bg-gray-50 rounded-full"
+                onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
+              >
                 <div className="h-7 w-7 rounded-full bg-gradient-to-r from-blue-100 to-blue-200 flex items-center justify-center">
                   <span className="text-blue-600 text-sm font-medium">U</span>
                 </div>
               </button>
 
-              <div className="absolute right-0 mt-1 w-48 bg-white rounded-lg shadow-sm border border-gray-100 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-200">
+              <div
+                className={`absolute right-0 mt-1 w-48 bg-white rounded-lg shadow-sm border border-gray-100 transition-all duration-200 ${
+                  isProfileMenuOpen ? 'opacity-100 visible' : 'opacity-0 invisible'
+                }`}
+              >
                 <ul className="py-1">
                   <li>
                     <Link
