@@ -33,7 +33,7 @@ export class UserService implements IUserService {
       username,
     });
     const queryResult = await executeQuery('SELECT id,username,email,password,created_at FROM users WHERE username=?',
-        [username]
+        [username.toLowerCase()]
     );
     const result:User = (queryResult as any[])[0];
     Logger.log(COMPONENT, FUNCTION, "debug", "User check complete", {
@@ -47,7 +47,7 @@ export class UserService implements IUserService {
       email,
     });
     const queryResult = await executeQuery('SELECT id,username,email,password,created_at FROM users WHERE email=?',
-        [email]
+        [email.toLowerCase()]
     );
     const result:User = (queryResult as any)[0];
     Logger.log(COMPONENT, FUNCTION, "debug", "User check complete", {
@@ -65,7 +65,7 @@ export class UserService implements IUserService {
       username,
     });
     const queryResult = await executeQuery('SELECT id,username,email,password,created_at FROM users WHERE email=? OR username=?',
-        [email,username]
+        [email.toLowerCase(),username.toLowerCase()]
     );
     const result:User = (queryResult as any)[0];
     Logger.log(COMPONENT, FUNCTION, "debug", "User check complete", {
@@ -82,7 +82,7 @@ export class UserService implements IUserService {
     const FUNCTION = "createUser";
 
     const result = await executeQuery('INSERT INTO users (id,username,email,password) VALUES(?,?,?,?)',
-        [v4(),username,email,password]);
+        [v4(),username.toLowerCase(),email.toLowerCase(),password]);
     const newUser:User ={
         id:(result as any).insertId,
         email,
