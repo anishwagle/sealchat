@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import CreatePostButton from "@/components/posts/CreatePostButton";
 import PostList from "@/components/posts/PostList";
 import { useAuth } from "@/lib/auth/useAuth";
+import Loading from "@/components/Loading";
 
 export default function Dashboard() {
   const [isPublic, setIsPublic] = useState(false);
@@ -12,9 +13,7 @@ export default function Dashboard() {
   }, [isAuthenticated, isLoading]); // Dependencies that trigger fetching.
 if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        Loading...
-      </div>
+      <Loading message="Authenticating please wait" fullScreen={true}/>
     );
   }
   return (

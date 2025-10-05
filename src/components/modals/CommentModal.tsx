@@ -6,6 +6,7 @@ import { fetchWithAuth } from "@/lib/auth/fetchWithAuth";
 import { formatToMySQLDate } from "@/utils/dateConveter";
 import { PostType } from "@/types/post";
 import MentionTextarea from "../MentionTextarea";
+import Loading from "../Loading";
 
 interface CommentModalProps {
   isOpen: boolean;
@@ -145,13 +146,13 @@ export default function CommentModal({
 
         <div id="commentScrollableDiv" ref={commentsContainerRef} className="flex-1 overflow-y-auto p-6">
           {isLoadingComments ? (
-            <div className="text-center py-16 text-gray-500">Loading comments...</div>
+            <Loading message="Loading comments..." fullScreen={false}/>
           ) : comments.length > 0 ? (
             <InfiniteScroll
               dataLength={comments.length}
               next={fetchComments}
               hasMore={hasMoreComments}
-              loader={<div className="text-center py-4">Loading more comments...</div>}
+              loader={<Loading message="Loading more comments..." fullScreen={false}/>}
               scrollableTarget="commentScrollableDiv"
               className="space-y-4"
             >

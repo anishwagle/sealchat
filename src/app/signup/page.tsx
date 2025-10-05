@@ -7,6 +7,8 @@ import Link from "next/link";
 
 
 export default function Signup(){
+    const USERNAME_REGEX = /^[a-zA-Z0-9_-]{3,16}$/;
+    const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const [username, setUsername] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -16,6 +18,16 @@ export default function Signup(){
 
     const handleSubmit = async (e : FormEvent) => {
         e.preventDefault();
+
+        if (!USERNAME_REGEX.test(username)) {
+            setError('Username must be 3-16 characters and can only contain letters, numbers, underscores, and hyphens.');
+            return;
+        }
+        if (!EMAIL_REGEX.test(email)) {
+            setError('Invalid email address.');
+            return;
+        }
+
         setError('');
         setIsLoading(true);
         try{

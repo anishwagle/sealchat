@@ -5,6 +5,7 @@ import PostComponent from "./Post";
 import InfiniteScroll from "react-infinite-scroll-component";
 import { fetchWithAuth } from "@/lib/auth/fetchWithAuth";
 import { formatToMySQLDate } from "@/utils/dateConveter";
+import Loading from "../Loading";
 
 interface PostListProps {
   userId?: string;
@@ -132,16 +133,16 @@ export default function PostList({ userId, isPublic, isProfile }: PostListProps)
           See {newPostsCount} new post{newPostsCount > 1 ? 's' : ''}
         </div>
       )}
-
-      <InfiniteScroll
+      {fetching ? (
+            <Loading message="Loading post..." fullScreen={false}/>
+          ) : posts.length > 0 ? (
+            <InfiniteScroll
         dataLength={posts.length}
         next={() => fetchPosts('older', nextCursor)}
         hasMore={hasMore}
         className="space-y-4"
         loader={
-          <div className="text-center py-4">
-            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-500 border-t-transparent" />
-          </div>
+          <Loading message="Loading post..." fullScreen={false}/>
         }
         endMessage={
           posts.length > 0 ? (
@@ -153,6 +154,20 @@ export default function PostList({ userId, isPublic, isProfile }: PostListProps)
           <PostComponent key={post.id} {...post} onPostDeleted={handlePostDeleted} />
         ))}
       </InfiniteScroll>
+          ) : (
+            <div className="flex flex-col items-center justify-center text-center py-16 px-6">
+  <h2 className="text-2xl font-semibold text-gray-800 mb-2">
+    Nothing to see here &#40;yet&#41;!
+  </h2>
+  <p
+    className="text-gray-600 max-w-md">
+        Your feed is currently empty. Add friends or interact with profiles to see their posts, or view the <strong>Public</strong> tab for some fresh content.
+  </p>
+
+  
+</div>
+          )}
+      
 
       {error && (
         <div className="text-center text-red-500">{error}</div>
