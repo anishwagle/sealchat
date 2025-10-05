@@ -78,8 +78,7 @@ const renderNotificationMessage = (notif: ProcessedNotification) => {
       const totalCommentLikes = 1 + (notif.otherUsers?.length || 0);
       return (
         <span>
-          <span className="font-medium">{notif.sourceUsername}</span> liked your
-          comment.
+          <span className="font-medium">{notif.sourceUsername}</span>
           {totalCommentLikes > 1 && ` and ${totalCommentLikes - 1} others`}{" "}
           liked your comment.
         </span>
@@ -136,7 +135,7 @@ const NotificationIcon = ({ type }: { type: Notification["type"] }) => {
         />
       </svg>
     );
-  if (type === "post_like" || type === "profile_like")
+  if (type === "post_like" || type === "profile_like"||type === "comment_like")
     return (
       <svg
         className="h-4 w-4 text-red-500"
@@ -179,20 +178,6 @@ const NotificationIcon = ({ type }: { type: Notification["type"] }) => {
           strokeLinecap="round"
           strokeLinejoin="round"
           d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207"
-        />
-      </svg>
-    );
-  if (type === "comment_like")
-    return (
-      <svg
-        className="h-4 w-4 text-red-500"
-        fill="currentColor"
-        viewBox="0 0 20 20"
-      >
-        <path
-          fillRule="evenodd"
-          d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z"
-          clipRule="evenodd"
         />
       </svg>
     );
@@ -240,24 +225,31 @@ export default function NotificationItem({
   const [modalContent, setModalContent] = useState<{
     title: string;
     users: Notification[];
+    buttonText:string;
+    buttonLink:string;
   } | null>(null);
 
-  const openUserListModal = (title: string, users: Notification[]) => {
-    setModalContent({ title, users });
+  const openUserListModal = (title: string, users: Notification[],buttonText:string,buttonLink:string) => {
+    setModalContent({ title, users,buttonText,buttonLink });
     setIsUserListModalOpen(true);
   };
 
   const handleNotificationClick = (notif: ProcessedNotification) => {
     // Call the optional callback, e.g., to close the dropdown
     onItemClick?.(notif);
-    const postUrl = `/posts/${notif.postId}`;
+    let postUrl = `/posts/${notif.postId}`;
     const profileUrl = `/profile/${notif.sourceUsername}`;
 
     switch (notif.type) {
-      case "post_mention":
       case "comment_mention":
       case "comment":
       case "comment_reply":
+        if(notif.postId){
+          if(notif.commentId) postUrl += `?commentId=${notif.commentId}`;
+          router.push(postUrl);
+        }
+        break;
+      case "post_mention":
       case "post_share":
         if (notif.postId) router.push(postUrl);
         break;
@@ -268,18 +260,18 @@ export default function NotificationItem({
       case "post_like":
         if (notif.postId) {
           const allLikers = [notif, ...(notif.otherUsers || [])];
-          openUserListModal("Liked your post", allLikers);
+          openUserListModal("Liked your post", allLikers,"View Post",`/posts/${notif.postId}`);
         }
       case "comment_like":
         if (notif.commentId) {
           const allCommentLikers = [notif, ...(notif.otherUsers || [])];
-          openUserListModal("Liked your comment", allCommentLikers);
+          openUserListModal("Liked your comment", allCommentLikers,"View Post",`/posts/${notif.postId}?commentId=${notif.commentId}`);
         }
         
         break;
       case "profile_like":
         const allLikers = [notif, ...(notif.otherUsers || [])];
-        openUserListModal("Liked your profile", allLikers);
+        openUserListModal("Liked your profile", allLikers,"View Profile","/profile");
         break;
       default:
         break;
@@ -326,16 +318,10 @@ export default function NotificationItem({
             username: u.sourceUsername,
           }))}
           actionButtonText={
-            modalContent.title === "Liked your post" ||
-            modalContent.title === "Liked your comment"
-              ? "View Post"
-              : "View Profile"
+            modalContent.buttonText
           }
           actionButtonLink={
-            modalContent.title === "Liked your post" ||
-            modalContent.title === "Liked your comment"
-              ? `/posts/${modalContent.users[0].postId}`
-              : "/profile"
+            modalContent.buttonLink
           }
           emptyMessage="No one has liked this yet."
         />
