@@ -12,6 +12,7 @@ import CreateShareModal from "./CreateShareModal";
 import CommentModal from "../modals/CommentModal";
 interface PostComponentProps extends Post {
   onPostDeleted?: (postId: string) => void;
+  commentId?: string;
 }
 
 export default function PostComponent({ onPostDeleted, ...post }: PostComponentProps) {
@@ -29,6 +30,7 @@ export default function PostComponent({ onPostDeleted, ...post }: PostComponentP
   const router = useRouter();
   const pathname = usePathname();
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const { commentId } = post;
   
   const fetchLikeList = useCallback(async () => {
     if (showLikesModal) {
@@ -42,6 +44,14 @@ export default function PostComponent({ onPostDeleted, ...post }: PostComponentP
   useEffect(() => {
     fetchLikeList();
   }, [showLikesModal, fetchLikeList]);
+
+  useEffect(() => {
+    if (commentId) {
+      setShowCommentModal(true);
+      // Optionally, you can also scroll to the comment in the modal
+      // or highlight the comment.
+    }
+  }, [commentId]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

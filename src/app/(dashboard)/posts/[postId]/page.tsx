@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { Post } from "@/types/post";
 import PostComponent from "@/components/posts/Post";
+import { useSearchParams } from "next/navigation";
 import { fetchWithAuth } from "@/lib/auth/fetchWithAuth";
 
 export default function PostPage() {
@@ -10,6 +11,7 @@ export default function PostPage() {
   const [post, setPost] = useState<Post>();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const searchParams = useSearchParams();
 
   const fetchPosts = useCallback(async () => {
     if (!postId) return; // Don't fetch if postId is not available yet
@@ -32,6 +34,7 @@ export default function PostPage() {
     if (postId) {
       fetchPosts();
     }
+
   }, [postId, fetchPosts]);
 
   return (
@@ -49,7 +52,7 @@ export default function PostPage() {
               ) : !post ? (
                 <div className="text-center text-gray-500 bg-white p-10 rounded-lg">No post found.</div>
               ) : (
-                <PostComponent key={post.id} {...post} />
+                <PostComponent key={post.id} {...post} commentId={searchParams.get("commentId") || undefined} />
               )}
             </div>
           </div>
