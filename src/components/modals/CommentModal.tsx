@@ -36,10 +36,18 @@ export default function CommentModal({
   const [lastCommentCreatedAt, setLastCommentCreatedAt] = useState<string | null>(null);
   const [comments,setComments] = useState<Comment[]>([]);
   const commentsContainerRef = useRef<HTMLDivElement>(null);
+  const mentionTextareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const handleOnReply = (parentCommentId:string,username:string)=>{
-    setNewComment(`@${username}`);
+  const handleOnReply = (parentCommentId: string, username: string) => {
+    setNewComment(`@${username} `);
     setParentCommentId(parentCommentId);
+    setTimeout(() => {
+      if (mentionTextareaRef.current) {
+        mentionTextareaRef.current.focus();
+        const val = mentionTextareaRef.current.value;
+        mentionTextareaRef.current.setSelectionRange(val.length, val.length);
+      }
+    }, 0);
   }
   const handleCommentSubmit = async (content: string) => {
     setIsCommenting(true);
@@ -70,7 +78,6 @@ export default function CommentModal({
           });
         });
       }
-      debugger;
       if (!response.ok) {
         throw new Error(data.error || 'Failed to create comment');
       }
@@ -135,13 +142,6 @@ export default function CommentModal({
     if (newComment.trim()) {
       handleCommentSubmit(newComment);
       setNewComment("");
-      if (commentsContainerRef.current) {
-        // Scroll to the top after submitting a new comment
-        commentsContainerRef.current.scrollTo({
-          top: 0,
-          behavior: 'smooth' // Optional: Add smooth scrolling
-        });
-      }
     }
   };
 
@@ -210,6 +210,7 @@ export default function CommentModal({
           <form onSubmit={handleSubmit} className="flex gap-3 items-center">
             <div className="w-9 h-9 rounded-full bg-gray-200 flex-shrink-0"></div>
               <MentionTextarea
+                ref={mentionTextareaRef}
                 value={newComment}
                 onValueChange={setNewComment}
                 placeholder="Write a comment... (use @ to mention)"
