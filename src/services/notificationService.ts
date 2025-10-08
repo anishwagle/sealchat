@@ -65,9 +65,11 @@ export class NotificationService implements INotificationService {
     }
 
     try {
-      let query =  `SELECT n.*, u.username AS source_username
+      let query =  `SELECT n.*, u.username AS source_username,
+        c.parent_comment_id AS parent_comment_id
          FROM notifications n
          JOIN users u ON n.source_user_id = u.id
+         LEFT JOIN comments c ON n.comment_id = c.id
          WHERE n.user_id = ?`;
         const params= [userId];
 
@@ -98,6 +100,7 @@ export class NotificationService implements INotificationService {
         postId: notification.post_id,
         commentId: notification.comment_id,
         isRead: notification.is_read,
+        parentCommentId:notification.parent_comment_id||null,
         createdAt: new Date(notification.created_at),
       }));
     } catch (error: any) {

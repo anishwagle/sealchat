@@ -13,6 +13,8 @@ interface CommentModalProps {
   onClose: () => void;
   postId:string;
   postType:PostType;
+  commentIdParam?:string|null;
+  parentCommentIdParam?:string|null;
 }
 
 const COMMENT_PAGE_SIZE = 10;
@@ -22,8 +24,11 @@ export default function CommentModal({
   onClose,
   postId,
   postType,
+  commentIdParam,
+  parentCommentIdParam
 }: CommentModalProps) {
   const [newComment, setNewComment] = useState("");
+  const [parentCommentId, setParentCommentId] = useState("");
   const [isCommenting,setIsCommenting] = useState(false);
   const [isLoadingComments, setIsLoadingComments] = useState(true);
   const [isMoreCommentsLoading,setIsMoreCommentsLoading] = useState(false);
@@ -32,25 +37,28 @@ export default function CommentModal({
   const [comments,setComments] = useState<Comment[]>([]);
   const commentsContainerRef = useRef<HTMLDivElement>(null);
 
-
+  const handleOnReply = (parentCommentId:string,username:string)=>{
+    setNewComment(`@${username}`);
+    setParentCommentId(parentCommentId);
+  }
   const handleCommentSubmit = async (content: string) => {
     setIsCommenting(true);
 
     const response = await fetchWithAuth('/api/protected/posts/comment/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content,postId: postId }),
+        body: JSON.stringify({ content,postId: postId,parentCommentId }),
         credentials: 'include' // Send cookies for auth
       });
 
       const data = await response.json();
-      setComments(prev => [data.comment, ...prev]);
+      if(!!!parentCommentId) setComments(prev => [data.comment, ...prev]);
       if (!response.ok) {
         throw new Error(data.error || 'Failed to create comment');
       }
-     
       setIsCommenting(false);
   };
+
   const fetchComments = async()=>{
       if (isMoreCommentsLoading && !lastCommentCreatedAt) return; // Prevent re-fetch on initial load
       
@@ -97,6 +105,7 @@ export default function CommentModal({
     setIsLoadingComments(true);
     setComments([]);
     setLastCommentCreatedAt(null);
+    setParentCommentId("");
     setHasMoreComments(true);
     await fetchComments().finally(() => setIsLoadingComments(false));
   };
@@ -163,6 +172,9 @@ export default function CommentModal({
                     onNavigate={onClose}
                     onDelete={handleCommentDeleted}
                     postId={postId}
+                    onReply={handleOnReply}
+                    commentIdParam={commentIdParam||null}
+                    parentCommentIdParam={parentCommentIdParam||null}
                   />
                 ))}
             </InfiniteScroll>

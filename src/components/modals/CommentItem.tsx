@@ -11,28 +11,27 @@ interface CommentItemProps {
   comment: Comment;
   onNavigate?: () => void;
   onDelete: (commentId: string) => void;
+  onReply: (commentId:string,username:string)=>void;
   postId: string;
+  commentIdParam?:string|null;
+  parentCommentIdParam?:string|null
 }
 
 const REPLY_PAGE_SIZE = 5;
 
-export default function CommentItem({ comment, onNavigate, onDelete, postId }: CommentItemProps) {
+export default function CommentItem({ comment, onNavigate, onDelete,onReply, postId,commentIdParam,parentCommentIdParam }: CommentItemProps) {
   const [showOptions, setShowOptions] = useState(false);
   const [isLiking, setIsLiking] = useState(false);
   const [isLiked, setIsLiked] = useState(comment.isLikedByCurrentUser || false);
   const [currentLikeCount, setCurrentLikeCount] = useState(comment.likeCount || 0);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [showReplyInput, setShowReplyInput] = useState(false);
-  const [replyContent, setReplyContent] = useState("");
-  const [isReplying, setIsReplying] = useState(false);
   const [replies, setReplies] = useState<Comment[]>([]);
   const [showRepliesList, setShowRepliesList] = useState(false);
   const [hasMoreReplies, setHasMoreReplies] = useState(true);
   const [lastReplyCreatedAt, setLastReplyCreatedAt] = useState<string | null>(null);
   const [isLoadingReplies, setIsLoadingReplies] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const replyTextareaRef = useRef<HTMLTextAreaElement>(null);
   const { currentUserId } = useAuth();
 
   useEffect(() => {
@@ -49,24 +48,19 @@ export default function CommentItem({ comment, onNavigate, onDelete, postId }: C
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  useEffect(() => {
-    if (showReplyInput) {
-      const textarea = replyTextareaRef.current;
-      if (textarea) {
-        setTimeout(() => {
-          textarea.focus();
-          const end = textarea.value.length;
-          textarea.setSelectionRange(end, end);
-        }, 0);
-      }
-    }
-  }, [showReplyInput]);
 
-  useEffect(() => {
-    if (showRepliesList) {
-      resetAndFetchReplies();
-    }
-  }, [showRepliesList]);
+useEffect(() => {
+  if (showRepliesList && replies.length === 0) {
+    resetAndFetchReplies();
+  }
+}, [showRepliesList]);
+
+useEffect(() => {
+  if (parentCommentIdParam) {
+    debugger;
+    setShowRepliesList(true);
+  }
+}, [parentCommentIdParam,commentIdParam]);
 
   useEffect(() => {
     if (replies.length > 0) {
@@ -104,41 +98,9 @@ export default function CommentItem({ comment, onNavigate, onDelete, postId }: C
     }
   };
 
-  const handleToggleReplyInput = () => {
-    const willShow = !showReplyInput;
-    setShowReplyInput(willShow);
-    if (willShow) {
-      setReplyContent(`@${comment.username} `);
-    }
-  };
 
   const handleToggleRepliesList = () => {
     setShowRepliesList(prev => !prev);
-  };
-
-  const handleReplySubmit = async () => {
-    if (!replyContent.trim() || isReplying) return;
-    setIsReplying(true);
-    try {
-      const response = await fetchWithAuth('/api/protected/posts/comment/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          content: replyContent,
-          postId: postId,
-          parentCommentId: comment.id
-        }),
-      });
-      const data = await response.json();
-      if (response.ok) {
-        setReplies(prev => [data.comment, ...prev]);
-        setShowReplyInput(false);
-        if (!showRepliesList) setShowRepliesList(true);
-        setReplyContent("");
-      }
-    } finally {
-      setIsReplying(false);
-    }
   };
 
   const handleReplyDeleted = (deletedReplyId: string) => {
@@ -189,6 +151,7 @@ export default function CommentItem({ comment, onNavigate, onDelete, postId }: C
       setIsDeleting(false);
     }
   };
+  const isReply = !!comment.parentCommentId;
   return (
     <div className="sbg-white rounded-lg border border-gray-100 p-3 relative">
       <div className="flex-1">
@@ -277,7 +240,10 @@ export default function CommentItem({ comment, onNavigate, onDelete, postId }: C
             <span>{currentLikeCount > 0 ? `${currentLikeCount} Like` : 'Like'}</span>
           </button>
           <button
-            onClick={handleToggleReplyInput}
+            onClick={()=>{
+              onReply(comment.parentCommentId||comment.id,comment.username);
+              setShowRepliesList(true);
+            }}
             className="flex items-center gap-1.5 text-gray-500 hover:text-blue-500 transition-colors duration-200"
           >
             <svg
@@ -304,36 +270,8 @@ export default function CommentItem({ comment, onNavigate, onDelete, postId }: C
             </button>
           )}
         </div>
-        {showReplyInput && (
-          <div className="mt-3 flex items-start gap-2 pl-6 border-l-2 border-gray-100 pt-3">
-            <div className="w-7 h-7 rounded-full bg-gray-200 flex-shrink-0"></div>
-            <div className="flex-1">
-              <textarea
-                ref={replyTextareaRef}
-                value={replyContent}
-                onChange={(e) => setReplyContent(e.target.value)}
-                placeholder={`Replying to @${comment.username}...`}
-                className="w-full bg-white border border-gray-200 rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
-                rows={2}
-              />
-              <div className="mt-2 flex justify-end">
-                <button
-                  onClick={handleReplySubmit}
-                  disabled={isReplying || !replyContent.trim()}
-                  className={`px-4 py-1.5 text-sm font-semibold text-white rounded-full transition-colors ${
-                    isReplying || !replyContent.trim()
-                      ? "bg-blue-300 cursor-not-allowed"
-                      : "bg-blue-500 hover:bg-blue-600"
-                  }`}
-                >
-                  {isReplying ? "..." : "Reply"}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
 
-        {showRepliesList && (
+        {!isReply && showRepliesList && (
           <div className="mt-3 pl-6 border-l-2 border-gray-100 pt-3">
             {isLoadingReplies && <p className="text-sm text-gray-500">Loading replies...</p>}
             {!isLoadingReplies && replies.length > 0 && (
@@ -348,10 +286,11 @@ export default function CommentItem({ comment, onNavigate, onDelete, postId }: C
                 {replies.map(reply => (
                   <CommentItem
                     key={reply.id}
-                    comment={reply}
+                    comment={{ ...reply, parentCommentId: comment.id }}
                     onNavigate={onNavigate}
                     onDelete={handleReplyDeleted}
                     postId={postId}
+                    onReply={onReply}
                   />
                 ))}
               </InfiniteScroll>

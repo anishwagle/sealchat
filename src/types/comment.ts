@@ -10,6 +10,7 @@ export interface Comment {
   replyCount?:number;
   likeCount?:number;
   isLikedByCurrentUser?:boolean;
+  replies?:Comment[];
 }
 export interface CommentLike {
   id:number;

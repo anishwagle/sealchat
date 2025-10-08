@@ -1,6 +1,6 @@
 import { Logger } from "@/lib/logger";
 import executeQuery from "../db";
-import {Like, PostType } from "../types/post";
+import { Like, PostType } from "../types/post";
 import { Comment } from "@/types/comment";
 import { v4 } from "uuid";
 import { QueryResult } from "mysql2";
@@ -152,7 +152,7 @@ export class EngagementService implements IEngagementService {
   }
 
   async getPublicOpinionComment(
-    currentUserId:string,
+    currentUserId: string,
     postId: string,
     cursorCreatedAt?: string | null,
     limit: number = 10
@@ -195,7 +195,7 @@ export class EngagementService implements IEngagementService {
     ) ul ON c.id = ul.comment_id
    WHERE c.post_id = ? AND c.parent_comment_id IS NULL
    `;
-      const params: string[] = [currentUserId,postId];
+      const params: string[] = [currentUserId, postId];
       if (cursorCreatedAt) {
         query += ` AND c.created_at < STR_TO_DATE(?, '%Y-%m-%d %H:%i:%s')`;
         params.push(cursorCreatedAt);
@@ -225,16 +225,16 @@ export class EngagementService implements IEngagementService {
         parentCommentId: comment.parent_comment_id,
         postId: comment.post_id,
         createdAt: new Date(comment.created_at),
-        replyCount:comment.reply_count,
-        likeCount:comment.like_count,
-        isLikedByCurrentUser:comment.is_liked_by_current_user
+        replyCount: comment.reply_count,
+        likeCount: comment.like_count,
+        isLikedByCurrentUser: comment.is_liked_by_current_user,
       }));
     } catch (error: any) {
       throw new Error("Failed to fetch public opinions: " + error.message);
     }
   }
-async getCommentReplies(
-    currentUserId:string,
+  async getCommentReplies(
+    currentUserId: string,
     commentId: string,
     cursorCreatedAt?: string | null,
     limit: number = 10
@@ -306,9 +306,9 @@ WHERE c.parent_comment_id = ?`;
         parentCommentId: comment.parent_comment_id,
         postId: comment.post_id,
         createdAt: new Date(comment.created_at),
-        replyCount:comment.reply_count,
-        likeCount:comment.like_count,
-        isLikedByCurrentUser:comment.is_liked_by_current_user
+        replyCount: comment.reply_count,
+        likeCount: comment.like_count,
+        isLikedByCurrentUser: comment.is_liked_by_current_user,
       }));
     } catch (error: any) {
       throw new Error("Failed to fetch public opinions: " + error.message);
@@ -319,7 +319,7 @@ WHERE c.parent_comment_id = ?`;
     currentUserId: string,
     postId: string,
     cursorCreatedAt?: string | null,
-    limit: number=10
+    limit: number = 10
   ): Promise<Comment[]> {
     const FUNCTION = "getFriendPostComment";
     if (!postId || !currentUserId) {
@@ -388,7 +388,7 @@ WHERE c.parent_comment_id = ?`;
     ) ul ON c.id = ul.comment_id
    WHERE c.post_id = ? AND c.parent_comment_id IS NULL
    `;
-      const params = [currentUserId,postId];
+      const params = [currentUserId, postId];
       if (cursorCreatedAt) {
         query += ` AND c.created_at < STR_TO_DATE(?, '%Y-%m-%d %H:%i:%s')`;
         params.push(cursorCreatedAt);
@@ -404,7 +404,7 @@ WHERE c.parent_comment_id = ?`;
         "debug",
         "Comments Fetched for feed Successfully",
         {
-          postId
+          postId,
         }
       );
 
@@ -418,8 +418,8 @@ WHERE c.parent_comment_id = ?`;
         postId: comment.post_id,
         createdAt: new Date(comment.created_at),
         replyCount: comment.reply_count,
-        likeCount:comment.like_count,
-        isLikedByCurrentUser:comment.is_liked_by_current_user
+        likeCount: comment.like_count,
+        isLikedByCurrentUser: comment.is_liked_by_current_user,
       }));
     } catch (error: any) {
       throw new Error("Failed to fetch Comment: " + error.message);
@@ -464,7 +464,10 @@ WHERE c.parent_comment_id = ?`;
     });
     return !!result;
   }
-  async getCommentLikeStatus(userId: string, commentId: string): Promise<boolean> {
+  async getCommentLikeStatus(
+    userId: string,
+    commentId: string
+  ): Promise<boolean> {
     const FUNCTION = "getCommentLikeStatus";
     Logger.log(COMPONENT, FUNCTION, "debug", "get comment like status", {
       userId,
@@ -512,16 +515,16 @@ WHERE c.parent_comment_id = ?`;
         await notificationService.deleteNotification(x.id, x.userId);
       });
       Logger.log(COMPONENT, FUNCTION, "debug", "Comment dis-liked");
-      await executeQuery("DELETE FROM comment_likes WHERE comment_id=? AND user_id=?", [
-        commentId,
-        userId,
-      ]);
+      await executeQuery(
+        "DELETE FROM comment_likes WHERE comment_id=? AND user_id=?",
+        [commentId, userId]
+      );
     } else {
       Logger.log(COMPONENT, FUNCTION, "debug", "Comment Liked");
-      await executeQuery("INSERT INTO comment_likes (user_id,comment_id) VALUES(?,?)", [
-        userId,
-        commentId,
-      ]);
+      await executeQuery(
+        "INSERT INTO comment_likes (user_id,comment_id) VALUES(?,?)",
+        [userId, commentId]
+      );
       if (comment.user_id != userId) {
         await notificationService.createNotification(
           comment.user_id,

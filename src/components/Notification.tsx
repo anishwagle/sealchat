@@ -1,6 +1,5 @@
 "use client";
-import { Notification, NotificationType } from "@/types/notification";
-import { getTimeSince } from "@/utils/dateConveter";
+import { Notification } from "@/types/notification";
 import { useState, useEffect, useRef, useMemo, Fragment } from "react";
 import { fetchWithAuth } from "@/lib/auth/fetchWithAuth";
 import Link from "next/link";
@@ -17,7 +16,6 @@ export default function NotificationComponent() {
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;
   const processedNotifications = useProcessedNotifications(notifications);
-  const groupedNotificationTypes : NotificationType[]= ['profile_like','post_like', 'comment_like'];
   const markAsRead = async () => {
     try {
       const unreadIds = notifications

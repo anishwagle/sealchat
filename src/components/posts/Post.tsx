@@ -1,7 +1,7 @@
 "use client";
 import { Post, Like } from "@/types/post";
 import { getTimeSince, getTimeUntil } from "@/utils/dateConveter";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useState, useEffect, useRef, useCallback } from "react";
 import UserListModal from "../modals/UserListModal";
 import { useAuth } from "@/lib/auth/useAuth";
@@ -12,7 +12,6 @@ import CreateShareModal from "./CreateShareModal";
 import CommentModal from "../modals/CommentModal";
 interface PostComponentProps extends Post {
   onPostDeleted?: (postId: string) => void;
-  commentId?: string;
 }
 
 export default function PostComponent({ onPostDeleted, ...post }: PostComponentProps) {
@@ -30,8 +29,9 @@ export default function PostComponent({ onPostDeleted, ...post }: PostComponentP
   const router = useRouter();
   const pathname = usePathname();
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const { commentId } = post;
-  
+  const searchParams = useSearchParams();
+  const commentId = searchParams.get('commentId');
+  const parentCommentId = searchParams.get('parentCommentId');
   const fetchLikeList = useCallback(async () => {
     if (showLikesModal) {
       const apiUrl = `/api/protected/posts/postLikeList/${post.id}`;
@@ -46,10 +46,9 @@ export default function PostComponent({ onPostDeleted, ...post }: PostComponentP
   }, [showLikesModal, fetchLikeList]);
 
   useEffect(() => {
+    
     if (commentId) {
       setShowCommentModal(true);
-      // Optionally, you can also scroll to the comment in the modal
-      // or highlight the comment.
     }
   }, [commentId]);
 
@@ -320,6 +319,8 @@ export default function PostComponent({ onPostDeleted, ...post }: PostComponentP
         onClose={() => setShowCommentModal(false)}
         postId={post.id}
         postType={post.type}
+        commentIdParam={commentId||null}
+        parentCommentIdParam={parentCommentId||null}
       />
       <UserListModal
         isOpen={showLikesModal}

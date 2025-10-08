@@ -245,7 +245,11 @@ export default function NotificationItem({
       case "comment":
       case "comment_reply":
         if(notif.postId){
-          if(notif.commentId) postUrl += `?commentId=${notif.commentId}`;
+          if(notif.commentId){ 
+            postUrl += `?commentId=${notif.commentId}`;
+          if(notif.parentCommentId) postUrl += `&parentCommentId=${notif.parentCommentId}`;
+          };
+          
           router.push(postUrl);
         }
         break;
