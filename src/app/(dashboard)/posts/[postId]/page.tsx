@@ -52,7 +52,7 @@ export default function PostPage() {
               ) : !post ? (
                 <div className="text-center text-gray-500 bg-white p-10 rounded-lg">No post found.</div>
               ) : (
-                <PostComponent key={post.id} {...post} commentId={searchParams.get("commentId") || undefined} />
+                <PostComponent key={post.id} {...post} />
               )}
             </div>
           </div>
