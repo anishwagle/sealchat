@@ -52,7 +52,25 @@ export default function CommentModal({
       });
 
       const data = await response.json();
-      if(!!!parentCommentId) setComments(prev => [data.comment, ...prev]);
+      if(!!!parentCommentId) {setComments(prev => [data.comment, ...prev])}
+      else {
+        // Find the parent comment and add the reply to its replies array
+        setComments(prevComments => {
+          return prevComments.map(comment => {
+            if (comment.id === parentCommentId) {
+              // Ensure comment.replies is initialized as an array
+              const updatedComment = {
+                ...comment,
+                replyCount:comment.replyCount||0+1,
+                replies: [...(comment.replies || []), data.comment],
+              };
+              return updatedComment;
+            }
+            return comment;
+          });
+        });
+      }
+      debugger;
       if (!response.ok) {
         throw new Error(data.error || 'Failed to create comment');
       }
@@ -167,13 +185,12 @@ export default function CommentModal({
             >
                 {comments.map((comment) => (
                   <CommentItem
-                    key={comment.id}
+                    key={`${comment.id}-${comment.replies?.length || 0}`}
                     comment={comment}
                     onNavigate={onClose}
                     onDelete={handleCommentDeleted}
                     postId={postId}
                     onReply={handleOnReply}
-                    commentIdParam={commentIdParam||null}
                     parentCommentIdParam={parentCommentIdParam||null}
                   />
                 ))}

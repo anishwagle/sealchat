@@ -13,15 +13,15 @@ interface CommentItemProps {
   onDelete: (commentId: string) => void;
   onReply: (commentId:string,username:string)=>void;
   postId: string;
-  commentIdParam?:string|null;
-  parentCommentIdParam?:string|null
+  showRepliesList?:boolean;
+  parentCommentIdParam?:string|null;
 }
 
 const REPLY_PAGE_SIZE = 5;
 
-export default function CommentItem({ comment, onNavigate, onDelete,onReply, postId,commentIdParam,parentCommentIdParam }: CommentItemProps) {
+export default function CommentItem({ comment, onNavigate, onDelete,onReply, postId,parentCommentIdParam}: CommentItemProps) {
   const [showOptions, setShowOptions] = useState(false);
-  const [isLiking, setIsLiking] = useState(false);
+  const [isLiking,setIsLiking] = useState(false);
   const [isLiked, setIsLiked] = useState(comment.isLikedByCurrentUser || false);
   const [currentLikeCount, setCurrentLikeCount] = useState(comment.likeCount || 0);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -33,7 +33,13 @@ export default function CommentItem({ comment, onNavigate, onDelete,onReply, pos
   const [isLoadingReplies, setIsLoadingReplies] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { currentUserId } = useAuth();
-
+  
+  useEffect(() => {
+    if (comment.replies && comment.replies.length > 0) {
+      setShowRepliesList(true);
+    }
+  }, [comment.replies]);
+  
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -56,12 +62,11 @@ useEffect(() => {
 }, [showRepliesList]);
 
 useEffect(() => {
-  if (parentCommentIdParam) {
-    debugger;
+  if (parentCommentIdParam||comment.replies) {
     setShowRepliesList(true);
   }
-}, [parentCommentIdParam,commentIdParam]);
-
+}, [parentCommentIdParam]);
+  
   useEffect(() => {
     if (replies.length > 0) {
       setLastReplyCreatedAt(formatToMySQLDate(replies[replies.length - 1].createdAt));
@@ -242,7 +247,6 @@ useEffect(() => {
           <button
             onClick={()=>{
               onReply(comment.parentCommentId||comment.id,comment.username);
-              setShowRepliesList(true);
             }}
             className="flex items-center gap-1.5 text-gray-500 hover:text-blue-500 transition-colors duration-200"
           >
@@ -291,7 +295,7 @@ useEffect(() => {
                     onDelete={handleReplyDeleted}
                     postId={postId}
                     onReply={onReply}
-                  />
+                    />
                 ))}
               </InfiniteScroll>
             )}
