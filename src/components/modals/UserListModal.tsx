@@ -52,6 +52,7 @@ const UserListModalContent = ({ isOpen, onClose, users, title, emptyMessage = "N
               </Link>
               <Link
                 href={`/profile/${user.username}`}
+                onClick={onClose}
                 className="text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 px-4 py-1.5 rounded-full transition-colors"
               >
                 Visit

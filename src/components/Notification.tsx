@@ -49,7 +49,7 @@ export default function NotificationComponent() {
   const fetchNotifications = async () => {
     try {
       setLoading(true);
-      const apiUrl = `/api/protected/notification?limit=${5}`;
+      const apiUrl = `/api/protected/notification?limit=${7}`;
       const data = await fetchWithAuth(apiUrl);
       const results = await data.json();
       setNotifications(results.notifications.map((x: Notification) => x));
@@ -108,7 +108,7 @@ export default function NotificationComponent() {
           {unreadCount > 0 && (
             <span className="absolute -top-1 -right-1 h-4 w-4 flex items-center justify-center 
                            text-xs font-medium text-white bg-blue-500 rounded-full">
-              {unreadCount > 9 ? "9+" : unreadCount}
+              {unreadCount > 7 ? "7+" : unreadCount}
             </span>
           )}
         </button>
