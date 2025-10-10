@@ -8,6 +8,7 @@ import {} from "./INotificationService";
 import { notificationService } from "./serviceProvider";
 import {
   convertMentionsIntoLinks,
+  escapeHtml,
   getEmbedSection,
   getLinksFromString,
   getMentionAndIdForString,
@@ -69,8 +70,8 @@ export class EngagementService implements IEngagementService {
     Logger.log(COMPONENT, FUNCTION, "debug", "Fetched the post", {
       post,
     });
-    // Store original content and initialize embed section
-    let processedContent = content;
+    
+    let processedContent = escapeHtml(content);
     processedContent = getLinksFromString(processedContent);
     processedContent = await convertMentionsIntoLinks(
       processedContent,

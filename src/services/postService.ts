@@ -7,6 +7,7 @@ import {} from "./INotificationService";
 import { notificationService } from "./serviceProvider";
 import {
   convertMentionsIntoLinks,
+  escapeHtml,
   getEmbedSection,
   getLinksFromString,
   getMentionAndIdForString,
@@ -140,7 +141,7 @@ export class PostService implements IPostService {
     }
 
     // Store original content and initialize embed section
-    let processedContent = content;
+    let processedContent = escapeHtml(content);
     const embedSection:string|null = sharedPostId?null: getEmbedSection(content);
     processedContent = getLinksFromString(processedContent);
     processedContent = await convertMentionsIntoLinks(

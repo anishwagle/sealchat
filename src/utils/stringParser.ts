@@ -1,6 +1,16 @@
 import executeQuery from "@/db";
 import { PostType } from "@/types/post";
 
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;")
+    .replace(/\n/g, "<br />");
+}
+
 const getLinksFromString = (str:string):string => {
     const urlRegex = /(https?:\/\/[^\s]+)/g;
     return str.replace(
@@ -91,5 +101,6 @@ export {
     getLinksFromString,
     getEmbedSection,
     convertMentionsIntoLinks,
-    getMentionAndIdForString
+    getMentionAndIdForString,
+    escapeHtml
 }
