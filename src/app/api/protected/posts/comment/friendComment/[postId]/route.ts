@@ -44,7 +44,7 @@ const { searchParams } = new URL(request.url);
     return NextResponse.json({ comments:userComments, nextCursor }, { status: 200 });
   } catch (error: any) {
     const apiError = new ApiError(
-      "Failed to fetch Post",
+      "Failed to fetch Comment",
       500,
       "INTERNAL_ERROR",
       { error: error.message }

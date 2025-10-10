@@ -42,7 +42,7 @@ export async function GET(request: Request, context: { params: Promise<{ postId:
     return NextResponse.json({ post: post }, { status: 200 });
   } catch (error: any) {
     const apiError = new ApiError(
-      "Failed to fetch Post",
+      "Failed to fetch Post By Id",
       500,
       "INTERNAL_ERROR",
       { error: error.message }

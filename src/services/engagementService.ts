@@ -334,7 +334,7 @@ WHERE c.parent_comment_id = ?`;
     );
 
     const post = (queryResult as any[])[0];
-
+    Logger.log(COMPONENT,FUNCTION,"debug","Post:",post);
     if (post.user_id != currentUserId) {
       // Check if users are friends
       const friendResults = await executeQuery(

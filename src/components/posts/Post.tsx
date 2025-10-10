@@ -12,9 +12,10 @@ import CreateShareModal from "./CreateShareModal";
 import CommentModal from "../modals/CommentModal";
 interface PostComponentProps extends Post {
   onPostDeleted?: (postId: string) => void;
+  mentionTextAreaRef?: React.RefObject<HTMLTextAreaElement|null>;
 }
 
-export default function PostComponent({ onPostDeleted, ...post }: PostComponentProps) {
+export default function PostComponent({ onPostDeleted, mentionTextAreaRef, ...post }: PostComponentProps) {
   const [showOptions, setShowOptions] = useState(false);
   const [showCommentModal, setShowCommentModal] = useState(false);
   const [showLikesModal, setShowLikesModal] = useState(false);
@@ -29,9 +30,6 @@ export default function PostComponent({ onPostDeleted, ...post }: PostComponentP
   const router = useRouter();
   const pathname = usePathname();
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const searchParams = useSearchParams();
-  const commentId = searchParams.get('commentId');
-  const parentCommentId = searchParams.get('parentCommentId');
   const fetchLikeList = useCallback(async () => {
     if (showLikesModal) {
       const apiUrl = `/api/protected/posts/postLikeList/${post.id}`;
@@ -44,13 +42,6 @@ export default function PostComponent({ onPostDeleted, ...post }: PostComponentP
   useEffect(() => {
     fetchLikeList();
   }, [showLikesModal, fetchLikeList]);
-
-  useEffect(() => {
-    
-    if (commentId) {
-      setShowCommentModal(true);
-    }
-  }, [commentId]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -123,6 +114,14 @@ export default function PostComponent({ onPostDeleted, ...post }: PostComponentP
 
   const handleShare = () => {
     setShowShareModal(true);
+  };
+
+  const handleCommentClick = () => {
+    if (mentionTextAreaRef?.current) {
+      mentionTextAreaRef.current.focus();
+    } else {
+      setShowCommentModal(true);
+    }
   };
 
 
@@ -269,7 +268,7 @@ export default function PostComponent({ onPostDeleted, ...post }: PostComponentP
               <span>{likeCount} Like</span>
             </button>
             <button
-              onClick={() => setShowCommentModal(true)}
+              onClick={handleCommentClick}
               className="flex items-center gap-1.5 text-gray-500 hover:text-blue-500 transition-colors duration-200"
             >
               <svg
@@ -319,8 +318,6 @@ export default function PostComponent({ onPostDeleted, ...post }: PostComponentP
         onClose={() => setShowCommentModal(false)}
         postId={post.id}
         postType={post.type}
-        commentIdParam={commentId||null}
-        parentCommentIdParam={parentCommentId||null}
       />
       <UserListModal
         isOpen={showLikesModal}

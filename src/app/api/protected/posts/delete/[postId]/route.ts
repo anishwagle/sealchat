@@ -32,7 +32,7 @@ export async function DELETE(request: Request,context: { params:Promise< { postI
     );
   } catch (error: any) {
     const apiError = new ApiError(
-      "Failed to fetch Post",
+      "Failed to delete Post",
       500,
       "INTERNAL_ERROR",
       { error: error.message }

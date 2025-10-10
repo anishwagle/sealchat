@@ -45,7 +45,7 @@ export async function GET(request: Request,context: { params: Promise<{ commentI
     return NextResponse.json({ replies:userReply, nextCursor }, { status: 200 });
   } catch (error: any) {
     const apiError = new ApiError(
-      "Failed to fetch Post",
+      "Failed to fetch Comment",
       500,
       "INTERNAL_ERROR",
       { error: error.message }
