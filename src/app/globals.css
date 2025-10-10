@@ -88,3 +88,7 @@
 .facebook-embed {
   background-color: #fff;
 }
+
+body.modal-open {
+  overflow: hidden;
+}

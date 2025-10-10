@@ -8,6 +8,8 @@ import { PostType } from "@/types/post";
 import MentionTextarea from "../MentionTextarea";
 import Loading from "../Loading";
 
+import { useModalScrollLock } from "@/hooks/useModalScrollLock";
+
 interface CommentModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -27,6 +29,7 @@ export default function CommentModal({
   commentIdParam,
   parentCommentIdParam
 }: CommentModalProps) {
+  useModalScrollLock(isOpen);
   const [newComment, setNewComment] = useState("");
   const [parentCommentId, setParentCommentId] = useState("");
   const [isCommenting,setIsCommenting] = useState(false);
@@ -119,7 +122,7 @@ export default function CommentModal({
         setLastCommentCreatedAt(formatToMySQLDate(comments[comments.length - 1].createdAt));
       }
     }, [comments]);
-  // Effect to handle clicks outside of the active menu to close it
+    
   useEffect(() => {
     if (isOpen) {      
       resetAndFetchComments();

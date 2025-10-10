@@ -1,9 +1,11 @@
+import { useModalScrollLock } from '@/hooks/useModalScrollLock';
 import { fetchWithAuth } from '@/lib/auth/fetchWithAuth';
 import { PostType } from '@/types/post';
 import { useState } from 'react';
 import MentionTextarea from '../MentionTextarea';
 
 export default function CreatePostModal({ onClose, onPostCreated }: { onClose: () => void; onPostCreated: () => void }) {
+  useModalScrollLock(true);
   const [content, setContent] = useState('');
   const [type, setType] = useState<PostType>('friend_post');
   const [durationDays, setDurationDays] = useState<number | undefined>(1);

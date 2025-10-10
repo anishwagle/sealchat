@@ -1,3 +1,4 @@
+import { useModalScrollLock } from '@/hooks/useModalScrollLock';
 import Link from 'next/link';
 
 interface LikesModalProps {
@@ -7,6 +8,7 @@ interface LikesModalProps {
 }
 
 export default function LikesModal({ isOpen, onClose, likes }: LikesModalProps) {
+  useModalScrollLock(isOpen);
   if (!isOpen) return null;
 
   return (

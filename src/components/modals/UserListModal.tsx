@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 
+import { useModalScrollLock } from '@/hooks/useModalScrollLock';
+
 interface UserListModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -15,6 +17,7 @@ interface UserListModalProps {
 }
 
 const UserListModalContent = ({ isOpen, onClose, users, title, emptyMessage = "No users to show.", actionButtonText, actionButtonLink }: UserListModalProps) => {
+  useModalScrollLock(isOpen);
   if (!isOpen) return null;
 
   return createPortal(
