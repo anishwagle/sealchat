@@ -45,7 +45,6 @@ export default function PostPage() {
     } catch (err: any) {
       setError("Failed to load post: " + err.message);
     } finally {
-      await resetAndFetchComments();
       setLoading(false);
     }
   }, [postId]);
@@ -128,13 +127,14 @@ export default function PostPage() {
       if (!response.ok) {
         throw new Error(data.error || 'Failed to create comment');
       }
+      setNewComment("");
+      setParentCommentId("");
       setIsCommenting(false);
   };
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (newComment.trim()) {
       handleCommentSubmit(newComment);
-      setNewComment("");
     }
   };
   const resetAndFetchComments = async () => {
@@ -150,6 +150,12 @@ export default function PostPage() {
       fetchPosts();
     }
   }, [postId, fetchPosts]);
+
+  useEffect(() => {
+    if (post) {
+      resetAndFetchComments();
+    }
+  }, [post]);
 
   return (
     <div className="min-h-screen bg-gray-50">
