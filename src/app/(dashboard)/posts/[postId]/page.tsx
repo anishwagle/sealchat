@@ -207,7 +207,7 @@ export default function PostPage() {
                     key={`${comment.id}-${comment.replies?.length || 0}`}
                     comment={comment}
                     onDelete={handleCommentDeleted}
-                    postId={ `${post?.id}`}
+                    post={ post}
                     onReply={handleOnReply}
                     parentCommentIdParam={parentCommentIdParam || null}
                   />

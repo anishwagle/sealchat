@@ -6,20 +6,21 @@ import RenderedContent from "../RenderedContent";
 import { useAuth } from "@/lib/auth/useAuth";
 import { fetchWithAuth } from "@/lib/auth/fetchWithAuth";
 import InfiniteScroll from "react-infinite-scroll-component";
+import { Post } from "@/types/post";
 
 interface CommentItemProps {
   comment: Comment;
   onNavigate?: () => void;
   onDelete: (commentId: string) => void;
   onReply: (commentId:string,username:string)=>void;
-  postId: string;
+  post: Post;
   showRepliesList?:boolean;
   parentCommentIdParam?:string|null;
 }
 
 const REPLY_PAGE_SIZE = 5;
 
-export default function CommentItem({ comment, onNavigate, onDelete,onReply, postId,parentCommentIdParam}: CommentItemProps) {
+export default function CommentItem({ comment, onNavigate, onDelete,onReply, post,parentCommentIdParam}: CommentItemProps) {
   const [showOptions, setShowOptions] = useState(false);
   const [isLiking,setIsLiking] = useState(false);
   const [isLiked, setIsLiked] = useState(comment.isLikedByCurrentUser || false);
@@ -200,14 +201,15 @@ useEffect(() => {
                   Edit Comment
                 </button>
                 <div className="h-[1px] bg-gray-100 my-1"></div> */}
-                {currentUserId==comment.userId?<>
+                {(currentUserId==comment.userId)||(post.userId===currentUserId && post.type==="friend_post")?<>
+             
                 <button 
                   onClick={() => {
                     setShowDeleteConfirm(true);
                     setShowOptions(false);
                   }}
                   className="w-full text-left px-4 py-1.5 text-sm text-red-500 hover:bg-gray-50 hover:text-red-600">
-                  Delete Comment
+                  Delete Comment 
                 </button>
                 <div className="h-[1px] bg-gray-100 my-1"></div>
                 </>:null}
@@ -293,7 +295,7 @@ useEffect(() => {
                     comment={{ ...reply, parentCommentId: comment.id }}
                     onNavigate={onNavigate}
                     onDelete={handleReplyDeleted}
-                    postId={postId}
+                    post={post}
                     onReply={onReply}
                     />
                 ))}

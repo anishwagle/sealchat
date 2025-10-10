@@ -316,8 +316,7 @@ export default function PostComponent({ onPostDeleted, mentionTextAreaRef, ...po
       <CommentModal
         isOpen={showCommentModal}
         onClose={() => setShowCommentModal(false)}
-        postId={post.id}
-        postType={post.type}
+        post={post}
       />
       <UserListModal
         isOpen={showLikesModal}

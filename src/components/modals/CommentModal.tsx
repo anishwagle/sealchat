@@ -4,7 +4,7 @@ import CommentItem from "./CommentItem";
 import InfiniteScroll from "react-infinite-scroll-component";
 import { fetchWithAuth } from "@/lib/auth/fetchWithAuth";
 import { formatToMySQLDate } from "@/utils/dateConveter";
-import { PostType } from "@/types/post";
+import { Post, PostType } from "@/types/post";
 import MentionTextarea from "../MentionTextarea";
 import Loading from "../Loading";
 
@@ -13,8 +13,7 @@ import { useModalScrollLock } from "@/hooks/useModalScrollLock";
 interface CommentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  postId:string;
-  postType:PostType;
+  post:Post;
   commentIdParam?:string|null;
   parentCommentIdParam?:string|null;
 }
@@ -24,8 +23,7 @@ const COMMENT_PAGE_SIZE = 10;
 export default function CommentModal({
   isOpen,
   onClose,
-  postId,
-  postType,
+  post,
   commentIdParam,
   parentCommentIdParam
 }: CommentModalProps) {
@@ -58,7 +56,7 @@ export default function CommentModal({
     const response = await fetchWithAuth('/api/protected/posts/comment/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content,postId: postId,parentCommentId }),
+        body: JSON.stringify({ content,postId: post.id,parentCommentId }),
         credentials: 'include' // Send cookies for auth
       });
 
@@ -93,8 +91,8 @@ export default function CommentModal({
       setIsMoreCommentsLoading(true);
       try {
       let apiUrl = `/api/protected/posts/comment`;
-      if(postType=='friend_post') apiUrl+=`/friendComment/${postId}`;
-      else if(postType=='public_opinion') apiUrl+=`/publicComment/${postId}`;
+      if(post.type=='friend_post') apiUrl+=`/friendComment/${post.id}`;
+      else if(post.type=='public_opinion') apiUrl+=`/publicComment/${post.id}`;
 
       const params = new URLSearchParams();
       params.append('limit', String(COMMENT_PAGE_SIZE));
@@ -192,7 +190,7 @@ export default function CommentModal({
                     comment={comment}
                     onNavigate={onClose}
                     onDelete={handleCommentDeleted}
-                    postId={postId}
+                    post={post}
                     onReply={handleOnReply}
                     parentCommentIdParam={parentCommentIdParam||null}
                   />
