@@ -184,7 +184,7 @@ export default function PostPage() {
           <div
             id="commentScrollableDiv"
             ref={commentsContainerRef}
-            className="flex-1 overflow-y-auto p-6"
+            className="flex-2 overflow-y-auto p-6"
           >
             {isLoadingComments ? (
               <Loading message="Loading comments..." fullScreen={false} />
