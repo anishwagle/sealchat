@@ -70,7 +70,7 @@ export class EngagementService implements IEngagementService {
     Logger.log(COMPONENT, FUNCTION, "debug", "Fetched the post", {
       post,
     });
-    
+
     let processedContent = escapeHtml(content);
     processedContent = getLinksFromString(processedContent);
     processedContent = await convertMentionsIntoLinks(
@@ -335,7 +335,7 @@ WHERE c.parent_comment_id = ?`;
     );
 
     const post = (queryResult as any[])[0];
-    Logger.log(COMPONENT,FUNCTION,"debug","Post:",post);
+    Logger.log(COMPONENT, FUNCTION, "debug", "Post:", post);
     if (post.user_id != currentUserId) {
       // Check if users are friends
       const friendResults = await executeQuery(
@@ -434,8 +434,16 @@ WHERE c.parent_comment_id = ?`;
     }
     try {
       const result = await executeQuery(
-        "DELETE FROM comments WHERE id = ? AND user_id = ?",
-        [commentId, userId]
+        `
+  DELETE c FROM comments c
+  JOIN posts p ON c.post_id = p.id
+  WHERE c.id = ?
+    AND (
+      c.user_id = ? 
+      OR (p.user_id = ? AND p.type = 'friend_post')
+    )
+  `,
+        [commentId, userId, userId]
       );
       if ((result as any).affectedRows === 0) {
         throw new Error(
