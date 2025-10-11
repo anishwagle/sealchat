@@ -294,6 +294,7 @@ export class FriendService implements IFriendService {
 
     return result;
   }
+  
 }
 
 export const friendService = new FriendService();

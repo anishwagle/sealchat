@@ -1,7 +1,9 @@
 import { userService as userServiceProvider } from "./userService";
 import { friendService as friendServiceProvider } from "./friendService";
+import { friendRecommendationService as friendRecommendationServiceProvider } from "./FriendRecommendationService";
 import { IUserService } from "./IUserService";
 import { IFriendService } from "./IFriendService";
+import { IFriendRecommendationService } from "./IFriendRecommendationService";
 import { postService as postServiceProvider } from "./postService";
 import {config} from 'dotenv';
 import { IPostService } from "./IPostService";
@@ -15,3 +17,4 @@ export const friendService:IFriendService =friendServiceProvider;
 export const postService:IPostService = postServiceProvider;
 export const notificationService:INotificationService = notificationServiceProvider;
 export const engagementService:IEngagementService= engagementServiceProvider;
+export const friendRecommendationService:IFriendRecommendationService = friendRecommendationServiceProvider;

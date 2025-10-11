@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import SuggestedFriends from "./SuggestedFriends";
 
 export default function SideBar() {
   return (
@@ -42,20 +43,7 @@ export default function SideBar() {
         </nav>
 
         {/* Friend Suggestions */}
-        <div className="bg-white rounded-lg p-4">
-          <h3 className="font-medium text-sm text-gray-700 mb-3">Suggested Friends</h3>
-          <div className="space-y-3">
-            {[1, 2].map((i) => (
-              <div key={i} className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-gray-100"></div>
-                  <span className="text-sm">User {i}</span>
-                </div>
-                <button className="text-xs text-blue-600 hover:text-blue-700">Follow</button>
-              </div>
-            ))}
-          </div>
-        </div>
+        <SuggestedFriends/>
 
         {/* Quick Message */}
         <div className="bg-white rounded-lg p-4">
