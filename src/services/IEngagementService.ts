@@ -7,13 +7,8 @@ export interface IEngagementService {
     postId: string,
     parentCommentId?: string | null
   ): Promise<Comment>;
-  getPublicOpinionComment(
-    currentUserId:string,
-    postId: string,
-    cursorCreatedAt?: string | null,
-    limit?: number
-  ): Promise<Comment[]>;
-  getFriendPostComment(
+
+  getPostComment(
     currentUserId: string,
     postId: string,
     cursorCreatedAt?: string | null,

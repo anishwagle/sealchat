@@ -90,9 +90,7 @@ export default function CommentModal({
       
       setIsMoreCommentsLoading(true);
       try {
-      let apiUrl = `/api/protected/posts/comment`;
-      if(post.type=='friend_post') apiUrl+=`/friendComment/${post.id}`;
-      else if(post.type=='public_opinion') apiUrl+=`/publicComment/${post.id}`;
+      let apiUrl = `/api/protected/posts/comment/get/${post.id}`;
 
       const params = new URLSearchParams();
       params.append('limit', String(COMMENT_PAGE_SIZE));

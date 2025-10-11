@@ -152,88 +152,6 @@ export class EngagementService implements IEngagementService {
     }
   }
 
-  async getPublicOpinionComment(
-    currentUserId: string,
-    postId: string,
-    cursorCreatedAt?: string | null,
-    limit: number = 10
-  ): Promise<Comment[]> {
-    const FUNCTION = "getPublicOpinionComment";
-    try {
-      let query = `SELECT 
-      c.id,
-      c.user_id,
-      u.username,
-      c.post_id,
-      c.parent_comment_id,
-      c.content,
-      c.original_content,
-      c.created_at,
-      COALESCE(r.reply_count, 0) AS reply_count,
-      -- Pre-aggregated like count
-    COALESCE(l.like_count, 0) AS like_count,
-    -- Check if current user liked the post
-    CASE WHEN ul.user_id IS NULL THEN FALSE ELSE TRUE END AS is_liked_by_current_user
-   FROM comments c
-   JOIN users u ON c.user_id = u.id
-   LEFT JOIN (
-       SELECT parent_comment_id, COUNT(*) AS reply_count
-       FROM comments
-       WHERE parent_comment_id IS NOT NULL
-       GROUP BY parent_comment_id
-   ) r ON c.id = r.parent_comment_id
-    -- Aggregate likes
-    LEFT JOIN (
-        SELECT comment_id, COUNT(*) AS like_count
-        FROM comment_likes
-        GROUP BY comment_id
-    ) l ON c.id = l.comment_id
-    -- Check if current user liked this post
-    LEFT JOIN (
-        SELECT comment_id, user_id
-        FROM comment_likes
-        WHERE user_id = ?  -- pass current user ID here
-    ) ul ON c.id = ul.comment_id
-   WHERE c.post_id = ? AND c.parent_comment_id IS NULL
-   `;
-      const params: string[] = [currentUserId, postId];
-      if (cursorCreatedAt) {
-        query += ` AND c.created_at < STR_TO_DATE(?, '%Y-%m-%d %H:%i:%s')`;
-        params.push(cursorCreatedAt);
-      }
-
-      query += ` ORDER BY c.created_at DESC LIMIT ? `;
-      params.push(`${limit}`);
-      const results = await executeQuery(query, params);
-
-      Logger.log(
-        COMPONENT,
-        FUNCTION,
-        "debug",
-        "Comments Fetched for feed Successfully",
-        {
-          postId,
-          results,
-        }
-      );
-
-      return (results as any[]).map((comment) => ({
-        id: comment.id,
-        userId: comment.user_id,
-        username: comment.username,
-        originalContent: comment.original_content,
-        content: comment.content,
-        parentCommentId: comment.parent_comment_id,
-        postId: comment.post_id,
-        createdAt: new Date(comment.created_at),
-        replyCount: comment.reply_count,
-        likeCount: comment.like_count,
-        isLikedByCurrentUser: comment.is_liked_by_current_user,
-      }));
-    } catch (error: any) {
-      throw new Error("Failed to fetch public opinions: " + error.message);
-    }
-  }
   async getCommentReplies(
     currentUserId: string,
     commentId: string,
@@ -316,7 +234,7 @@ WHERE c.parent_comment_id = ?`;
     }
   }
 
-  async getFriendPostComment(
+  async getPostComment(
     currentUserId: string,
     postId: string,
     cursorCreatedAt?: string | null,
@@ -327,31 +245,6 @@ WHERE c.parent_comment_id = ?`;
       throw new Error("Post ID and current user ID are required");
     }
 
-    const queryResult = await executeQuery(
-      `SELECT id,type,user_id
-         FROM posts
-         WHERE id = ?`,
-      [postId]
-    );
-
-    const post = (queryResult as any[])[0];
-    Logger.log(COMPONENT, FUNCTION, "debug", "Post:", post);
-    if (post.user_id != currentUserId) {
-      // Check if users are friends
-      const friendResults = await executeQuery(
-        "SELECT id FROM friends WHERE (user_id_1 = ? AND user_id_2 = ?) OR (user_id_1 = ? AND user_id_2 = ?)",
-        [currentUserId, post.user_id, post.user_id, currentUserId]
-      );
-      const isFriend = (friendResults as any[]).length > 0;
-
-      if (!isFriend) {
-        Logger.log(COMPONENT, FUNCTION, "debug", "Users are not friends", {
-          userId: post.user_id,
-          currentUserId,
-        });
-        return []; // Return empty array if not friends
-      }
-    }
     try {
       let query = `SELECT 
       c.id,

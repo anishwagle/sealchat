@@ -4,16 +4,15 @@ import { Logger } from "@/lib/logger";
 import { engagementService } from "@/services/serviceProvider";
 import { ApiError } from "@/lib/errors";
 
-const COMPONENT = "api/protected/posts/comment/publicComment/[postId]";
+const COMPONENT = "api/protected/posts/comment/get/[postId]";
 const FUNCTION = "GET";
-
-export async function GET(request: Request,context: { params: Promise<{ postId: string }>}) {
+export async function GET(request: Request,context: { params: Promise< { postId: string }>}) {
   const p = await context.params;
     Logger.log(COMPONENT, FUNCTION, 'info', 'Fetching Users Comment', { postId: p.postId });
 
   try {
     const currentUserId = request.headers.get("x-user-id");
-    Logger.log(COMPONENT, FUNCTION, 'info', 'Fetching Users Comment on public post', { currentUserId: currentUserId });
+    Logger.log(COMPONENT, FUNCTION, 'info', 'Fetching Users Comment on Friends post', { currentUserId: currentUserId });
     if (!currentUserId) {
       Logger.log(COMPONENT, FUNCTION, "error", "Current User not found");
       return NextResponse.json(
@@ -21,12 +20,12 @@ export async function GET(request: Request,context: { params: Promise<{ postId: 
         { status: 404 }
       );
     }
-    const { searchParams } = new URL(request.url);
+const { searchParams } = new URL(request.url);
     const cursorCreatedAt = searchParams.get("cursorCreatedAt");
     const limit = searchParams.get("limit")
       ? parseInt(`${searchParams.get("limit")}`)
       : 10;
-    const userComments = await engagementService.getPublicOpinionComment(currentUserId,p.postId,cursorCreatedAt,limit);
+    const userComments = await engagementService.getPostComment(currentUserId, p.postId,cursorCreatedAt,limit);
     const nextCursor = userComments.length === limit
         ? userComments[userComments.length - 1].createdAt
         : null;

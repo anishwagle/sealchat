@@ -54,10 +54,7 @@ export default function PostPage() {
 
     setIsMoreCommentsLoading(true);
     try {
-      let apiUrl = `/api/protected/posts/comment`;
-      if (post?.type == "friend_post") apiUrl += `/friendComment/${postId}`;
-      else if (post?.type == "public_opinion")
-        apiUrl += `/publicComment/${postId}`;
+      let apiUrl = `/api/protected/posts/comment/get/${postId}`;
 
       const params = new URLSearchParams();
       params.append("limit", String(COMMENT_PAGE_SIZE));
