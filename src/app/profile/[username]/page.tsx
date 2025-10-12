@@ -7,39 +7,51 @@ import Link from 'next/link';
 import ProfileLikeButton from '@/components/profile/ProfileLikeButton';
 import PostList from '@/components/posts/PostList';
 import { fetchWithAuth } from '@/lib/auth/fetchWithAuth';
+import AddFriendButton from '@/components/profile/AddFriendButton';
+
+type FriendshipStatus = Profile['friendshipStatus'];
 
 export default function UserProfile() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [error, setError] = useState('');
-  const [loadingActionType, setLoadingActionType] = useState<null | "accept" | "decline" | "send" | "cancel" | "unfriend">(null);
   const { isAuthenticated, currentUserId, isLoading, error: authError } = useAuth();
   const router = useRouter();
   const { username } = useParams();
 
-  // fetchProfile now defined outside useEffect for reuse
-  const fetchProfile = async () => {
-    try {
-      const profileResponse = await fetchWithAuth(`/api/protected/profile/${username}`, {
-        method: 'GET',
-      });
-      const profileData = await profileResponse.json();
-      if (profileResponse.ok) {
-        setProfile(profileData);
-      } else {
-        setError(profileData.message || 'Failed to load profile');
-      }
-    } catch (err: any) {
-      console.error('Profile fetch failed:', err.message);
-      setError('Something went wrong. Please try again.');
+  const handleFriendshipChange = (newStatus: FriendshipStatus) => {
+    if (profile) {
+      setProfile({ ...profile, friendshipStatus: newStatus });
+    }
+  };
+
+  const handleProfileLikeChange = (newLikeStatus: boolean, newLikeCount: number) => {
+    if (profile) {
+      setProfile({ ...profile, profileLikeStatus: newLikeStatus, profileLikeCount: newLikeCount });
     }
   };
 
   useEffect(() => {
     if (!isAuthenticated || authError) return;
     if (!isLoading && isAuthenticated) {
+      const fetchProfile = async () => {
+        try {
+          const profileResponse = await fetchWithAuth(`/api/protected/profile/${username}`, {
+            method: 'GET',
+          });
+          const profileData = await profileResponse.json();
+          if (profileResponse.ok) {
+            setProfile(profileData);
+          } else {
+            setError(profileData.message || 'Failed to load profile');
+          }
+        } catch (err: any) {
+          console.error('Profile fetch failed:', err.message);
+          setError('Something went wrong. Please try again.');
+        }
+      };
       fetchProfile();
     }
-  }, [isAuthenticated, isLoading, username]); // Dependencies that trigger fetching.
+  }, [isAuthenticated, isLoading, username, authError]); // Dependencies that trigger fetching.
 
   if (isLoading) {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
@@ -87,111 +99,7 @@ export default function UserProfile() {
             </div>
             {profile.userId !== currentUserId ? (
               <div className="flex gap-3">
-                {profile.friendshipStatus === "none" ? (
-                  <button
-                    className="px-6 py-2 bg-blue-500 text-white font-medium rounded-lg hover:bg-blue-600 transition-colors"
-                    onClick={async () => {
-                      setLoadingActionType("send");
-                      try {
-                        await fetchWithAuth("/api/protected/friend/sendRequest", {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ userId2: profile.userId }),
-                        });
-                        await fetchProfile();
-                      } finally {
-                        setLoadingActionType(null);
-                      }
-                    }}
-                    disabled={loadingActionType !== null}
-                  >
-                    {loadingActionType === "send" ? "Loading..." : "Add Friend"}
-                  </button>
-                ) : null}
-                {profile.friendshipStatus === "sent" ? (
-                  <button
-                    className="px-6 py-2 bg-blue-500 text-white font-medium rounded-lg hover:bg-blue-600 transition-colors"
-                    onClick={async () => {
-                      setLoadingActionType("cancel");
-                      try {
-                        await fetchWithAuth("/api/protected/friend/cancelRequest", {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ userId2: profile.userId }),
-                        });
-                        await fetchProfile();
-                      } finally {
-                        setLoadingActionType(null);
-                      }
-                    }}
-                    disabled={loadingActionType !== null}
-                  >
-                    {loadingActionType === "cancel" ? "Loading..." : "Cancel Request"}
-                  </button>
-                ) : null}
-                {profile.friendshipStatus === "received" ? (
-                  <>
-                    <button
-                      className="px-6 py-2 bg-blue-500 text-white font-medium rounded-lg hover:bg-blue-600 transition-colors"
-                      onClick={async () => {
-                        setLoadingActionType("accept");
-                        try {
-                          await fetchWithAuth("/api/protected/friend/acceptRequest", {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ userId2: profile.userId }),
-                          });
-                          await fetchProfile();
-                        } finally {
-                          setLoadingActionType(null);
-                        }
-                      }}
-                      disabled={loadingActionType === "decline" || loadingActionType === "accept"}
-                    >
-                      {loadingActionType === "accept" ? "Loading..." : "Accept Friend"}
-                    </button>
-                    <button
-                      className="px-6 py-2 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 transition-colors"
-                      onClick={async () => {
-                        setLoadingActionType("decline");
-                        try {
-                          await fetchWithAuth("/api/protected/friend/cancelRequest", {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ userId2: profile.userId }),
-                          });
-                          await fetchProfile();
-                        } finally {
-                          setLoadingActionType(null);
-                        }
-                      }}
-                      disabled={loadingActionType === "accept" || loadingActionType === "decline"}
-                    >
-                      {loadingActionType === "decline" ? "Loading..." : "Decline Request"}
-                    </button>
-                  </>
-                ) : null}
-                {profile.friendshipStatus === "accepted" ? (
-                  <button
-                    className="px-6 py-2 bg-red-500 text-white font-medium rounded-lg hover:bg-red-600 transition-colors"
-                    onClick={async () => {
-                      setLoadingActionType("unfriend");
-                      try {
-                        await fetchWithAuth("/api/protected/friend/unfriend", {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ userId2: profile.userId }),
-                        });
-                        await fetchProfile();
-                      } finally {
-                        setLoadingActionType(null);
-                      }
-                    }}
-                    disabled={loadingActionType !== null}
-                  >
-                    {loadingActionType === "unfriend" ? "Loading..." : "Unfriend"}
-                  </button>
-                ) : null}
+                <AddFriendButton profile={profile} onUpdate={handleFriendshipChange} />
                 {/* Message button: only for accepted friends */}
                 {profile.friendshipStatus === "accepted" && (
                   <button className="px-6 py-2 bg-white text-gray-700 font-medium rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
@@ -201,7 +109,7 @@ export default function UserProfile() {
                 {/* Profile Like button */}
                 <ProfileLikeButton
                   profile={profile}
-                  fetchProfile={fetchProfile}
+                  onUpdate={handleProfileLikeChange}
                 />
               </div>
             ) : (
