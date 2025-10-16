@@ -1,16 +1,18 @@
+
 import { fetchWithAuth } from "@/lib/auth/fetchWithAuth";
 import { useEffect, useState } from "react";
 import AddFriendButton from "../profile/AddFriendButton";
 import { FriendshipStatus, Profile } from "@/types/profile";
 import Link from "next/link";
+import ProfileLikeButton from "../profile/ProfileLikeButton";
 
-export default function SuggestedFriends() {
+export default function SuggestedProfiles() {
   const [isLoading, setIsLoading] = useState(false);
   const [recommendations, setRecommendations] = useState<Profile[]>([]);
   const fetchRecommendations = async () => {
     setIsLoading(true);
     try {
-      let apiUrl = `/api/protected/friend/recommend`;
+      let apiUrl = `/api/protected/friend/recommendProfile`;
 
       const data = await fetchWithAuth(apiUrl, { method: "GET" });
       const results = await data.json();
@@ -26,13 +28,11 @@ export default function SuggestedFriends() {
     fetchRecommendations();
   }, []);
 
-  const handleFriendshipChange = (
-    userId: string,
-    newStatus: FriendshipStatus
-  ) => {
+
+  const handleProfileLikeChange = (userId:string, newLikeStatus: boolean, newLikeCount: number) => {
     setRecommendations((prevRecommendations) =>
       prevRecommendations.map((rec) =>
-        rec.userId === userId ? { ...rec, friendshipStatus: newStatus } : rec
+        rec.userId === userId ? { ...rec, profileLikeStatus: newLikeStatus, profileLikeCount: newLikeCount } : rec
       )
     );
   };
@@ -40,7 +40,7 @@ export default function SuggestedFriends() {
     (recommendations.length>0?
     <div className="bg-white rounded-lg p-4">
       <h3 className="font-medium text-sm text-gray-700 mb-3">
-        You Might Know Them
+        Profiles Your Friends Like
       </h3>
       <div className="space-y-3">
         {recommendations.map((profile) => (
@@ -56,11 +56,10 @@ export default function SuggestedFriends() {
                 {profile.username}
               </Link>
             </div>
-            <AddFriendButton
+            <ProfileLikeButton
               profile={profile}
-              size="medium"
-              onUpdate={(newStatus) =>
-                handleFriendshipChange(profile.userId, newStatus)
+              onUpdate={(newLikeStatus: boolean, newLikeCount: number) =>
+                handleProfileLikeChange(profile.userId, newLikeStatus,newLikeCount)
               }
             />
           </div>

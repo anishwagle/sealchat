@@ -30,6 +30,48 @@ export class FriendRecommendationService implements IFriendRecommendationService
       password: "",
     }));
   }
+
+  async recommendProfile(currentUserId: string): Promise<User[]> {
+    const query = `
+      SELECT
+          p.id,
+          p.username,
+          p.email,
+          COUNT(DISTINCT f.friend_id) AS liked_by_friends_count
+      FROM
+          users p
+      JOIN
+          follows fl ON p.id = fl.followed_id
+      JOIN
+          (
+              SELECT CASE
+                  WHEN user_id_1 = ? THEN user_id_2
+                  ELSE user_id_1
+              END AS friend_id
+              FROM friends
+              WHERE user_id_1 = ? OR user_id_2 = ?
+          ) AS f ON fl.follower_id = f.friend_id
+      WHERE
+          p.id != ?
+          AND p.id NOT IN (
+              SELECT followed_id FROM follows WHERE follower_id = ?
+          )
+      GROUP BY
+          p.id, p.username, p.email
+      ORDER BY
+          liked_by_friends_count DESC;
+    `;
+
+    const params = [currentUserId, currentUserId, currentUserId, currentUserId, currentUserId];
+    const result = await executeQuery(query, params);
+
+    return (result as any[]).map((row) => ({
+      id: row.id,
+      username: row.username,
+      email: row.email,
+      password: "",
+    }));
+  }
 }
 
 export const friendRecommendationService = new FriendRecommendationService();

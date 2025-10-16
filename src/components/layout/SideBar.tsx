@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import SuggestedFriends from "./SuggestedFriends";
+import SuggestedProfiles from "./SuggestedProfiles";
 
 export default function SideBar() {
   return (
@@ -45,21 +46,8 @@ export default function SideBar() {
         {/* Friend Suggestions */}
         <SuggestedFriends/>
 
-        {/* Quick Message */}
-        <div className="bg-white rounded-lg p-4">
-          <h3 className="font-medium text-sm text-gray-700 mb-3">Quick Message</h3>
-          <div className="space-y-2">
-            {[1, 2, 3].map((i) => (
-              <button key={i} className="flex items-center gap-2 w-full p-2 hover:bg-gray-50 rounded-md">
-                <div className="w-8 h-8 rounded-full bg-gray-100"></div>
-                <div className="flex-1 text-left">
-                  <p className="text-sm">Friend {i}</p>
-                  <p className="text-xs text-gray-500">Online</p>
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
+        {/* Profile Suggestions */}
+        <SuggestedProfiles />
       </div>
     </aside>
   );
