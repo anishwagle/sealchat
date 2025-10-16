@@ -7,8 +7,9 @@ import PostList from "@/components/posts/PostList";
 import CreatePostButton from "@/components/posts/CreatePostButton";
 import UserListModal from "@/components/modals/UserListModal";
 import { fetchWithAuth } from "@/lib/auth/fetchWithAuth";
+import withAuth from "@/lib/auth/withAuth";
 
-export default function ProfilePage() {
+function ProfilePage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [error, setError] = useState("");
   const { isAuthenticated, isLoading, error: authError } = useAuth();
@@ -66,14 +67,6 @@ export default function ProfilePage() {
       }
     }
   };
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        Loading...
-      </div>
-    );
-  }
 
   if (authError || error) {
     return (
@@ -501,3 +494,4 @@ export default function ProfilePage() {
     </div>
   );
 }
+export default withAuth(ProfilePage);

@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth/useAuth';
 import { Profile } from '@/types/profile';
 import Link from 'next/link';
@@ -8,14 +8,14 @@ import ProfileLikeButton from '@/components/profile/ProfileLikeButton';
 import PostList from '@/components/posts/PostList';
 import { fetchWithAuth } from '@/lib/auth/fetchWithAuth';
 import AddFriendButton from '@/components/profile/AddFriendButton';
+import withAuth from '@/lib/auth/withAuth';
 
 type FriendshipStatus = Profile['friendshipStatus'];
 
-export default function UserProfile() {
+function UserProfile() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [error, setError] = useState('');
   const { isAuthenticated, currentUserId, isLoading, error: authError } = useAuth();
-  const router = useRouter();
   const { username } = useParams();
 
   const handleFriendshipChange = (newStatus: FriendshipStatus) => {
@@ -52,10 +52,6 @@ export default function UserProfile() {
       fetchProfile();
     }
   }, [isAuthenticated, isLoading, username, authError]); // Dependencies that trigger fetching.
-
-  if (isLoading) {
-    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
-  }
 
   if (authError || error) {
     return (
@@ -260,3 +256,5 @@ export default function UserProfile() {
     </div>
   );
 }
+
+export default withAuth(UserProfile);

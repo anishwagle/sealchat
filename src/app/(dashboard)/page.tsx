@@ -11,11 +11,7 @@ export default function Dashboard() {
   useEffect(() => {
     if (!isAuthenticated || authError) return;
   }, [isAuthenticated, isLoading]); // Dependencies that trigger fetching.
-if (isLoading) {
-    return (
-      <Loading message="Authenticating please wait" fullScreen={true}/>
-    );
-  }
+
   return (
     // The parent layout now handles the main structure, so we only need a fragment here.
     <>

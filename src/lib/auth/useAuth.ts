@@ -45,7 +45,7 @@ export const useAuth = () => {
         if (data.message === 'Token valid' && data.userId) {
           setAuthState({ isAuthenticated: true, currentUserId: data.userId, isLoading: false, error: '' });
         } else {
-          setAuthState({ isAuthenticated: false, currentUserId: '', isLoading: true, error: 'Unauthorized' });
+          setAuthState({ isAuthenticated: false, currentUserId: '', isLoading: false, error: 'Unauthorized' });
           if (!publicPages.includes(pathname)) {
             router.push('/login');
           }
