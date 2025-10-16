@@ -5,7 +5,7 @@ import { friendService } from '@/services/serviceProvider';
 import { ApiError } from '@/lib/errors';
 import { Profile } from '@/types/profile';
 
-const COMPONENT = 'api/protected/friend/';
+const COMPONENT = 'api/protected/friend/pendingRequest';
 const FUNCTION = 'GET';
 
 export async function GET(request: Request) {
@@ -20,7 +20,7 @@ export async function GET(request: Request) {
             { status: 404 }
           );
         }
-    const users = await friendService.getCurrentFriend(currentUserId);
+    const users = await friendService.getPendingRequestList(currentUserId);
     if (!users) {
       Logger.log(COMPONENT, FUNCTION, 'error', 'Friends not found');
       return NextResponse.json({ message: 'Friends not found', code: 'FRIENDS_NOT_FOUND' }, { status: 404 });
@@ -44,7 +44,7 @@ export async function GET(request: Request) {
             ),
           }))
         );
-        return NextResponse.json({friends:response}, { status: 200 });
+        return NextResponse.json({requests:response}, { status: 200 });
   } catch (error: any) {
     const apiError = new ApiError('Failed to fetch Friends', 500, 'INTERNAL_ERROR', { error: error.message });
     Logger.log(COMPONENT, FUNCTION, 'error', apiError.message, { details: apiError.details });

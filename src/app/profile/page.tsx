@@ -1,21 +1,21 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Profile as ProfileType } from "@/types/profile";
+import { Profile} from "@/types/profile";
 import { useAuth } from "@/lib/auth/useAuth";
 import PostList from "@/components/posts/PostList";
 import CreatePostButton from "@/components/posts/CreatePostButton";
 import UserListModal from "@/components/modals/UserListModal";
 import { fetchWithAuth } from "@/lib/auth/fetchWithAuth";
 
-export default function Profile() {
-  const [profile, setProfile] = useState<ProfileType | null>(null);
+export default function ProfilePage() {
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [error, setError] = useState("");
   const { isAuthenticated, isLoading, error: authError } = useAuth();
   const [showFriendsModal, setShowFriendsModal] = useState(false);
-  const [friendsList, setFriendsList] = useState<{ username: string }[]>([]);
+  const [friendsList, setFriendsList] = useState<Profile[]>([]);
   const [showProfileLikesModal, setShowProfileLikesModal] = useState(false);
-  const [profileLikesList, setProfileLikesList] = useState<{ username: string }[]>([]);
+  const [profileLikesList, setProfileLikesList] = useState<Profile[]>([]);
 
   const router = useRouter();
   const fetchProfile = async () => {
@@ -46,7 +46,7 @@ export default function Profile() {
       try {
         const response = await fetchWithAuth('/api/protected/friend');
         const data = await response.json();
-        setFriendsList(data.users || []);
+        setFriendsList(data.friends || []);
         setShowFriendsModal(true);
       } catch (error) {
         console.error("Failed to fetch friends list:", error);
@@ -59,7 +59,7 @@ export default function Profile() {
       try {
         const response = await fetchWithAuth('/api/protected/friend/profileLikeList');
         const data = await response.json();
-        setProfileLikesList(data.users || []);
+        setProfileLikesList(data.follows || []);
         setShowProfileLikesModal(true);
       } catch (error) {
         console.error("Failed to fetch profile likes list:", error);

@@ -297,7 +297,24 @@ export class FriendService implements IFriendService {
 
     return result;
   }
-  
+  async getPendingRequestList(userId: string): Promise<User[]> {
+    const FUNCTION = "getPendingRequestList";
+    Logger.log(COMPONENT, FUNCTION, "debug", "get User's Pending Request List", {
+      userId,
+    });
+    const queryResult = await executeQuery(
+      `SELECT u.* FROM users u JOIN friend_requests fr ON u.id = fr.receiver_id WHERE fr.sender_id = ?`,
+      [userId]
+    );
+
+    return (queryResult as any[]).map((user) => ({
+      id: user.id,
+      username: user.username,
+      fullName: user.full_name,
+      email: user.email,
+      password: "",
+    }));
+  }
 }
 
 export const friendService = new FriendService();

@@ -32,7 +32,7 @@ export default function ProfileQuickView() {
             </div>
             <div>
               <Link
-                href={`/profile/${profile?.username}`}
+                href={`/profile`}
                 className="font-medium text-gray-700"
               >
                 {profile?.fullName}
