@@ -11,9 +11,9 @@ const FUNCTION = "POST";
 export async function POST(request: Request) {
   Logger.time(COMPONENT, FUNCTION, 'total');
   try {
-    const { username, email, password } = await request.json();
-    if (!username || !email || !password) {
-     const error = new ValidationError('Missing Required Field',{username,email,password});
+    const { username, email,fullname, password } = await request.json();
+    if (!username || !email || !password||!fullname) {
+     const error = new ValidationError('Missing Required Field',{username,email,password,fullname});
      Logger.log(COMPONENT,FUNCTION,'error',error.message,error.details);
      throw new ApiError(error.message,400,'MISSING_FIELDS',error.details);
     }
@@ -29,7 +29,7 @@ export async function POST(request: Request) {
 
     Logger.time(COMPONENT,FUNCTION,'createUser');
     const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = await userService.createUser(email, username, hashedPassword);
+    const newUser = await userService.createUser(email, username,fullname, hashedPassword);
     Logger.timeEnd(COMPONENT,FUNCTION,'createUser');
     Logger.log(COMPONENT,FUNCTION,'info','User Created', {userId:newUser.id})
     Logger.timeEnd(COMPONENT,FUNCTION,'total');

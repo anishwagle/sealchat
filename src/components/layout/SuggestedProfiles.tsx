@@ -45,17 +45,20 @@ export default function SuggestedProfiles() {
       <div className="space-y-3">
         {recommendations.map((profile) => (
           <div key={profile.userId} className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-50 to-blue-100 flex items-center justify-center text-blue-600 font-semibold ring-1 ring-blue-100">
-              {profile.username[0].toUpperCase()}
-            </div>
-              <Link
-                href={`/profile/${profile.username}`}
-                className="font-medium text-gray-700"
-              >
-                {profile.username}
-              </Link>
-            </div>
+            <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-100 to-blue-200 flex items-center justify-center">
+                  <span className="text-blue-600 font-medium">{profile.username[0].toUpperCase()}</span>
+                </div>
+                <div>
+                  <Link
+                  href={`/profile/${profile.username}`}
+                  className="font-medium text-gray-700"
+                >
+                  {profile.fullName}
+                </Link>
+                  <p className="text-sm text-gray-500">@{profile.username}</p>
+                </div>
+              </div>
             <ProfileLikeButton
               profile={profile}
               onUpdate={(newLikeStatus: boolean, newLikeCount: number) =>

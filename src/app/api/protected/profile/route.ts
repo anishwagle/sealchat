@@ -31,6 +31,7 @@ export async function GET(request: Request) {
     const response:Profile = {
           userId:user.id,
           username:user.username,
+          fullName:user.fullName,
           joinedAt: `${user.createdAt?.toDateString()}`,
           friendshipStatus:await friendService.getFriendShipStatus(currentUserId,user.id),
           profileLikeCount:await friendService.getProfileLikeCount(user.id),

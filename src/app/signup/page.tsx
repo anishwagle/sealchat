@@ -11,6 +11,7 @@ export default function Signup(){
     const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const [username, setUsername] = useState('');
     const [email, setEmail] = useState('');
+    const [fullname, setFullname] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -34,7 +35,7 @@ export default function Signup(){
             const response = await fetch('/api/auth/signup',{
                 method:'POST',
                 headers:{ 'Content-Type':'application/json'},
-                body:JSON.stringify({username,email,password}),
+                body:JSON.stringify({username,email,fullname,password}),
             });
 
             const data = await response.json();
@@ -65,6 +66,18 @@ export default function Signup(){
                     </div>
                 )}
                 <form onSubmit={handleSubmit} className="space-y-5">
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-700 block">Full Name</label>
+                        <input
+                            type="text"
+                            value={fullname}
+                            onChange={(e) => setFullname(e.target.value)}
+                            className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 outline-none"
+                            required
+                            disabled={isLoading}
+                            placeholder="Enter your full name"
+                        />
+                    </div>
                     <div className="space-y-2">
                         <label className="text-sm font-medium text-gray-700 block">Username</label>
                         <input

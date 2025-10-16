@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Profile } from '@/types/profile';
 import { fetchWithAuth } from '@/lib/auth/fetchWithAuth';
-import { IoPersonAddSharp } from 'react-icons/io5';
+import { FaUserCheck, FaUserMinus, FaUserPlus, FaUserTimes } from 'react-icons/fa';
 
 
 type FriendshipStatus = Profile['friendshipStatus'];
@@ -47,11 +47,11 @@ export default function AddFriendButton({ profile, onUpdate, size = 'large' }: A
             receivedDecline: "Decline"
         },
         small: {
-            none: <IoPersonAddSharp />,
-            sent: <IoPersonAddSharp color='red' />,
-            accepted: <IoPersonAddSharp color='red' />,
-            receivedAccept: <IoPersonAddSharp color='green' />,
-            receivedDecline: <IoPersonAddSharp color='red' />
+            none: <FaUserPlus size={22} color='#2b7fff'/>,
+            sent: <FaUserMinus size={22} color='#2b7fff' />,
+            accepted: <FaUserTimes size={22} color='#fb2c36' />,
+            receivedAccept: <FaUserCheck size={22} color='green' />,
+            receivedDecline: <FaUserTimes size={22} color='#fb2c36' />
         }
     };
 

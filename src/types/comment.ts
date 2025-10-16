@@ -4,6 +4,7 @@ export interface Comment {
   originalContent: string;
   userId:string;
   username: string;
+  fullName: string;
   createdAt: Date;
   postId: string;
   parentCommentId?: string | null;

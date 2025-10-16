@@ -1,9 +1,9 @@
 import { v4 } from "uuid";
-import { refreshTokens, users } from "@/lib/mockData";
 import { User } from "@/types/user";
 import { IUserService } from "./IUserService";
 import { Logger } from "@/lib/logger";
 import executeQuery from "@/db";
+import {toTitleCase} from "@/utils/helperFunctions"
 const COMPONENT = "UserService";
 export class UserService implements IUserService {
   async findUserById(userId: string): Promise<User | undefined> {
@@ -11,7 +11,7 @@ export class UserService implements IUserService {
     Logger.log(COMPONENT, FUNCTION, "debug", "Checking for existing user", {
       userId,
     });
-    const queryResult = await executeQuery('SELECT id,username,email,password,created_at FROM users WHERE id=?',
+    const queryResult = await executeQuery('SELECT id,username,full_name,email,password,created_at FROM users WHERE id=?',
         [userId]
     );
     const result = (queryResult as any[])[0];
@@ -21,6 +21,7 @@ export class UserService implements IUserService {
     return {
       id: result.id,
       username: result.username,
+      fullName:result.full_name,
       email: result.email,
       password: result.password,
       createdAt: result.created_at,
@@ -32,28 +33,40 @@ export class UserService implements IUserService {
     Logger.log(COMPONENT, FUNCTION, "debug", "Checking for existing user", {
       username,
     });
-    const queryResult = await executeQuery('SELECT id,username,email,password,created_at FROM users WHERE username=?',
+    const queryResult = await executeQuery('SELECT id,username,email,full_name,created_at FROM users WHERE username=?',
         [username.toLowerCase()]
     );
-    const result:User = (queryResult as any[])[0];
+    const result = (queryResult as any[])[0];
     Logger.log(COMPONENT, FUNCTION, "debug", "User check complete", {
       found: !!result,
     });
-    return result;
+    return {
+      id:result.id,
+      username:result.username,
+      fullName:result.full_name,
+      email:result.email,
+      password:''
+    };
   }
   async findUserByEmail(email: string): Promise<User | undefined> {
     const FUNCTION = "findUserByemail";
     Logger.log(COMPONENT, FUNCTION, "debug", "Checking for existing user", {
       email,
     });
-    const queryResult = await executeQuery('SELECT id,username,email,password,created_at FROM users WHERE email=?',
+    const queryResult = await executeQuery('SELECT id,username,email,full_name,created_at FROM users WHERE email=?',
         [email.toLowerCase()]
     );
-    const result:User = (queryResult as any)[0];
+    const result = (queryResult as any)[0];
     Logger.log(COMPONENT, FUNCTION, "debug", "User check complete", {
       found: !!result,
     });
-    return result;
+    return {
+      id:result.id,
+      username:result.username,
+      email:result.email,
+      fullName:result.full_name,
+      password:''
+    };
   }
   async findUserByEmailOrUsername(
     email: string,
@@ -64,33 +77,39 @@ export class UserService implements IUserService {
       email,
       username,
     });
-    const queryResult = await executeQuery('SELECT id,username,email,password,created_at FROM users WHERE email=? OR username=?',
+    const queryResult = await executeQuery('SELECT id,username,email,full_name,created_at FROM users WHERE email=? OR username=?',
         [email.toLowerCase(),username.toLowerCase()]
     );
-    const result:User = (queryResult as any)[0];
+    const result = (queryResult as any)[0];
     Logger.log(COMPONENT, FUNCTION, "debug", "User check complete", {
       found: !!result,
     });
-    return result;
+    return {
+      id:result.id,
+      username:result.username,
+      fullName:result.full_name,
+      email:result.email,
+      password:''
+    };
   }
 
   async createUser(
     email: string,
     username: string,
+    fullname: string,
     password: string,
   ): Promise<User> {
     const FUNCTION = "createUser";
+    const id = v4();
+    await executeQuery('INSERT INTO users (id,username,full_name,email,password) VALUES(?,?,?,?,?)',
+        [id,username.toLowerCase(),toTitleCase(fullname),email.toLowerCase(),password]);
 
-    const result = await executeQuery('INSERT INTO users (id,username,email,password) VALUES(?,?,?,?)',
-        [v4(),username.toLowerCase(),email.toLowerCase(),password]);
-    const newUser:User ={
-        id:(result as any).insertId,
-        email,
-        username,
-        password:'',
-    } ;
+    const newUser = await this.findUserById(id);
+    if(!newUser){
+      throw Error("Failed to Create and Fetch User");
+    }
     Logger.log(COMPONENT, FUNCTION, "info", "New User Created", {
-      userId: newUser.id,
+      userId: newUser?.id,
     });
     return newUser;
   }

@@ -4,12 +4,11 @@ import { useRouter } from "next/navigation";
 import { useState, useRef, useEffect, SetStateAction } from "react";
 import NotificationComponent from "./Notification";
 import { fetchWithAuth } from "@/lib/auth/fetchWithAuth";
+import { User } from "@/types/user";
 
 export default function Navbar() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<
-    { id: number; username: string }[]
-  >([]);
+  const [searchResults, setSearchResults] = useState<User[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -49,10 +48,7 @@ export default function Navbar() {
         });
         const results = await users.json();
         setSearchResults(
-          results.users.map((x: { id: any; username: any }) => ({
-            id: x.id,
-            username: x.username,
-          }))
+          results.users.map((x: User) => x)
         );
       } catch (error) {
         console.error("Search failed:", error);
@@ -117,7 +113,7 @@ export default function Navbar() {
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-medium text-gray-900 truncate">
-                                John Doe
+                                {result.fullName}
                               </p>
                               <p className="text-xs text-gray-500 truncate">
                                 @{result.username}

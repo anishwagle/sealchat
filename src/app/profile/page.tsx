@@ -112,7 +112,7 @@ export default function Profile() {
           <div className="mt-24 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">
-                {profile.fullName || "John Doe"}
+                {profile.fullName }
               </h1>
               <p className="text-base text-gray-500">@{profile.username}</p>
               <div className="mt-2 flex items-center gap-6 text-sm ">

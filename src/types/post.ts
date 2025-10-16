@@ -12,6 +12,7 @@ export interface Post {
   id: string;
   userId: string;
   username: string;
+  fullName: string;
   type: PostType;
   content: string;
   originalContent: string;

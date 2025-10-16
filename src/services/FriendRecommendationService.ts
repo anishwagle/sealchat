@@ -5,7 +5,7 @@ import executeQuery from "@/db";
 export class FriendRecommendationService implements IFriendRecommendationService {
   async recommendFriends(currentUserId: string): Promise<User[]> {
     const query = `
-      SELECT u.id, u.username, u.email, COUNT(mutual.user_id_1) AS mutual_friends_count
+      SELECT u.id, u.username, u.email,u.full_name, COUNT(mutual.user_id_1) AS mutual_friends_count
       FROM users u
       JOIN friends f1 ON (u.id = f1.user_id_1 OR u.id = f1.user_id_2)
       JOIN friends f2 ON (f1.user_id_1 = f2.user_id_1 OR f1.user_id_1 = f2.user_id_2 OR f1.user_id_2 = f2.user_id_1 OR f1.user_id_2 = f2.user_id_2)
@@ -17,7 +17,7 @@ export class FriendRecommendationService implements IFriendRecommendationService
           SELECT user_id_1 FROM friends WHERE user_id_2 = ?
         )
       GROUP BY u.id, u.username, u.email
-      ORDER BY mutual_friends_count DESC;
+      ORDER BY mutual_friends_count DESC LIMIT 5;
     `;
 
     const params = [currentUserId, currentUserId, currentUserId, currentUserId, currentUserId];
@@ -26,6 +26,7 @@ export class FriendRecommendationService implements IFriendRecommendationService
     return (result as any[]).map((row) => ({
       id: row.id,
       username: row.username,
+      fullName:row.full_name,
       email: row.email,
       password: "",
     }));
@@ -37,6 +38,7 @@ export class FriendRecommendationService implements IFriendRecommendationService
           p.id,
           p.username,
           p.email,
+          p.full_name,
           COUNT(DISTINCT f.friend_id) AS liked_by_friends_count
       FROM
           users p
@@ -59,7 +61,7 @@ export class FriendRecommendationService implements IFriendRecommendationService
       GROUP BY
           p.id, p.username, p.email
       ORDER BY
-          liked_by_friends_count DESC;
+          liked_by_friends_count DESC LIMIT 5;
     `;
 
     const params = [currentUserId, currentUserId, currentUserId, currentUserId, currentUserId];
@@ -69,6 +71,7 @@ export class FriendRecommendationService implements IFriendRecommendationService
       id: row.id,
       username: row.username,
       email: row.email,
+      fullName:row.full_name,
       password: "",
     }));
   }

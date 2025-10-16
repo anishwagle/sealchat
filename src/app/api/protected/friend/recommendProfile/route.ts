@@ -37,6 +37,7 @@ export async function GET(req: NextRequest) {
       recommendations.map(async (user) => ({
         userId: user.id,
         username: user.username,
+        fullName: user.fullName,
         joinedAt: `${user.createdAt?.toDateString()}`,
         friendshipStatus: await friendService.getFriendShipStatus(
           currentUserId,

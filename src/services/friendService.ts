@@ -13,7 +13,7 @@ export class FriendService implements IFriendService {
       userId,
     });
     const queryResult = await executeQuery(
-      `SELECT f.*,u.email,u.username FROM follows f
+      `SELECT f.*,u.email,u.username,u.full_name FROM follows f
         JOIN users u on f.follower_id = u.id
        WHERE f.followed_id=?`,
       [userId]
@@ -22,6 +22,7 @@ export class FriendService implements IFriendService {
     return (queryResult as any[]).map((user) => ({
       id: user.id,
       username: user.username,
+      fullName: user.full_name,
       email: user.email,
       password: "",
     }));
@@ -248,12 +249,12 @@ export class FriendService implements IFriendService {
       userId,
     });
     const queryResult = await executeQuery(
-      `SELECT u.id,u.username,u.email
+      `SELECT u.id,u.username,u.email,u.full_name
        FROM users u
        JOIN friends f ON u.id = f.user_id_2
        WHERE f.user_id_1 = ?
        UNION
-       SELECT u.id,u.username,u.email
+       SELECT u.id,u.username,u.email,u.full_name
        FROM users u
        JOIN friends f ON u.id = f.user_id_1
        WHERE f.user_id_2 = ?`,
@@ -263,6 +264,7 @@ export class FriendService implements IFriendService {
       id: user.id,
       username: user.username,
       email: user.email,
+      fullName: user.full_name,
       password: "",
     }));
     Logger.log(COMPONENT, FUNCTION, "debug", "Friend search complete", {
@@ -278,13 +280,14 @@ export class FriendService implements IFriendService {
       searchQuery,
     });
     const queryResult = await executeQuery(
-      "SELECT id,username,password,email FROM users WHERE username LIKE ? OR email LIKE ?",
+      "SELECT id,username,password,email,full_name FROM users WHERE username LIKE ? OR email LIKE ?",
       [`%${searchQuery}%`, `%${searchQuery}%`]
     );
     const result: User[] = (queryResult as any[]).map((user) => ({
       id: user.id,
       username: user.username,
       email: user.email,
+      fullName:user.full_name,
       password: "",
     }));
     Logger.log(COMPONENT, FUNCTION, "debug", "Friend search complete", {

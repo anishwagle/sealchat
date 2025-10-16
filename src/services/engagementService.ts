@@ -115,7 +115,7 @@ export class EngagementService implements IEngagementService {
         }
       }
       const commentResult = await executeQuery(
-        `SELECT c.*, u.username
+        `SELECT c.*, u.username,u.full_name
          FROM comments c
           JOIN users u on c.user_id = u.id
          WHERE c.id = ? `,
@@ -146,6 +146,7 @@ export class EngagementService implements IEngagementService {
         postId: post.Id,
         createdAt: comment.created_at,
         username: comment.username,
+        fullName:comment.full_name
       };
     } catch (error: any) {
       throw new Error("Failed to create Comment: " + error.message);
@@ -165,6 +166,7 @@ export class EngagementService implements IEngagementService {
     c.user_id,
     c.post_id,
     u.username,
+    u.full_name,
     c.parent_comment_id,
     c.content,
     c.original_content,
@@ -220,6 +222,7 @@ WHERE c.parent_comment_id = ?`;
         id: comment.id,
         userId: comment.user_id,
         username: comment.username,
+        fullName: comment.full_name,
         originalContent: comment.original_content,
         content: comment.content,
         parentCommentId: comment.parent_comment_id,
@@ -250,6 +253,7 @@ WHERE c.parent_comment_id = ?`;
       c.id,
       c.user_id,
       u.username,
+      u.full_name,
       c.post_id,
       c.parent_comment_id,
       c.content,
@@ -306,6 +310,7 @@ WHERE c.parent_comment_id = ?`;
         id: comment.id,
         userId: comment.user_id,
         username: comment.username,
+        fullName: comment.full_name,
         originalContent: comment.original_content,
         content: comment.content,
         parentCommentId: comment.parent_comment_id,

@@ -90,7 +90,7 @@ export default function UserProfile() {
         <div className="max-w-7xl mx-auto px-4 pb-6">
           <div className="mt-24 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">{profile.fullName || 'John Doe'}</h1>
+              <h1 className="text-3xl font-bold text-gray-900">{profile.fullName}</h1>
               <p className="text-base text-gray-500">@{profile.username}</p>
              
               <p className="mt-3 text-gray-600 max-w-2xl">
