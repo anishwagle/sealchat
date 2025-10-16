@@ -74,7 +74,7 @@ export class PostService implements IPostService {
         FROM likes
         WHERE user_id = ?  -- pass current user ID here
     ) ul ON p.id = ul.post_id
-    WHERE p.id = ?;        -- pass target post ID here`,
+    WHERE p.id = ? AND p.is_archived = FALSE;        -- pass target post ID here`,
       [currentUserId, postId]
     );
 
@@ -400,7 +400,101 @@ export class PostService implements IPostService {
       throw new Error("Failed to fetch user posts: " + error.message);
     }
   }
+async getArchivedPost(
+    userId: string,
+    cursorCreatedAt?: string,
+    limit: number = 20
+  ): Promise<Post[]> {
+    const FUNCTION = "getArchivedPost";
+    Logger.log(COMPONENT, FUNCTION, "debug", "get ArchivedPost", {
+      userId,
+    });
+    if (!userId) {
+      throw new Error("User ID is required");
+    }
 
+    let query = `SELECT 
+    p.id,
+    p.user_id,
+    u.username,
+    u.full_name,
+    p.original_content,
+    p.type,
+    p.content,
+    p.duration_days,
+    p.expires_at,
+    p.is_archived,
+    p.created_at,
+    p.shared_post_id,
+    -- Pre-aggregated comment count
+    COALESCE(c.comment_count, 0) AS comment_count,
+    -- Pre-aggregated like count
+    COALESCE(l.like_count, 0) AS like_count,
+    COALESCE(s.share_count, 0) AS share_count,
+    -- Check if current user liked the post
+    CASE WHEN ul.user_id IS NULL THEN FALSE ELSE TRUE END AS is_liked_by_current_user
+    FROM posts p
+    JOIN users u ON p.user_id = u.id
+    -- Aggregate comments
+    LEFT JOIN (
+        SELECT post_id, COUNT(*) AS comment_count
+        FROM comments
+        GROUP BY post_id
+    ) c ON p.id = c.post_id
+    -- Aggregate likes
+    LEFT JOIN (
+        SELECT post_id, COUNT(*) AS like_count
+        FROM likes
+        GROUP BY post_id
+    ) l ON p.id = l.post_id
+     -- Aggregate shares
+    LEFT JOIN (
+        SELECT shared_post_id, COUNT(*) AS share_count
+        FROM posts
+        WHERE shared_post_id IS NOT NULL
+        GROUP BY shared_post_id
+    ) s ON p.id = s.shared_post_id
+    -- Check if current user liked this post
+    LEFT JOIN (
+        SELECT post_id, user_id
+        FROM likes
+        WHERE user_id = ?  -- pass current user ID here
+    ) ul ON p.id = ul.post_id
+       WHERE p.user_id = ? AND p.is_archived = true`;
+    const params = [userId, userId];
+    if (cursorCreatedAt) {
+      query +=` AND p.created_at < STR_TO_DATE(?, '%Y-%m-%d %H:%i:%s') `;
+      params.push(cursorCreatedAt);
+    }
+
+    query += ` ORDER BY p.created_at DESC LIMIT ? `;
+    params.push(`${limit}`);
+
+    try {
+      const queryResult = await executeQuery(query, params);
+      const posts: Post[] = (queryResult as any[]).map((post) => ({
+        id: post.id,
+        userId: post.user_id,
+        username: post.username,
+        fullName: post.full_name,
+        originalContent: post.original_content,
+        type: post.type,
+        content: post.content,
+        durationDays: post.duration_days,
+        expiresAt: post.expires_at ? new Date(post.expires_at) : null,
+        isArchived: post.is_archived,
+        createdAt: new Date(post.created_at),
+        commentCount: post.comment_count,
+        likeCount: post.like_count,
+        isLikedByCurrentUser: post.is_liked_by_current_user,
+        sharedPostId:post.shared_post_id,
+        shareCount:post.share_count
+      }));
+      return posts;
+    } catch (error: any) {
+      throw new Error("Failed to fetch user posts: " + error.message);
+    }
+  }
   async getFriendPosts(
     userId: string,
     currentUserId: string,

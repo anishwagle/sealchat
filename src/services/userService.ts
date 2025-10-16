@@ -77,7 +77,7 @@ export class UserService implements IUserService {
       email,
       username,
     });
-    const queryResult = await executeQuery('SELECT id,username,email,full_name,created_at FROM users WHERE email=? OR username=?',
+    const queryResult = await executeQuery('SELECT id,username,email,password,full_name,created_at FROM users WHERE email=? OR username=?',
         [email.toLowerCase(),username.toLowerCase()]
     );
     const result = (queryResult as any)[0];
@@ -89,7 +89,7 @@ export class UserService implements IUserService {
       username:result.username,
       fullName:result.full_name,
       email:result.email,
-      password:''
+      password:result.password
     };
   }
 

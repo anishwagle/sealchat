@@ -145,7 +145,7 @@ export default function Navbar() {
           {/* Right Side Icons - increase size slightly */}
           <div className="flex items-center gap-2">
             {/* Messages */}
-            <button className="p-2.5 hover:bg-gray-50 rounded-full relative">
+            {/* <button className="p-2.5 hover:bg-gray-50 rounded-full relative">
               <svg
                 className="h-[22px] w-[22px] text-gray-500"
                 fill="none"
@@ -160,7 +160,7 @@ export default function Navbar() {
                 />
               </svg>
               <span className="absolute top-2 right-2 w-2 h-2 bg-blue-500 rounded-full"></span>
-            </button>
+            </button> */}
 
             {/* Notifications */}
 

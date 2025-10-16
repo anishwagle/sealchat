@@ -170,7 +170,7 @@ export default function PostPage() {
               </div>
             ) : !post ? (
               <div className="text-center text-gray-500 bg-white p-10 rounded-lg">
-                No post found.
+                Oops! This post isn&#39;t available right now. It might have been deleted, expired, or you don&#39;t have access to it.
               </div>
             ) : (
               <PostComponent key={post.id} {...post} mentionTextAreaRef={mentionTextareaRef} />
