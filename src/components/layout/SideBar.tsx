@@ -3,23 +3,14 @@
 import Link from "next/link";
 import SuggestedFriends from "./SuggestedFriends";
 import SuggestedProfiles from "./SuggestedProfiles";
+import ProfileQuickView from "./ProfileQuickView";
 
 export default function SideBar() {
   return (
     <aside className="lg:w-80 shrink-0">
       <div className="space-y-5">
         {/* Profile Quick View */}
-        <div className="bg-white rounded-lg p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-gradient-to-r from-blue-100 to-blue-200 flex items-center justify-center">
-              <span className="text-blue-600 font-medium">U</span>
-            </div>
-            <div>
-              <h3 className="font-medium">Username</h3>
-              <p className="text-sm text-gray-500">@username</p>
-            </div>
-          </div>
-        </div>
+       <ProfileQuickView />
 
         {/* Navigation */}
         <nav className="bg-white rounded-lg p-2">

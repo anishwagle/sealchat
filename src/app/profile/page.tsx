@@ -18,11 +18,7 @@ export default function Profile() {
   const [profileLikesList, setProfileLikesList] = useState<{ username: string }[]>([]);
 
   const router = useRouter();
-  
-  useEffect(() => {
-    if (!isAuthenticated || authError) return;
-
-    const fetchProfile = async () => {
+  const fetchProfile = async () => {
       try {
         const profileResponse = await fetchWithAuth(`/api/protected/profile`, {
           method: "GET",
@@ -39,6 +35,8 @@ export default function Profile() {
         setError("Something went wrong. Please try again.");
       }
     };
+  useEffect(() => {
+    if (!isAuthenticated || authError) return;
 
     fetchProfile();
   }, [isAuthenticated, authError, router]);
