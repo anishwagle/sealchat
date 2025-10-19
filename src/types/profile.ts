@@ -7,7 +7,7 @@ export interface Profile {
   profileLikeCount:number;
   profileFriendCount?:number;
   profileLikeStatus:boolean;
-  fullName?: string;
+  fullName: string;
   bio?: string;
   location?: string;
   profession?: string;
