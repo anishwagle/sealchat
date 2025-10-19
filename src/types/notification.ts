@@ -9,6 +9,7 @@ export interface Notification {
   type: NotificationType;
   sourceUserId: string;
   sourceUsername: string;
+  sourceFullName: string;
   postId: string | null;
   parentCommentId?: string | null;
   commentId: string | null;

@@ -11,7 +11,7 @@ import { Like } from '@/types/post';
 interface UserListModalProps {
   isOpen: boolean;
   onClose: () => void;
-  users: Profile[]|Like[];
+  users: {username:string,fullName:string}[];
   title: string;
   emptyMessage?: string;
   actionButtonText?: string;
