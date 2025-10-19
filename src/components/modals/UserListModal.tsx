@@ -6,11 +6,12 @@ import { createPortal } from 'react-dom';
 
 import { useModalScrollLock } from '@/hooks/useModalScrollLock';
 import { Profile } from '@/types/profile';
+import { Like } from '@/types/post';
 
 interface UserListModalProps {
   isOpen: boolean;
   onClose: () => void;
-  users: Profile[];
+  users: Profile[]|Like[];
   title: string;
   emptyMessage?: string;
   actionButtonText?: string;

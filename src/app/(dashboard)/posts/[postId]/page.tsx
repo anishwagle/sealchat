@@ -67,6 +67,9 @@ export default function PostPage() {
       const newComments = results.comments || [];
 
       setComments((prevComments) => [...prevComments, ...newComments]);
+      if (newComments.length > 0) {
+        setLastCommentCreatedAt(newComments[newComments.length - 1].createdAt);
+      }
       if (newComments.length < COMMENT_PAGE_SIZE) {
         setHasMoreComments(false);
       }
@@ -155,15 +158,13 @@ export default function PostPage() {
   }, [post]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="px-4 sm:px-6 lg:px-8 py-6">
-        <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl h-[85vh] flex flex-col transform transition-all duration-300 ease-in-out scale-95 opacity-0 animate-fade-in-scale">
-          {/* Main Content */}
+    <div className=" bg-gray-50">
+      <div className="px-4  sm:px-6 lg:px-8 ">
+        <div className="bg-white rounded-2xl shadow-lg w-full max-w-2xl h-[85vh] flex flex-col transform transition-all duration-300 ease-in-out scale-95 opacity-0 animate-fade-in-scale">
+         
           <div className="lg:flex-1 space-y-5">
             {loading ? (
-              <div className="text-center text-gray-500 py-10">
-                Loading post...
-              </div>
+              <Loading message="Loading.."/>
             ) : error ? (
               <div className="text-center text-red-500 bg-white p-10 rounded-lg">
                 {error}
@@ -178,50 +179,41 @@ export default function PostPage() {
           </div>
           
             {post?<>
-          <div
-            id="commentScrollableDiv"
-            ref={commentsContainerRef}
-            className="flex-2 overflow-y-auto p-6"
-          >
-            {isLoadingComments ? (
-              <Loading message="Loading comments..." fullScreen={false} />
-            ) : comments.length > 0 ? (
-              <InfiniteScroll
-                dataLength={comments.length}
-                next={fetchComments}
-                hasMore={hasMoreComments}
-                loader={
-                  <Loading
-                    message="Loading more comments..."
-                    fullScreen={false}
-                  />
-                }
-                scrollableTarget="commentScrollableDiv"
-                className="space-y-4"
-              >
+          <div id="commentScrollableDiv" ref={commentsContainerRef} className="flex-2 overflow-y-auto p-6">
+          {isLoadingComments ? (
+            <Loading message="Loading comments..." fullScreen={false}/>
+          ) : comments.length > 0 ? (
+            <InfiniteScroll
+              dataLength={comments.length}
+              next={fetchComments}
+              hasMore={hasMoreComments}
+              loader={<Loading message="Loading more comments..." fullScreen={false}/>}
+              scrollableTarget="commentScrollableDiv"
+              className="space-y-4 "
+            >
                 {comments.map((comment) => (
-                  <CommentItem
-                    key={`${comment.id}-${comment.replies?.length || 0}`}
-                    comment={comment}
-                    onDelete={handleCommentDeleted}
-                    post={ post}
-                    onReply={handleOnReply}
-                    parentCommentIdParam={parentCommentIdParam || null}
-                  />
+                  <div id={`comment-${comment.id}`} key={`${comment.id}-${comment.replies?.length || 0}`}>
+                    <CommentItem
+                      comment={comment}
+                      onDelete={handleCommentDeleted}
+                      post={post}
+                      onReply={handleOnReply}
+                    />
+                  </div>
                 ))}
-              </InfiniteScroll>
-            ) : (
-              <div className="text-center py-16">
-                <p className="text-2xl mb-2">🤔</p>
-                <h3 className="font-semibold text-gray-800">No comments yet</h3>
-                <p className="text-sm text-gray-500">
-                  Be the first to share your thoughts!
-                </p>
-              </div>
-            )}
-          </div>
+            </InfiniteScroll>
+          ) : (
+            <div className="text-center py-16">
+              <p className="text-2xl mb-2">🤔</p>
+              <h3 className="font-semibold text-gray-800">No comments yet</h3>
+              <p className="text-sm text-gray-500">
+                Be the first to share your thoughts!
+              </p>
+            </div>
+          )}
+        </div>
 
-          <div className="p-6 bg-gray-50 border-t border-gray-200">
+          <div className="p-6 bg-gray-50 ">
             <form onSubmit={handleSubmit} className="flex gap-3 items-center">
               <div className="w-9 h-9 rounded-full bg-gray-200 flex-shrink-0"></div>
               <MentionTextarea

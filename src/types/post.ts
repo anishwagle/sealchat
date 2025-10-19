@@ -6,6 +6,7 @@ export interface Like {
   postId: string;
   createdAt: Date;
   username: string;
+  fullName: string;
 }
 
 export interface Post {

@@ -23,7 +23,7 @@ export class EngagementService implements IEngagementService {
       postId,
     });
     const queryResult = await executeQuery(
-      `SELECT l.*,u.username AS username FROM likes l
+      `SELECT l.*,u.username,u.full_name FROM likes l
       JOIN users u ON u.id=l.user_id
        WHERE post_id=? `,
       [postId]
@@ -37,6 +37,7 @@ export class EngagementService implements IEngagementService {
       userId: x.user_id,
       postId: x.post_id,
       username: x.username,
+      fullName:x.full_name,
       createdAt: x.created_at,
     }));
   }
