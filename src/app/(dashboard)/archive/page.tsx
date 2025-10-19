@@ -86,15 +86,13 @@ export default function PostList({
   }, [loading, posts.length]);
 
   return (
-    <div className="bg-white rounded-lg p-4">
-      <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <h2 className="font-medium text-gray-900">Archived Post</h2>
-          <div className="flex flex-col items-end gap-2">
-            
-            <div className="text-xs text-gray-500 flex items-center gap-1">
+    <div className="bg-white rounded-lg p-6 shadow-sm">
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-100">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-indigo-50 rounded-lg">
               <svg
-                className="w-3.5 h-3.5"
+                className="w-5 h-5 text-indigo-600"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -103,28 +101,56 @@ export default function PostList({
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth="2"
-                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
                 />
-              </svg>Archived Post gets deleted permanently after 30 days
+              </svg>
             </div>
+            <h2 className="text-xl font-semibold text-gray-900">Archived Posts</h2>
+          </div>
+          <div className="flex items-center gap-2 bg-amber-50 px-3 py-2 rounded-lg">
+            <svg
+              className="w-4 h-4 text-amber-600"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <span className="text-sm text-amber-800">
+              Posts are permanently deleted after 30 days
+            </span>
           </div>
         </div>
+
         <div className="space-y-4">
           {fetching ? (
-            <Loading message="Loading post..." fullScreen={false} />
+            <div className="flex items-center justify-center py-8">
+              <div className="flex flex-col items-center gap-3">
+                <Loading message="Loading archived posts..." fullScreen={false} />
+              </div>
+            </div>
           ) : posts.length > 0 ? (
             <InfiniteScroll
               dataLength={posts.length}
               next={() => fetchPosts(nextCursor)}
               hasMore={hasMore}
               className="space-y-4"
-              loader={<Loading message="Loading post..." fullScreen={false} />}
+              loader={
+                <div className="py-4">
+                  <Loading message="Loading more posts..." fullScreen={false} />
+                </div>
+              }
               endMessage={
-                posts.length > 0 ? (
-                  <p className="text-center text-gray-500">
-                    No more posts to load.
+                <div className="text-center py-6 text-gray-500">
+                  <p className="text-sm">
+                    You've reached the end! No more archived posts to load.
                   </p>
-                ) : null
+                </div>
               }
             >
               {posts.map((post) => (
@@ -137,13 +163,30 @@ export default function PostList({
             </InfiniteScroll>
           ) : (
             <div className="flex flex-col items-center justify-center text-center py-16 px-6">
+              <div className="w-24 h-24 mb-6 text-gray-200">
+                <svg
+                  className="w-full h-full"
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path d="M20 2H4C3 2 2 3 2 4v16c0 1 1 2 2 2h16c1 0 2-1 2-2V4c0-1-1-2-2-2zm-9 15H8v-3h3v3zm0-5H8V9h3v3zm0-5H8V4h3v3zm5 10h-3v-3h3v3zm0-5h-3V9h3v3zm0-5h-3V4h3v3z" />
+                </svg>
+              </div>
               <h2 className="text-2xl font-semibold text-gray-800 mb-2">
-                Nothing to see here &#40;yet&#41;!
+                No Archived Posts Yet
               </h2>
+              <p className="text-gray-500 max-w-sm">
+                When you archive posts, they'll appear here for 30 days before
+                being permanently deleted
+              </p>
             </div>
           )}
 
-          {error && <div className="text-center text-red-500">{error}</div>}
+          {error && (
+            <div className="text-center p-4 bg-red-50 rounded-lg">
+              <p className="text-red-600">{error}</p>
+            </div>
+          )}
         </div>
       </div>
     </div>
