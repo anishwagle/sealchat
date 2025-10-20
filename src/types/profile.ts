@@ -1,5 +1,6 @@
 export type FriendshipStatus= 'accepted'|'blocked'|'received'|'sent'|'none'
-
+export type PrivacyLevel = 'private' | 'friends' | 'public';
+export type GenderType = 'male' | 'female' | 'non-binary' | 'other'|'prefer_not_to_say';
 export interface Profile {
   userId:string;
   username: string;

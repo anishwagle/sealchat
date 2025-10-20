@@ -84,6 +84,7 @@ export class UserService implements IUserService {
     Logger.log(COMPONENT, FUNCTION, "debug", "User check complete", {
       found: !!result,
     });
+    if(!!!result)return;
     return {
       id:result.id,
       username:result.username,
@@ -101,6 +102,7 @@ export class UserService implements IUserService {
   ): Promise<User> {
     const FUNCTION = "createUser";
     const id = v4();
+    Logger.log(COMPONENT,FUNCTION,'debug',"Creating User:",{id});
     await executeQuery('INSERT INTO users (id,username,full_name,email,password) VALUES(?,?,?,?,?)',
         [id,username.toLowerCase(),toTitleCase(fullname),email.toLowerCase(),password]);
 

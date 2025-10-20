@@ -50,18 +50,18 @@ export async function POST(request: Request) {
 
     Logger.log(COMPONENT, FUNCTION, 'info', 'Login successful', { userId: user.id });
     Logger.timeEnd(COMPONENT, FUNCTION, 'total');
-    
+    const isProduction = process.env.NODE_ENV === 'production';
     return NextResponse.json(
       { message: 'Login successful', userId: user.id },
       {
-        status: 200,
-        headers: {
-          'Set-Cookie': [
-            `accessToken=${accessToken}; HttpOnly; Path=/; Max-Age=900`, // 15m
-            `refreshToken=${refreshToken}; HttpOnly; Path=/; Max-Age=604800`, // 7d
-          ].join(', '),
-        },
-      }
+      status: 200,
+      headers: {
+        'Set-Cookie': [
+        `accessToken=${accessToken}; HttpOnly; Path=/; Max-Age=900; SameSite=Lax${isProduction ? '; Secure' : ''}`,
+        `refreshToken=${refreshToken}; HttpOnly; Path=/; Max-Age=604800; SameSite=Lax${isProduction ? '; Secure' : ''}`,
+    ].join(', '),
+      },
+    }
     );
   } catch (error: any) {
     const apiError = error instanceof ApiError

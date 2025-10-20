@@ -2,6 +2,10 @@
 import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import LocationSearch from "@/components/LocationSearch";
+import VisibilityToggle from "@/components/VisibilityToggle";
+import { GenderType, PrivacyLevel } from "@/types/profile";
+import { fetchWithAuth } from "@/lib/auth/fetchWithAuth";
 
 interface UserData {
     username: string;
@@ -11,10 +15,15 @@ interface UserData {
     confirmPassword: string;
 }
 
+
 interface ProfileData {
     dateOfBirth: string;
-    gender: string;
-    profilePicture: File | null;
+    dateOfBirthVisibility: PrivacyLevel;
+    gender: GenderType;
+    genderVisibility: PrivacyLevel;
+    bio: string;
+    location: string;
+    locationVisibility: PrivacyLevel;
 }
 
 interface ValidationErrors {
@@ -41,8 +50,16 @@ export default function Signup({
 }) {
     const USERNAME_REGEX = /^[a-zA-Z0-9_-]{3,16}$/;
     const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    // Password validation functions
+    const validatePasswordLength = (password: string) => password.length >= 8;
+    const validatePasswordLowercase = (password: string) => /[a-z]/.test(password);
+    const validatePasswordUppercase = (password: string) => /[A-Z]/.test(password);
+    const validatePasswordNumber = (password: string) => /\d/.test(password);
+    const validatePasswordSpecial = (password: string) => /[-#@$!%*?&:;<>{}[\]()]/.test(password);
+
     const [step, setStep] = useState(initialStep);
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [formData, setFormData] = useState<FormData>({
         user: {
             username: '',
@@ -53,8 +70,12 @@ export default function Signup({
         },
         profile: {
             dateOfBirth: '',
-            gender: '',
-            profilePicture: null,
+            dateOfBirthVisibility: 'friends',
+            gender: 'male',
+            genderVisibility: 'friends',
+            bio: '',
+            location: '',
+            locationVisibility: 'friends'
         }
     });
     const [errors, setErrors] = useState<ValidationErrors>({});
@@ -73,10 +94,16 @@ export default function Signup({
                 return !EMAIL_REGEX.test(value)
                     ? 'Please enter a valid email address'
                     : undefined;
-            case 'password':
-                return !PASSWORD_REGEX.test(value)
-                    ? 'Password must be at least 8 characters with mixed case, numbers & symbols'
-                    : undefined;
+            case 'password': {
+                if (!value) return 'Password is required';
+                const errors = [];
+                if (!validatePasswordLength(value)) errors.push('At least 8 characters');
+                if (!validatePasswordLowercase(value)) errors.push('One lowercase letter');
+                if (!validatePasswordUppercase(value)) errors.push('One uppercase letter');
+                if (!validatePasswordNumber(value)) errors.push('One number');
+                if (!validatePasswordSpecial(value)) errors.push('One special character (-#@$!%*?&:;<>{}[]())');
+                return errors.length > 0 ? errors.join(' • ') : undefined;
+            }
             case 'confirmPassword':
                 return value !== formData.user.password
                     ? 'Passwords do not match'
@@ -93,6 +120,8 @@ export default function Signup({
                 return age < 13 ? 'You must be at least 13 years old' : undefined;
             case 'gender':
                 return !value ? 'Please select your gender' : undefined;
+            case 'location':
+                return !value ? 'Please select your location' : undefined;
             default:
                 return undefined;
         }
@@ -130,114 +159,76 @@ export default function Signup({
         }
     };
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0] || null;
-        setFormData(prev => ({
-            ...prev,
-            profile: {
-                ...prev.profile,
-                profilePicture: file
-            }
-        }));
-    };
-
-    const validateStep1 = () => {
-        const newErrors = {
-            fullname: validateField('fullname', formData.user.fullname),
-            username: validateField('username', formData.user.username),
-            email: validateField('email', formData.user.email),
-            password: validateField('password', formData.user.password),
-            confirmPassword: validateField('confirmPassword', formData.user.confirmPassword)
-        };
-        setErrors(newErrors);
-        return !Object.values(newErrors).some(error => error !== undefined);
-    };
-
-    const validateStep2 = () => {
-        const newErrors = {
-            dateOfBirth: validateField('dateOfBirth', formData.profile.dateOfBirth),
-            gender: validateField('gender', formData.profile.gender)
-        };
-        setErrors(newErrors);
-        return !Object.values(newErrors).some(error => error !== undefined);
-    };
-
     const handleSubmit = async () => {
         if (step === 1) {
-            try {
+            try{
                 setIsLoading(true);
-                // Make API call to create user account
-                // const response = await fetch('/api/auth/signup', {
-                //     method: 'POST',
-                //     headers: { 'Content-Type': 'application/json' },
-                //     body: JSON.stringify({
-                //         username: formData.user.username,
-                //         email: formData.user.email,
-                //         password: formData.user.password,
-                //         fullname: formData.user.fullname
-                //     })
-                // });
-                // const data = await response.json();
-                // if (!response.ok) throw new Error(data.message);
+            const response = await fetch("/api/auth/signup", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                username: formData.user.username,
+                email: formData.user.email,
+                fullname: formData.user.fullname,
+                password:formData.user.password,
+              }),
+            });
 
-                // Simulate API call for now
-                await new Promise(resolve => setTimeout(resolve, 1000));
-                
-                // After successful user creation, move to profile setup
-                setErrors({});
-                setStep(2);
-            } catch (error) {
+            const data = await response.json();
+
+            if(response.ok){
+                 setStep(2);
+            }else{
                 setErrors(prev => ({
                     ...prev,
-                    submit: error instanceof Error ? error.message : 'An error occurred'
+                    submit: data.message || 'Signup Failed'
                 }));
-            } finally {
-                setIsLoading(false);
+            }
+            }catch (error){
+                setErrors(prev => ({
+                        ...prev,
+                        submit: error instanceof Error ? error.message : 'An error occurred'
+                    }));
+            }
+            finally{
+                setIsLoading(false)
             }
         } else if (step === 2) {
             try {
-                setIsLoading(true);
-                // Make API call to save profile information
-                // const response = await fetch('/api/profile/create', {
-                //     method: 'POST',
-                //     headers: { 
-                //         'Content-Type': 'application/json',
-                //         'Authorization': `Bearer ${localStorage.getItem('token')}` // If using token auth
-                //     },
-                //     body: JSON.stringify({
-                //         userId: userId, // Use the userId prop for step 2
-                //         dateOfBirth: formData.profile.dateOfBirth,
-                //         gender: formData.profile.gender
-                //     })
-                // });
-                // const data = await response.json();
-                // if (!response.ok) throw new Error(data.message);
+              setIsLoading(true);
+              const response = await fetchWithAuth("/api/protected/profile/create", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  dateOfBirth: formData.profile.dateOfBirth,
+                  dateOfBirthVisibility: formData.profile.dateOfBirthVisibility,
+                  gender: formData.profile.gender,
+                  genderVisibility: formData.profile.genderVisibility,
+                  bio:formData.profile.bio,
+                  location:formData.profile.location,
+                  locationVisibility:formData.profile.locationVisibility
+                }),
+              });
 
-                // If profile picture exists, upload it
-                if (formData.profile.profilePicture) {
-                    // const formData = new FormData();
-                    // formData.append('file', formData.profile.profilePicture);
-                    // await fetch('/api/profile/upload-photo', {
-                    //     method: 'POST',
-                    //     headers: {
-                    //         'Authorization': `Bearer ${localStorage.getItem('token')}`
-                    //     },
-                    //     body: formData
-                    // });
-                }
+              const data = await response.json();
 
-                // Simulate API call for now
-                await new Promise(resolve => setTimeout(resolve, 1000));
-
-                // Redirect to home page after complete signup
-                router.push('/home');
-            } catch (error) {
-                setErrors(prev => ({
-                    ...prev,
-                    submit: error instanceof Error ? error.message : 'An error occurred'
+              if (response.ok) {
+                setStep(2);
+              } else {
+                setErrors((prev) => ({
+                  ...prev,
+                  submit: data.message || "Profile Creation Failed",
                 }));
+              }
+              router.push("/");
+            } catch (error) {
+              setErrors((prev) => ({
+                ...prev,
+                submit:
+                  error instanceof Error ? error.message : "An error occurred",
+              }));
             } finally {
-                setIsLoading(false);
+              setIsLoading(false);
             }
         }
     };
@@ -261,7 +252,10 @@ export default function Signup({
                 !errors.dateOfBirth &&
                 !errors.gender &&
                 formData.profile.dateOfBirth &&
-                formData.profile.gender
+                formData.profile.gender &&
+                formData.profile.dateOfBirthVisibility &&
+                formData.profile.genderVisibility &&
+                formData.profile.locationVisibility
             );
         }
         return false;
@@ -389,15 +383,33 @@ export default function Signup({
                                 <label className={labelClasses}>Password</label>
                                 <span className="text-xs text-gray-500">8+ chars with A-Z, a-z, 0-9, symbols</span>
                             </div>
-                            <input
-                                type="password"
-                                name="password"
-                                value={formData.user.password}
-                                onChange={handleInputChange}
-                                className={`${inputClasses} ${errors.password ? 'ring-red-300 border-red-300' : ''}`}
-                                required
-                                placeholder="••••••••"
-                            />
+                            <div className="relative">
+                                <input
+                                    type={showPassword ? "text" : "password"}
+                                    name="password"
+                                    value={formData.user.password}
+                                    onChange={handleInputChange}
+                                    className={`${inputClasses} pr-10 ${errors.password ? 'ring-red-300 border-red-300' : ''}`}
+                                    required
+                                    placeholder="••••••••"
+                                />
+                                <button
+                                    type="button"
+                                    className="absolute inset-y-0 right-0 flex items-center pr-3"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                >
+                                    {showPassword ? (
+                                        <svg className="h-5 w-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                        </svg>
+                                    ) : (
+                                        <svg className="h-5 w-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                                        </svg>
+                                    )}
+                                </button>
+                            </div>
                             {errors.password && (
                                 <p className="text-xs text-red-600 mt-1">{errors.password}</p>
                             )}
@@ -407,15 +419,33 @@ export default function Signup({
                                 <label className={labelClasses}>Confirm Password</label>
                                 <span className="text-xs text-gray-500">Must match password</span>
                             </div>
-                            <input
-                                type="password"
-                                name="confirmPassword"
-                                value={formData.user.confirmPassword}
-                                onChange={handleInputChange}
-                                className={`${inputClasses} ${errors.confirmPassword ? 'ring-red-300 border-red-300' : ''}`}
-                                required
-                                placeholder="••••••••"
-                            />
+                            <div className="relative">
+                                <input
+                                    type={showConfirmPassword ? "text" : "password"}
+                                    name="confirmPassword"
+                                    value={formData.user.confirmPassword}
+                                    onChange={handleInputChange}
+                                    className={`${inputClasses} pr-10 ${errors.confirmPassword ? 'ring-red-300 border-red-300' : ''}`}
+                                    required
+                                    placeholder="••••••••"
+                                />
+                                <button
+                                    type="button"
+                                    className="absolute inset-y-0 right-0 flex items-center pr-3"
+                                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                >
+                                    {showConfirmPassword ? (
+                                        <svg className="h-5 w-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                        </svg>
+                                    ) : (
+                                        <svg className="h-5 w-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                                        </svg>
+                                    )}
+                                </button>
+                            </div>
                             {errors.confirmPassword && (
                                 <p className="text-xs text-red-600 mt-1">{errors.confirmPassword}</p>
                             )}
@@ -426,7 +456,30 @@ export default function Signup({
                 return (
                     <div className="space-y-6">
                         <div className="space-y-2">
-                            <label className={labelClasses}>Date of Birth</label>
+                            <div className="flex items-center justify-between">
+                                <label className={labelClasses}>
+                                    <div className="flex items-center gap-2">
+                                        <svg className="h-5 w-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                        </svg>
+                                        Date of Birth
+                                    </div>
+                                </label>
+                                <div className="flex items-center gap-2">
+                                    <VisibilityToggle
+                                        value={formData.profile.dateOfBirthVisibility}
+                                        onChange={(value: PrivacyLevel) => {
+                                            setFormData(prev => ({
+                                                ...prev,
+                                                profile: {
+                                                    ...prev.profile,
+                                                    dateOfBirthVisibility: value
+                                                }
+                                            }));
+                                        }}
+                                    />
+                                </div>
+                            </div>
                             <input
                                 type="date"
                                 name="dateOfBirth"
@@ -436,10 +489,34 @@ export default function Signup({
                                 required
                                 max={new Date().toISOString().split('T')[0]}
                             />
-                            <p className="text-xs text-gray-500">You must be at least 13 years old to use this service</p>
+                            <p className="text-xs text-gray-500">You must be at least 13 years old</p>
                         </div>
+
                         <div className="space-y-2">
-                            <label className={labelClasses}>Gender</label>
+                            <div className="flex items-center justify-between">
+                                <label className={labelClasses}>
+                                    <div className="flex items-center gap-2">
+                                        <svg className="h-5 w-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                        </svg>
+                                        Gender
+                                    </div>
+                                </label>
+                                <div className="flex items-center gap-2">
+                                    <VisibilityToggle
+                                        value={formData.profile.genderVisibility}
+                                        onChange={(value: PrivacyLevel) => {
+                                            setFormData(prev => ({
+                                                ...prev,
+                                                profile: {
+                                                    ...prev.profile,
+                                                    genderVisibility: value
+                                                }
+                                            }));
+                                        }}
+                                    />
+                                </div>
+                            </div>
                             <select
                                 name="gender"
                                 value={formData.profile.gender}
@@ -455,16 +532,68 @@ export default function Signup({
                                 <option value="prefer-not-to-say">Prefer not to say</option>
                             </select>
                         </div>
+
                         <div className="space-y-2">
-                            <label className={labelClasses}>Profile Picture (Optional)</label>
-                            <input
-                                type="file"
-                                name="profilePicture"
-                                onChange={handleFileChange}
+                            <div className="flex items-center justify-between">
+                                <label className={labelClasses}>
+                                    <div className="flex items-center gap-2">
+                                        <svg className="h-5 w-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                        </svg>
+                                        Bio
+                                    </div>
+                                </label>
+                            </div>
+                            <textarea
+                                name="bio"
+                                value={formData.profile.bio}
+                                onChange={handleInputChange}
                                 className={inputClasses}
-                                accept="image/*"
+                                rows={3}
+                                placeholder="Tell us about yourself..."
                             />
-                            <p className="text-xs text-gray-500">You can always update this later from your profile</p>
+                        </div>
+
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                                <label className={labelClasses}>
+                                    <div className="flex items-center gap-2">
+                                        <svg className="h-5 w-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        </svg>
+                                        Location
+                                    </div>
+                                </label>
+                                <div className="flex items-center gap-2">
+                                    <VisibilityToggle
+                                        value={formData.profile.locationVisibility}
+                                        onChange={(value: PrivacyLevel) => {
+                                            setFormData(prev => ({
+                                                ...prev,
+                                                profile: {
+                                                    ...prev.profile,
+                                                    locationVisibility: value
+                                                }
+                                            }));
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                            <LocationSearch
+                                value={formData.profile.location}
+                                onChange={(location) => {
+                                    setFormData(prev => ({
+                                        ...prev,
+                                        profile: {
+                                            ...prev.profile,
+                                            location
+                                        }
+                                    }));
+                                }}
+                                className={inputClasses}
+                                placeholder="Search for your location..."
+                            />
                         </div>
                     </div>
                 );
@@ -498,20 +627,7 @@ export default function Signup({
                             {renderStep()}
                             
                             <div className="space-y-4 pt-6">
-                                <div className="flex space-x-4">
-                                    {step > 1 && (
-                                        <button
-                                            type="button"
-                                            onClick={() => setStep(step - 1)}
-                                            className="flex-1 px-6 py-3 text-indigo-600 bg-indigo-50 rounded-lg font-semibold hover:bg-indigo-100 transition-all duration-200 flex items-center justify-center"
-                                        >
-                                            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
-                                            </svg>
-                                            Back
-                                        </button>
-                                    )}
-                                    
+                                <div className="flex">
                                     <button
                                         type="button"
                                         onClick={handleSubmit}
