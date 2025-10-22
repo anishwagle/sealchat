@@ -1,6 +1,6 @@
 'use client';
 import { useState, FormEvent } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import LocationSearch from "@/components/LocationSearch";
 import VisibilityToggle from "@/components/VisibilityToggle";
@@ -34,6 +34,7 @@ interface ValidationErrors {
     confirmPassword?: string;
     dateOfBirth?: string;
     gender?: string;
+    location?: string;
 }
 
 interface FormData {
@@ -41,13 +42,7 @@ interface FormData {
     profile: ProfileData;
 }
 
-export default function Signup({
-    initialStep = 1,
-    userId = ''
-}: {
-    initialStep?: number;
-    userId?: string;
-}) {
+export default function Signup() {
     const USERNAME_REGEX = /^[a-zA-Z0-9_-]{3,16}$/;
     const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     // Password validation functions
@@ -56,7 +51,8 @@ export default function Signup({
     const validatePasswordUppercase = (password: string) => /[A-Z]/.test(password);
     const validatePasswordNumber = (password: string) => /\d/.test(password);
     const validatePasswordSpecial = (password: string) => /[-#@$!%*?&:;<>{}[\]()]/.test(password);
-
+    const searchParams = useSearchParams();
+    const initialStep =parseInt(`${searchParams.get('initialStep')}`)||1;
     const [step, setStep] = useState(initialStep);
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -121,7 +117,7 @@ export default function Signup({
             case 'gender':
                 return !value ? 'Please select your gender' : undefined;
             case 'location':
-                return !value ? 'Please select your location' : undefined;
+                return !value.trim() ? 'Location is required' : undefined;
             default:
                 return undefined;
         }
@@ -213,14 +209,14 @@ export default function Signup({
               const data = await response.json();
 
               if (response.ok) {
-                setStep(2);
+                router.push("/");
               } else {
                 setErrors((prev) => ({
                   ...prev,
                   submit: data.message || "Profile Creation Failed",
                 }));
               }
-              router.push("/");
+              
             } catch (error) {
               setErrors((prev) => ({
                 ...prev,
@@ -251,8 +247,10 @@ export default function Signup({
             return (
                 !errors.dateOfBirth &&
                 !errors.gender &&
+                !errors.location &&
                 formData.profile.dateOfBirth &&
                 formData.profile.gender &&
+                formData.profile.location &&
                 formData.profile.dateOfBirthVisibility &&
                 formData.profile.genderVisibility &&
                 formData.profile.locationVisibility
@@ -583,6 +581,7 @@ export default function Signup({
                             <LocationSearch
                                 value={formData.profile.location}
                                 onChange={(location) => {
+                                    
                                     setFormData(prev => ({
                                         ...prev,
                                         profile: {
@@ -591,9 +590,13 @@ export default function Signup({
                                         }
                                     }));
                                 }}
-                                className={inputClasses}
+                                className={`${inputClasses} ${errors.location ? 'ring-red-300 border-red-300' : ''}`}
                                 placeholder="Search for your location..."
+                                
                             />
+                             {errors.location && (
+                                <p className="text-xs text-red-600 mt-1">{errors.location}</p>
+                            )}
                         </div>
                     </div>
                 );
@@ -603,88 +606,132 @@ export default function Signup({
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
+        {/* Main Content */}
+        <main className="flex items-center justify-center px-4 sm:px-6 lg:px-8 py-12">
+          <div className="w-full max-w-xl space-y-8">
+            <div className="text-center space-y-4">
+              <h1 className="text-4xl font-extrabold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                Welcome to SealChat
+              </h1>
+              <h2 className="text-2xl font-semibold text-gray-900">
+                {step === 1 ? "Create your account" : "Complete your profile"}
+              </h2>
+              <p className="text-lg text-gray-600">
+                {step === 1
+                  ? "Join our community in just a few steps"
+                  : "Tell us a bit about yourself"}
+              </p>
+            </div>
 
-            {/* Main Content */}
-            <main className="flex items-center justify-center px-4 sm:px-6 lg:px-8 py-12">
-                <div className="w-full max-w-xl space-y-8">
-                    <div className="text-center space-y-4">
-                        <h1 className="text-4xl font-extrabold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                            Welcome to SealChat
-                        </h1>
-                        <h2 className="text-2xl font-semibold text-gray-900">
-                            {step === 1 ? 'Create your account' : 'Complete your profile'}
-                        </h2>
-                        <p className="text-lg text-gray-600">
-                            {step === 1 ? 'Join our community in just a few steps' : 'Tell us a bit about yourself'}
-                        </p>
+            {renderProgressBar()}
+
+            <div className="bg-white/80 backdrop-blur-sm p-8 rounded-xl shadow-lg border border-indigo-100">
+              <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
+                {renderStep()}
+
+                <div className="space-y-4 pt-6">
+                  <div className="flex">
+                    <button
+                      type="button"
+                      onClick={handleSubmit}
+                      disabled={!isStepValid() || isLoading}
+                      className={`flex-1 text-white py-3 px-6 rounded-lg font-semibold shadow-sm transition-all duration-200 flex items-center justify-center ${
+                        !isStepValid() || isLoading
+                          ? "bg-gray-300 cursor-not-allowed"
+                          : step === 2
+                          ? "bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700"
+                          : "bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700"
+                      }`}
+                    >
+                      {isLoading ? (
+                        <>
+                          <svg
+                            className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            ></circle>
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                            ></path>
+                          </svg>
+                          {step === 2
+                            ? "Setting up your profile..."
+                            : "Creating your account..."}
+                        </>
+                      ) : (
+                        <>
+                          {step === 2
+                            ? "Complete Profile Setup"
+                            : "Create Account"}
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  {step === 1 && (
+                    <div className="text-center">
+                      <Link
+                        href="/login"
+                        className="text-sm text-gray-600 hover:text-indigo-600 transition-colors"
+                      >
+                        Already have an account? Sign in
+                      </Link>
                     </div>
-
-                    {renderProgressBar()}
-                    
-                    <div className="bg-white/80 backdrop-blur-sm p-8 rounded-xl shadow-lg border border-indigo-100">
-                        <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
-                            {renderStep()}
-                            
-                            <div className="space-y-4 pt-6">
-                                <div className="flex">
-                                    <button
-                                        type="button"
-                                        onClick={handleSubmit}
-                                        disabled={!isStepValid() || isLoading}
-                                        className={`flex-1 text-white py-3 px-6 rounded-lg font-semibold shadow-sm transition-all duration-200 flex items-center justify-center ${
-                                            !isStepValid() || isLoading
-                                                ? 'bg-gray-300 cursor-not-allowed'
-                                                : step === 2 
-                                                    ? 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700'
-                                                    : 'bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700'
-                                        }`}
-                                    >
-                                        {isLoading ? (
-                                            <>
-                                                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                                </svg>
-                                                {step === 2 ? 'Setting up your profile...' : 'Creating your account...'}
-                                            </>
-                                        ) : (
-                                            <>
-                                                {step === 2 ? 'Complete Profile Setup' : 'Create Account'}
-                                            </>
-                                        )}
-                                    </button>
-                                </div>
-                                {step === 1 && (
-                                    <div className="text-center">
-                                        <Link 
-                                            href="/login" 
-                                            className="text-sm text-gray-600 hover:text-indigo-600 transition-colors"
-                                        >
-                                            Already have an account? Sign in
-                                        </Link>
-                                    </div>
-                                )}
-                            </div>
-                        </form>
+                  )}
+                  {step === 2 && (
+                    <div className="text-center">
+                      <Link
+                        href="/login"
+                        onClick={async () => {
+                      try {
+                        await fetch("/api/auth/logout", { method: "POST" });
+                        router.push("/login");
+                      } catch (error: any) {
+                        console.error("Logout failed:", error.message);
+                        router.push("/login");
+                      }
+                    }}
+                        className="text-sm text-gray-600 hover:text-indigo-600 transition-colors"
+                      >
+                        Not your account? Log out.
+                      </Link>
                     </div>
-
-                    {step === 1 && (
-                        <div className="text-center text-sm text-gray-500">
-                            By creating an account, you agree to our{' '}
-                            <Link href="/terms" className="text-indigo-600 hover:text-indigo-700 font-medium">
-                                Terms of Service
-                            </Link>{' '}
-                            and{' '}
-                            <Link href="/privacy" className="text-indigo-600 hover:text-indigo-700 font-medium">
-                                Privacy Policy
-                            </Link>
-                        </div>
-                    )}
+                  )}
                 </div>
-            </main>
+              </form>
+            </div>
 
-            
-        </div>
+            {step === 1 && (
+              <div className="text-center text-sm text-gray-500">
+                By creating an account, you agree to our{" "}
+                <Link
+                  href="/terms"
+                  className="text-indigo-600 hover:text-indigo-700 font-medium"
+                >
+                  Terms of Service
+                </Link>{" "}
+                and{" "}
+                <Link
+                  href="/privacy"
+                  className="text-indigo-600 hover:text-indigo-700 font-medium"
+                >
+                  Privacy Policy
+                </Link>
+              </div>
+            )}
+          </div>
+        </main>
+      </div>
     );
 }

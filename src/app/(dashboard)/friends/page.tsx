@@ -144,7 +144,7 @@ export default function FriendsPage() {
                   profile={user}
                   size="medium"
                   onUpdate={(newStatus) =>
-                    handleFriendshipChange(user.userId, newStatus)
+                    handleFriendshipChange(user.userId, newStatus||"none")
                   }
                 />
                 <ProfileLikeButton

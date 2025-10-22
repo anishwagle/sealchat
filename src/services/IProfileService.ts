@@ -1,4 +1,4 @@
-import { GenderType, PrivacyLevel } from "@/types/profile";
+import { GenderType, PrivacyLevel, Profile } from "@/types/profile";
 
 export interface IProfileService {
   createProfile(
@@ -11,4 +11,5 @@ export interface IProfileService {
     location:string,
     locationVisibility:PrivacyLevel
   ): Promise<void>;
+  getProfile(currentUserId:string,profileUserId:string):Promise<Profile|null>;
 }

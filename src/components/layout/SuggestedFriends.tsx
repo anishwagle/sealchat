@@ -67,7 +67,7 @@ export default function SuggestedFriends() {
               profile={profile}
               size="small"
               onUpdate={(newStatus) =>
-                handleFriendshipChange(profile.userId, newStatus)
+                handleFriendshipChange(profile.userId, newStatus||"none")
               }
             />
           </div>

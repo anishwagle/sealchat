@@ -1,13 +1,17 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Profile} from "@/types/profile";
+import { PrivacyLevel, Profile} from "@/types/profile";
 import { useAuth } from "@/lib/auth/useAuth";
 import PostList from "@/components/posts/PostList";
 import CreatePostButton from "@/components/posts/CreatePostButton";
 import UserListModal from "@/components/modals/UserListModal";
 import { fetchWithAuth } from "@/lib/auth/fetchWithAuth";
 import withAuth from "@/lib/auth/withAuth";
+import { IoIosCalendar, IoMdPerson } from "react-icons/io";
+import { RiCake2Fill } from "react-icons/ri";
+import { IoLocationOutline } from "react-icons/io5";
+import { MdLock, MdPeople, MdPublic } from "react-icons/md";
 
 function ProfilePage() {
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -27,7 +31,7 @@ function ProfilePage() {
         const profileData = await profileResponse.json();
 
         if (profileResponse.ok) {
-          setProfile(profileData);
+          setProfile(profileData.profile);
         } else {
           setError(profileData.message || "Failed to load profile");
         }
@@ -67,7 +71,16 @@ function ProfilePage() {
       }
     }
   };
-
+  const getPrivacyIcon = (privacy: PrivacyLevel) => {
+          switch (privacy) {
+              case 'private':
+                  return <MdLock className="h-5 w-5" />;
+              case 'friends':
+                  return <MdPeople className="h-5 w-5" />;
+              case 'public':
+                  return <MdPublic className="h-5 w-5" />;
+          }
+      };
   if (authError || error) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -82,7 +95,6 @@ function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-
       {/* Full width header */}
       <div className="w-full bg-white border-b">
         <div className="relative h-48 bg-gradient-to-r from-blue-500 to-blue-600">
@@ -103,11 +115,14 @@ function ProfilePage() {
           <div className="mt-24 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">
-                {profile.fullName }
+                {profile.fullName}
               </h1>
               <p className="text-base text-gray-500">@{profile.username}</p>
               <div className="mt-2 flex items-center gap-6 text-sm ">
-                <button onClick={handleShowFriends} className="flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-colors">
+                <button
+                  onClick={handleShowFriends}
+                  className="flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-colors"
+                >
                   <svg
                     className="w-5 h-5"
                     fill="none"
@@ -121,9 +136,14 @@ function ProfilePage() {
                       d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
                     />
                   </svg>
-                  <span className="font-medium">{profile.profileFriendCount || 0} Friends</span>
+                  <span className="font-medium">
+                    {profile.profileFriendCount || 0} Friends
+                  </span>
                 </button>
-                <button onClick={handleShowProfileLikes} className="flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-colors">
+                <button
+                  onClick={handleShowProfileLikes}
+                  className="flex items-center gap-2 text-gray-600 hover:text-blue-600 transition-colors"
+                >
                   <svg
                     className="w-5 h-5"
                     fill="none"
@@ -137,13 +157,12 @@ function ProfilePage() {
                       d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
                     />
                   </svg>
-                  <span className="font-medium">{profile.profileLikeCount || 0} Profile Likes</span>
+                  <span className="font-medium">
+                    {profile.profileLikeCount || 0} Profile Likes
+                  </span>
                 </button>
               </div>
-              <p className="mt-3 text-gray-600 max-w-2xl">
-                Passionate about building great software and contributing to
-                open source projects.
-              </p>
+              <p className="mt-3 text-gray-600 max-w-2xl">{profile.bio}</p>
             </div>
             <div className="flex gap-3">
               <CreatePostButton />
@@ -206,37 +225,56 @@ function ProfilePage() {
               </button>
               <h2 className="text-lg font-semibold mb-4">About</h2>
               <div className="space-y-3 text-sm">
-                <div className="flex items-center gap-2 text-gray-600">
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                    />
-                  </svg>
-                  <span>San Francisco, CA</span>
+                <div className="flex justify-between gap-2 text-gray-600">
+                  <div className="flex items-center gap-2">
+                    <IoLocationOutline  className="h-5 w-5"/>
+                    <span>{profile.location}</span>
+                  </div>
+                  <span>
+                    {getPrivacyIcon(profile.locationVisibility || "private")}
+                  </span>
                 </div>
-                <div className="flex items-center gap-2 text-gray-600">
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                    />
-                  </svg>
-                  <span>Joined January 2024</span>
+                <div className="flex justify-between gap-2 text-gray-600">
+                  <div className="flex items-center gap-2">
+                    <IoMdPerson className="h-5 w-5"/>
+                    <span>&nbsp;{profile.gender}</span>
+                  </div>
+                  <span>
+                    {getPrivacyIcon(profile.genderVisibility || "private")}
+                  </span>
+                </div>
+                <div className="flex justify-between  gap-2 text-gray-600">
+                  <div className="flex items-center gap-2">
+                    <RiCake2Fill className="h-5 w-5"/>
+                    <span>
+                      &nbsp;
+                      {new Date(profile.birthdate || "").toLocaleString(
+                        "en-US",
+                        {
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                        }
+                      )}
+                    </span>
+                  </div>
+                  <span>
+                    {getPrivacyIcon(profile.birthdateVisibility || "private")}
+                  </span>
+                </div>
+
+                <div className="flex justify-between gap-2 text-gray-600">
+                  <div className="flex items-center gap-2">
+                    <IoIosCalendar className="h-5 w-5"/>
+                    <span>
+                      Joined&nbsp;
+                      {new Date(profile.joinedAt).toLocaleString("en-US", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      })}
+                    </span>
+                  </div>
                 </div>
               </div>
             </section>

@@ -2,9 +2,11 @@ import { fetchWithAuth } from "@/lib/auth/fetchWithAuth";
 import { useEffect, useState } from "react";
 import { Profile } from "@/types/profile";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function ProfileQuickView() {
   const [profile, setProfile] = useState<Profile>();
+  const router = useRouter();
   const fetchProfile = async () => {
       try {
         const profileResponse = await fetchWithAuth(`/api/protected/profile`, {
@@ -13,7 +15,10 @@ export default function ProfileQuickView() {
         const profileData = await profileResponse.json();
 
         if (profileResponse.ok) {
-          setProfile(profileData);
+          if(!!!profileData.profile){
+            router.push(`/signup?initialStep=2`)
+          }
+          setProfile(profileData.profile);
         } 
       } catch (err: any) {
         console.error("Profile fetch failed:", err.message);

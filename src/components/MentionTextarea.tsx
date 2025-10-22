@@ -22,7 +22,7 @@ const MentionTextarea = forwardRef<HTMLTextAreaElement, MentionTextareaProps>(
         try {
           const data = await fetchWithAuth('/api/protected/friend');
           const results = await data.json();
-          setFriends(results.users || []);
+          setFriends(results.friends || []);
         } catch (err) {
           console.error('Failed to load friends for mentions');
         }
