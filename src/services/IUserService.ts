@@ -5,7 +5,7 @@ export interface IUserService {
     findUserByUsername(username: string): Promise<User | undefined>;
     findUserByEmail(email: string): Promise<User | undefined>;
     findUserByEmailOrUsername(email: string, username: string): Promise<User | undefined>;
-    createUser(email: string, username: string, password: string): Promise<User>;
+    createUser(email: string, username: string,fullname:string, password: string): Promise<User>;
     storeRefreshToken(userId: string, refreshToken: string): Promise<void>;
     validateRefreshToken(userId: string, refreshToken: string): Promise<boolean>;
     removeRefreshToken(userId: string): Promise<void>;

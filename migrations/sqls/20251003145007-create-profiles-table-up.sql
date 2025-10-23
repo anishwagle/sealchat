@@ -1,7 +1,5 @@
 CREATE TABLE IF NOT EXISTS seal_chat.profiles (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  user_id VARCHAR(255) NOT NULL,
-  fullName VARCHAR(255) NOT NULL,
+  user_id VARCHAR(255) PRIMARY KEY,
   bio TEXT NULL,
   location VARCHAR(255),
   location_visibility ENUM('public', 'friends', 'private') DEFAULT 'public',

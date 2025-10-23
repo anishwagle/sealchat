@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import { Logger } from '@/lib/logger';
-import { friendService, userService } from '@/services/serviceProvider';
+import { friendService, profileService, userService } from '@/services/serviceProvider';
 import { ApiError } from '@/lib/errors';
 import { Profile } from '@/types/profile';
 
@@ -27,15 +27,11 @@ export async function GET(request: Request, context: { params: Promise<{ usernam
         }
     Logger.log(COMPONENT, FUNCTION, 'info', 'Profile fetched', { username: username });
 
-    const response:Profile = {
-      userId:user.id,
-      username:username,
-      joinedAt: `${user.createdAt?.toDateString()}`,
-      friendshipStatus:await friendService.getFriendShipStatus(currentUserId,user.id),
-      profileLikeCount:await friendService.getProfileLikeCount(user.id),
-      profileLikeStatus:await friendService.getProfileLikeStatus(currentUserId,user.id)
-    }
-    return NextResponse.json(response, { status: 200 });
+    const profile = await profileService.getProfile(currentUserId,user.id);
+        Logger.log(COMPONENT, FUNCTION, "info", "Profile fetched", {
+          username: user.username,
+        });
+         return NextResponse.json({profile}, { status: 200 });
   } catch (error: any) {
     const apiError = new ApiError('Failed to fetch profile', 500, 'INTERNAL_ERROR', { error: error.message });
     Logger.log(COMPONENT, FUNCTION, 'error', apiError.message, { details: apiError.details });

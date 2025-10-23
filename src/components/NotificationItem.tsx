@@ -24,14 +24,14 @@ const renderNotificationMessage = (notif: ProcessedNotification) => {
     case "friend_request_sent":
       return (
         <span>
-          <span className="font-medium">{notif.sourceUsername}</span> sent you a
+          <span className="font-medium">{notif.sourceFullName}</span> sent you a
           friend request
         </span>
       );
     case "friend_request_accept":
       return (
         <span>
-          <span className="font-medium">{notif.sourceUsername}</span> accepted
+          <span className="font-medium">{notif.sourceFullName}</span> accepted
           your friend request
         </span>
       );
@@ -39,7 +39,7 @@ const renderNotificationMessage = (notif: ProcessedNotification) => {
       const totalProfileLikes = 1 + (notif.otherUsers?.length || 0);
       return (
         <span>
-          <span className="font-medium">{notif.sourceUsername}</span>
+          <span className="font-medium">{notif.sourceFullName}</span>
           {totalProfileLikes > 1 && ` and ${totalProfileLikes - 1} others`}{" "}
           liked your profile.
         </span>
@@ -48,7 +48,7 @@ const renderNotificationMessage = (notif: ProcessedNotification) => {
       const totalPostLikes = 1 + (notif.otherUsers?.length || 0);
       return (
         <span>
-          <span className="font-medium">{notif.sourceUsername}</span>
+          <span className="font-medium">{notif.sourceFullName}</span>
           {totalPostLikes > 1 && ` and ${totalPostLikes - 1} others`} liked your
           post.
         </span>
@@ -56,21 +56,21 @@ const renderNotificationMessage = (notif: ProcessedNotification) => {
     case "comment":
       return (
         <span>
-          <span className="font-medium">{notif.sourceUsername}</span> commented
+          <span className="font-medium">{notif.sourceFullName}</span> commented
           on your post.
         </span>
       );
     case "post_mention":
       return (
         <span>
-          <span className="font-medium">{notif.sourceUsername}</span> mentioned
+          <span className="font-medium">{notif.sourceFullName}</span> mentioned
           you in a post.
         </span>
       );
     case "comment_mention":
       return (
         <span>
-          <span className="font-medium">{notif.sourceUsername}</span> mentioned
+          <span className="font-medium">{notif.sourceFullName}</span> mentioned
           you in a comment.
         </span>
       );
@@ -78,7 +78,7 @@ const renderNotificationMessage = (notif: ProcessedNotification) => {
       const totalCommentLikes = 1 + (notif.otherUsers?.length || 0);
       return (
         <span>
-          <span className="font-medium">{notif.sourceUsername}</span>
+          <span className="font-medium">{notif.sourceFullName}</span>
           {totalCommentLikes > 1 && ` and ${totalCommentLikes - 1} others`}{" "}
           liked your comment.
         </span>
@@ -86,14 +86,14 @@ const renderNotificationMessage = (notif: ProcessedNotification) => {
     case "comment_reply":
       return (
         <span>
-          <span className="font-medium">{notif.sourceUsername}</span> replied to
+          <span className="font-medium">{notif.sourceFullName}</span> replied to
           your comment.
         </span>
       );
     case "post_share":
       return (
         <span>
-          <span className="font-medium">{notif.sourceUsername}</span> shared
+          <span className="font-medium">{notif.sourceFullName}</span> shared
           your post.
         </span>
       );
@@ -320,6 +320,7 @@ export default function NotificationItem({
           title={modalContent.title}
           users={modalContent.users.map((u) => ({
             username: u.sourceUsername,
+            fullName: u.sourceFullName
           }))}
           actionButtonText={
             modalContent.buttonText

@@ -1,6 +1,8 @@
+"use client"
 import SideBar from "@/components/layout/SideBar";
+import withAuth from "@/lib/auth/withAuth";
 
-export default function DashboardLayout({
+function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -16,3 +18,5 @@ export default function DashboardLayout({
     </main>
   );
 }
+
+export default withAuth(DashboardLayout);

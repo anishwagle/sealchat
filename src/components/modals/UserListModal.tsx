@@ -5,11 +5,13 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import { useModalScrollLock } from '@/hooks/useModalScrollLock';
+import { Profile } from '@/types/profile';
+import { Like } from '@/types/post';
 
 interface UserListModalProps {
   isOpen: boolean;
   onClose: () => void;
-  users: { username: string }[];
+  users: {username:string,fullName:string}[];
   title: string;
   emptyMessage?: string;
   actionButtonText?: string;
@@ -48,7 +50,7 @@ const UserListModalContent = ({ isOpen, onClose, users, title, emptyMessage = "N
                 </div>
                 <div>
                   <p className="font-semibold text-gray-800 group-hover:text-blue-600 transition-colors">
-                    {user.username}
+                    {user.fullName}
                   </p>
                   <p className="text-sm text-gray-500">@{user.username}</p>
                 </div>

@@ -4,10 +4,10 @@ import React, { useState } from "react";
 
 export default function ProfileLikeButton({
   profile,
-  fetchProfile,
+  onUpdate,
 }: {
   profile: Profile,
-  fetchProfile: () => Promise<void>
+  onUpdate: (newLikeStatus: boolean, newLikeCount: number) => void;
 }) {
   const [likeLoading, setLikeLoading] = useState(false);
 
@@ -34,7 +34,9 @@ export default function ProfileLikeButton({
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ userId2: profile.userId }),
           });
-          await fetchProfile();
+          const newLikeStatus = !isLiked;
+          const newLikeCount = newLikeStatus ? profile.profileLikeCount||0 + 1 : profile.profileLikeCount||-1 - 1;
+          onUpdate(newLikeStatus, newLikeCount);
         } finally {
           setLikeLoading(false);
         }

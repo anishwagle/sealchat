@@ -140,9 +140,11 @@ export default function PostComponent({ onPostDeleted, mentionTextAreaRef, ...po
                 href={`/profile/${post.username}`}
                 className="font-medium text-gray-700"
               >
-                {post.username}
+                {post.fullName}
               </Link>
               <p className="text-xs text-gray-400 flex items-center gap-1.5">
+                <span className="text-sm text-gray-500">@{post.username}</span>
+                <span className="text-gray-300">•</span>
                 <span
                   className={`${
                     post.type === "friend_post"

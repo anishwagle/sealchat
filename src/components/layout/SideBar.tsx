@@ -1,23 +1,16 @@
 "use client";
 
 import Link from "next/link";
+import SuggestedFriends from "./SuggestedFriends";
+import SuggestedProfiles from "./SuggestedProfiles";
+import ProfileQuickView from "./ProfileQuickView";
 
 export default function SideBar() {
   return (
     <aside className="lg:w-80 shrink-0">
       <div className="space-y-5">
         {/* Profile Quick View */}
-        <div className="bg-white rounded-lg p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-gradient-to-r from-blue-100 to-blue-200 flex items-center justify-center">
-              <span className="text-blue-600 font-medium">U</span>
-            </div>
-            <div>
-              <h3 className="font-medium">Username</h3>
-              <p className="text-sm text-gray-500">@username</p>
-            </div>
-          </div>
-        </div>
+       <ProfileQuickView />
 
         {/* Navigation */}
         <nav className="bg-white rounded-lg p-2">
@@ -27,51 +20,25 @@ export default function SideBar() {
             </svg>
             Home
           </Link>
-          <Link href="#" className="flex items-center gap-3 p-3 text-gray-700 hover:bg-gray-50 rounded-md">
+          <Link href="friends" className="flex items-center gap-3 p-3 text-gray-700 hover:bg-gray-50 rounded-md">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
             </svg>
             Friends
           </Link>
-          <Link href="#" className="flex items-center gap-3 p-3 text-gray-700 hover:bg-gray-50 rounded-md">
+          <Link href="archive" className="flex items-center gap-3 p-3 text-gray-700 hover:bg-gray-50 rounded-md">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
             </svg>
-            Messages
+            Archives
           </Link>
         </nav>
 
         {/* Friend Suggestions */}
-        <div className="bg-white rounded-lg p-4">
-          <h3 className="font-medium text-sm text-gray-700 mb-3">Suggested Friends</h3>
-          <div className="space-y-3">
-            {[1, 2].map((i) => (
-              <div key={i} className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-gray-100"></div>
-                  <span className="text-sm">User {i}</span>
-                </div>
-                <button className="text-xs text-blue-600 hover:text-blue-700">Follow</button>
-              </div>
-            ))}
-          </div>
-        </div>
+        <SuggestedFriends/>
 
-        {/* Quick Message */}
-        <div className="bg-white rounded-lg p-4">
-          <h3 className="font-medium text-sm text-gray-700 mb-3">Quick Message</h3>
-          <div className="space-y-2">
-            {[1, 2, 3].map((i) => (
-              <button key={i} className="flex items-center gap-2 w-full p-2 hover:bg-gray-50 rounded-md">
-                <div className="w-8 h-8 rounded-full bg-gray-100"></div>
-                <div className="flex-1 text-left">
-                  <p className="text-sm">Friend {i}</p>
-                  <p className="text-xs text-gray-500">Online</p>
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
+        {/* Profile Suggestions */}
+        <SuggestedProfiles />
       </div>
     </aside>
   );

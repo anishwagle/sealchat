@@ -46,5 +46,10 @@ export interface IPostService {
     direction?: "older" | "newer",
     limit?: number
   ): Promise<Post[]>;
+  getArchivedPost(
+    currentUserId: string,
+    cursorCreatedAt?: string,
+    limit?: number
+  ): Promise<Post[]>;
   deletePost(userId: string, postId: string): Promise<void>;
 }

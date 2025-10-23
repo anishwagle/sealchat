@@ -25,7 +25,7 @@ export class NotificationService implements INotificationService {
       );
       const notificationId = (result as any).insertId;
       const notificationResults = await executeQuery(
-        "SELECT n.*, u.username AS source_username FROM notifications n JOIN users u ON n.source_user_id = u.id WHERE n.id = ?",
+        "SELECT n.*, u.username AS source_username, u.full_name as source_full_name FROM notifications n JOIN users u ON n.source_user_id = u.id WHERE n.id = ?",
         [notificationId]
       );
       const notification = (notificationResults as any[])[0];
@@ -45,6 +45,7 @@ export class NotificationService implements INotificationService {
         type: notification.type,
         sourceUserId: notification.source_user_id,
         sourceUsername: notification.source_username,
+        sourceFullName: notification.source_full_name,
         postId: notification.post_id,
         commentId:notification.comment_id,
         isRead: notification.is_read,
@@ -65,8 +66,8 @@ export class NotificationService implements INotificationService {
     }
 
     try {
-      let query =  `SELECT n.*, u.username AS source_username,
-        c.parent_comment_id AS parent_comment_id
+      let query =  `SELECT n.*, u.username AS source_username,u.full_name AS source_full_name,
+        c.parent_comment_id
          FROM notifications n
          JOIN users u ON n.source_user_id = u.id
          LEFT JOIN comments c ON n.comment_id = c.id
@@ -97,6 +98,7 @@ export class NotificationService implements INotificationService {
         type: notification.type,
         sourceUserId: notification.source_user_id,
         sourceUsername: notification.source_username,
+        sourceFullName: notification.source_full_name,
         postId: notification.post_id,
         commentId: notification.comment_id,
         isRead: notification.is_read,
@@ -154,7 +156,7 @@ async getNotificationByUserIdAndType(
 
     try {
 
-      let query = `SELECT n.*, u.username AS source_username
+      let query = `SELECT n.*, u.username AS source_username, u.full_name AS source_full_name
          FROM notifications n
          JOIN users u ON n.source_user_id = u.id
          WHERE n.user_id=? AND type=? AND n.source_user_id = ? `;
@@ -177,6 +179,7 @@ async getNotificationByUserIdAndType(
         type: notification.type,
         sourceUserId: notification.source_user_id,
         sourceUsername: notification.source_username,
+        sourceFullName: notification.source_full_name,
         postId: notification.post_id,
         commentId:notification.comment_id,
         isRead: notification.is_read,

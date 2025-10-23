@@ -36,7 +36,7 @@ export async function POST(request: Request) {
         // Continue with logout even if token is invalid
       }
     }
-
+    
     Logger.log(COMPONENT, FUNCTION, 'info', 'Logout successful');
 
     return NextResponse.json(

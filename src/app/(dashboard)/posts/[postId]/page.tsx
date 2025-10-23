@@ -45,6 +45,7 @@ export default function PostPage() {
     } catch (err: any) {
       setError("Failed to load post: " + err.message);
     } finally {
+      await resetAndFetchComments();
       setLoading(false);
     }
   }, [postId]);
@@ -67,6 +68,9 @@ export default function PostPage() {
       const newComments = results.comments || [];
 
       setComments((prevComments) => [...prevComments, ...newComments]);
+      if (newComments.length > 0) {
+        setLastCommentCreatedAt(newComments[newComments.length - 1].createdAt);
+      }
       if (newComments.length < COMMENT_PAGE_SIZE) {
         setHasMoreComments(false);
       }
@@ -148,112 +152,144 @@ export default function PostPage() {
     }
   }, [postId, fetchPosts]);
 
-  useEffect(() => {
-    if (post) {
-      resetAndFetchComments();
-    }
-  }, [post]);
-
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="px-4 sm:px-6 lg:px-8 py-6">
-        <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl h-[85vh] flex flex-col transform transition-all duration-300 ease-in-out scale-95 opacity-0 animate-fade-in-scale">
-          {/* Main Content */}
-          <div className="lg:flex-1 space-y-5">
+    <div className="min-h-screen bg-gray-50 py-4">
+      <div className="px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto">
+        <div className="bg-white rounded-xl shadow-sm overflow-hidden flex flex-col h-[85vh]">
+          {/* Post Content Section */}
+          <div className="flex-none">
             {loading ? (
-              <div className="text-center text-gray-500 py-10">
-                Loading post...
+              <div className="p-8 flex justify-center items-center">
+                <Loading message="Loading post..." />
               </div>
             ) : error ? (
-              <div className="text-center text-red-500 bg-white p-10 rounded-lg">
-                {error}
+              <div className="p-8 text-center">
+                <div className="bg-red-50 rounded-lg p-4">
+                  <p className="text-red-600">{error}</p>
+                </div>
               </div>
             ) : !post ? (
-              <div className="text-center text-gray-500 bg-white p-10 rounded-lg">
-                No post found.
+              <div className="p-8 text-center">
+                <div className="bg-gray-50 rounded-lg p-6">
+                  <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <h3 className="mt-4 text-lg font-medium text-gray-900">Post Not Available</h3>
+                  <p className="mt-2 text-sm text-gray-500">
+                    This post isn&apos;t available right now. It might have been deleted, expired, or you don&apos;t have access to it.
+                  </p>
+                </div>
               </div>
             ) : (
-              <PostComponent key={post.id} {...post} mentionTextAreaRef={mentionTextareaRef} />
-            )}
-          </div>
-          
-            {post?<>
-          <div
-            id="commentScrollableDiv"
-            ref={commentsContainerRef}
-            className="flex-2 overflow-y-auto p-6"
-          >
-            {isLoadingComments ? (
-              <Loading message="Loading comments..." fullScreen={false} />
-            ) : comments.length > 0 ? (
-              <InfiniteScroll
-                dataLength={comments.length}
-                next={fetchComments}
-                hasMore={hasMoreComments}
-                loader={
-                  <Loading
-                    message="Loading more comments..."
-                    fullScreen={false}
-                  />
-                }
-                scrollableTarget="commentScrollableDiv"
-                className="space-y-4"
-              >
-                {comments.map((comment) => (
-                  <CommentItem
-                    key={`${comment.id}-${comment.replies?.length || 0}`}
-                    comment={comment}
-                    onDelete={handleCommentDeleted}
-                    post={ post}
-                    onReply={handleOnReply}
-                    parentCommentIdParam={parentCommentIdParam || null}
-                  />
-                ))}
-              </InfiniteScroll>
-            ) : (
-              <div className="text-center py-16">
-                <p className="text-2xl mb-2">🤔</p>
-                <h3 className="font-semibold text-gray-800">No comments yet</h3>
-                <p className="text-sm text-gray-500">
-                  Be the first to share your thoughts!
-                </p>
+              <div className="border-b border-gray-100">
+                <PostComponent key={post.id} {...post} mentionTextAreaRef={mentionTextareaRef} />
               </div>
             )}
           </div>
 
-          <div className="p-6 bg-gray-50 border-t border-gray-200">
-            <form onSubmit={handleSubmit} className="flex gap-3 items-center">
-              <div className="w-9 h-9 rounded-full bg-gray-200 flex-shrink-0"></div>
-              <MentionTextarea
-                ref={mentionTextareaRef}
-                value={newComment}
-                onValueChange={setNewComment}
-                placeholder="Write a comment... (use @ to mention)"
-                disabled={isCommenting}
-                className="w-full bg-white border border-gray-200 rounded-full px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
-                rows={1}
-                onInput={(e) => {
-                  const target = e.target as HTMLTextAreaElement;
-                  target.style.height = "auto";
-                  target.style.height = `${target.scrollHeight}px`;
-                }}
-              />
-
-              <button
-                type="submit"
-                disabled={isCommenting || !newComment.trim()}
-                className={`flex-shrink-0 text-white px-5 py-2.5 rounded-full transition-colors font-semibold ${
-                  isCommenting || !newComment.trim()
-                    ? "bg-blue-300 cursor-not-allowed"
-                    : "bg-blue-500 hover:bg-blue-600"
-                }`}
+          {/* Comments Section */}
+          {post && (
+            <>
+              <div
+                id="commentScrollableDiv"
+                ref={commentsContainerRef}
+                className="flex-1 overflow-y-auto px-4 sm:px-6"
               >
-                {isCommenting ? "..." : "Send"}
-              </button>
-            </form>
-          </div>
-          </>
-:null}
+                {isLoadingComments ? (
+                  <div className="py-8 flex justify-center">
+                    <Loading message="Loading comments..." fullScreen={false} />
+                  </div>
+                ) : comments.length > 0 ? (
+                  <InfiniteScroll
+                    dataLength={comments.length}
+                    next={fetchComments}
+                    hasMore={hasMoreComments}
+                    loader={
+                      <div className="py-4 flex justify-center">
+                        <Loading message="Loading more comments..." fullScreen={false} />
+                      </div>
+                    }
+                    scrollableTarget="commentScrollableDiv"
+                    className="space-y-4 py-4"
+                  >
+                    {comments.map((comment) => (
+                      <div
+                        id={`comment-${comment.id}`}
+                        key={`${comment.id}-${comment.replies?.length || 0}`}
+                        className="transition-all duration-200 hover:bg-gray-50 rounded-lg"
+                      >
+                        <CommentItem
+                          comment={comment}
+                          onDelete={handleCommentDeleted}
+                          post={post}
+                          onReply={handleOnReply}
+                          parentCommentIdParam={
+                            parentCommentIdParam == comment.id
+                              ? parentCommentIdParam
+                              : null
+                          }
+                        />
+                      </div>
+                    ))}
+                  </InfiniteScroll>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-16">
+                    <div className="bg-gray-100 rounded-full p-4 mb-4">
+                      <svg className="h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                      </svg>
+                    </div>
+                    <h3 className="text-lg font-medium text-gray-900">No comments yet</h3>
+                    <p className="mt-1 text-sm text-gray-500">Be the first to share your thoughts!</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Comment Input Section */}
+              <div className="flex-none border-t border-gray-100 bg-white p-4">
+                <form onSubmit={handleSubmit} className="flex gap-3 items-end max-w-3xl mx-auto">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-gray-200 to-gray-300 flex-shrink-0" />
+                  <div className="flex-1">
+                    <MentionTextarea
+                      ref={mentionTextareaRef}
+                      value={newComment}
+                      onValueChange={setNewComment}
+                      placeholder="Write a comment... (use @ to mention)"
+                      disabled={isCommenting}
+                      className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none text-sm"
+                      rows={1}
+                      onInput={(e) => {
+                        const target = e.target as HTMLTextAreaElement;
+                        target.style.height = "auto";
+                        target.style.height = `${target.scrollHeight}px`;
+                      }}
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={isCommenting || !newComment.trim()}
+                    className={`flex-none inline-flex items-center px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                      isCommenting || !newComment.trim()
+                        ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                        : "bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    }`}
+                  >
+                    {isCommenting ? (
+                      <span className="flex items-center">
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        Sending
+                      </span>
+                    ) : (
+                      "Send"
+                    )}
+                  </button>
+                </form>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

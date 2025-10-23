@@ -171,9 +171,10 @@ useEffect(() => {
                 href={`/profile/${comment.username}`}
                 className="font-medium text-gray-700 text-sm"
               >
-                {comment.username}
+                {comment.fullName}
               </Link>
               <p className="text-xs text-gray-400 flex items-center gap-1">
+                <span className="text-sm text-gray-500">@{comment.username}</span>
                 <span className="text-gray-300">•</span>
                 <span>{getTimeSince(new Date(comment.createdAt))}</span>
               </p>

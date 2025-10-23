@@ -15,6 +15,8 @@ export interface IFriendService {
   ): Promise<FriendshipStatus>;
   getCurrentFriend(userId: string): Promise<User[]>;
   getCurrentProfileLikeList(userId: string): Promise<User[]>;
+  getPendingRequestList(userId: string): Promise<User[]>;
+  getSentRequestList(userId: string): Promise<User[]>;
   checkFriendship(userId1: string, userId2: string): Promise<boolean>;
   getProfileLikeStatus(userId1: string, userId2: string): Promise<boolean>;
 }

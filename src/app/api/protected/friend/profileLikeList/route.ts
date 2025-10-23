@@ -1,6 +1,7 @@
 import { ApiError } from "@/lib/errors";
 import { Logger } from "@/lib/logger";
 import { friendService } from "@/services/serviceProvider";
+import { Profile } from "@/types/profile";
 import { NextResponse } from "next/server";
 
 const COMPONENT = "api/protected/friend/profileLikeList";
@@ -24,7 +25,24 @@ export async function GET(request: Request) {
         { status: 404 }
       );
     }
-    return NextResponse.json({ users: users }, { status: 200 });
+    const response: Profile[] = await Promise.all(
+              users.map(async (user) => ({
+                userId: user.id,
+                username: user.username,
+                fullName: user.fullName,
+                joinedAt: `${user.createdAt?.toDateString()}`,
+                friendshipStatus: await friendService.getFriendShipStatus(
+                  currentUserId,
+                  user.id
+                ),
+                profileLikeCount: await friendService.getProfileLikeCount(user.id),
+                profileLikeStatus: await friendService.getProfileLikeStatus(
+                  currentUserId,
+                  user.id
+                ),
+              }))
+            );
+            return NextResponse.json({follows:response}, { status: 200 });
   } catch (error: any) {
     const apiError = new ApiError(
       "Failed to Fetch profile Like list",
