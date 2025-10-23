@@ -10,7 +10,7 @@ export default function SuggestedFriends() {
   const fetchRecommendations = async () => {
     setIsLoading(true);
     try {
-      let apiUrl = `/api/protected/friend/recommend`;
+      const apiUrl = `/api/protected/friend/recommend`;
 
       const data = await fetchWithAuth(apiUrl, { method: "GET" });
       const results = await data.json();

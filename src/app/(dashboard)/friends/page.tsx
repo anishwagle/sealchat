@@ -12,6 +12,7 @@ export default function FriendsPage() {
   const [activeTab, setActiveTab] = useState("received-requests");
   const [friends, setFriends] = useState<Profile[]>([]);
   const [sentRequests, setSentRequests] = useState<Profile[]>([]);
+  const [pendingRequests, setPendingRequests] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const handleFriendshipChange = (
@@ -52,17 +53,17 @@ export default function FriendsPage() {
           setFriends(data.friends);
         } else if (activeTab === "sent-requests") {
           const response = await fetchWithAuth(
-            "/api/protected/friend/pendingRequest"
+            "/api/protected/friend/getSentRequest"
           );
           const data = await response.json();
           setSentRequests(data.requests);
         } else {
           // For received requests, assuming an endpoint like this exists
           const response = await fetchWithAuth(
-            "/api/protected/friend"
+            "/api/protected/friend/getPendingRequest"
           );
           const data = await response.json();
-          setFriends(data.friends); // reusing friends state for simplicity
+          setFriends(data.requests); // reusing friends state for simplicity
         }
       } catch (err: any) {
         setError(`Failed to load data: ${err.message}`);
@@ -188,7 +189,7 @@ export default function FriendsPage() {
             No friend requests
           </h3>
           <p className="text-gray-500 max-w-sm mx-auto">
-            You don't have any pending friend requests at the moment
+            You don&apos;t have any pending friend requests at the moment
           </p>
         </div>
       );
@@ -248,7 +249,7 @@ export default function FriendsPage() {
             No pending requests
           </h3>
           <p className="text-gray-500 max-w-sm mx-auto">
-            You haven't sent any friend requests yet
+            You haven&apos;t sent any friend requests yet
           </p>
         </div>
       );

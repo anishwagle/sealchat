@@ -148,7 +148,7 @@ export default function PostList({
               endMessage={
                 <div className="text-center py-6 text-gray-500">
                   <p className="text-sm">
-                    You've reached the end! No more archived posts to load.
+                    You&apos;ve reached the end! No more archived posts to load.
                   </p>
                 </div>
               }
@@ -176,7 +176,7 @@ export default function PostList({
                 No Archived Posts Yet
               </h2>
               <p className="text-gray-500 max-w-sm">
-                When you archive posts, they'll appear here for 30 days before
+                When you archive posts, they&apos;ll appear here for 30 days before
                 being permanently deleted
               </p>
             </div>

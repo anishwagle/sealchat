@@ -176,7 +176,7 @@ export default function PostPage() {
                   </svg>
                   <h3 className="mt-4 text-lg font-medium text-gray-900">Post Not Available</h3>
                   <p className="mt-2 text-sm text-gray-500">
-                    This post isn't available right now. It might have been deleted, expired, or you don't have access to it.
+                    This post isn&apos;t available right now. It might have been deleted, expired, or you don&apos;t have access to it.
                   </p>
                 </div>
               </div>

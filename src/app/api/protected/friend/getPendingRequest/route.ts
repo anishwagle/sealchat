@@ -5,7 +5,7 @@ import { friendService } from '@/services/serviceProvider';
 import { ApiError } from '@/lib/errors';
 import { Profile } from '@/types/profile';
 
-const COMPONENT = 'api/protected/friend/pendingRequest';
+const COMPONENT = 'api/protected/friend/getPendingRequest';
 const FUNCTION = 'GET';
 
 export async function GET(request: Request) {

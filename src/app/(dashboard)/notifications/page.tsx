@@ -125,7 +125,7 @@ export default function NotificationPage() {
               <path d="M12 2a7 7 0 00-7 7v3l-1 2v1h16v-1l-1-2V9a7 7 0 00-7-7z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
               <path d="M13.73 21a2 2 0 01-3.46 0" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-            <p className="text-gray-700 font-medium">You're all caught up</p>
+            <p className="text-gray-700 font-medium">You&apos;re all caught up</p>
             <p className="text-sm text-gray-500 mt-1">When new activity happens, you&apos;ll see it here.</p>
           </div>
         )}

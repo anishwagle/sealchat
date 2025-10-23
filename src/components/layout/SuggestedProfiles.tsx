@@ -12,7 +12,7 @@ export default function SuggestedProfiles() {
   const fetchRecommendations = async () => {
     setIsLoading(true);
     try {
-      let apiUrl = `/api/protected/friend/recommendProfile`;
+      const apiUrl = `/api/protected/friend/recommendProfile`;
 
       const data = await fetchWithAuth(apiUrl, { method: "GET" });
       const results = await data.json();

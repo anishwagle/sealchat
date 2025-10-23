@@ -1,5 +1,5 @@
 'use client';
-import { useState, FormEvent } from "react";
+import { useState, FormEvent, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import LocationSearch from "@/components/LocationSearch";
@@ -51,9 +51,16 @@ export default function Signup() {
     const validatePasswordUppercase = (password: string) => /[A-Z]/.test(password);
     const validatePasswordNumber = (password: string) => /\d/.test(password);
     const validatePasswordSpecial = (password: string) => /[-#@$!%*?&:;<>{}[\]()]/.test(password);
-    const searchParams = useSearchParams();
-    const initialStep =parseInt(`${searchParams.get('initialStep')}`)||1;
-    const [step, setStep] = useState(initialStep);
+  const [step, setStep] = useState(1);
+    useEffect(() => {
+        debugger;
+      if (typeof window !== "undefined") {
+        const params = new URLSearchParams(window.location.search);
+        const stepParam = parseInt(params.get("initialStep") || "1", 10);
+        setStep(stepParam);
+      }
+    }, []);
+    
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [formData, setFormData] = useState<FormData>({

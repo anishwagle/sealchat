@@ -35,7 +35,7 @@ export default function ProfileLikeButton({
             body: JSON.stringify({ userId2: profile.userId }),
           });
           const newLikeStatus = !isLiked;
-          const newLikeCount = newLikeStatus ? profile.profileLikeCount + 1 : profile.profileLikeCount - 1;
+          const newLikeCount = newLikeStatus ? profile.profileLikeCount||0 + 1 : profile.profileLikeCount||-1 - 1;
           onUpdate(newLikeStatus, newLikeCount);
         } finally {
           setLikeLoading(false);
