@@ -19,6 +19,8 @@ const geistMono = Geist_Mono({
 });
 
 
+import { Toaster } from "@/components/ui/sonner";
+
 export default async function RootLayout({
   children,
 }: Readonly<{
@@ -36,10 +38,11 @@ export default async function RootLayout({
         `}</style>
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-50`}>
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background`}>
           <Progressbar />
         <ConditionalNavbar />
         {children}
+        <Toaster />
       </body>
     </html>
   );

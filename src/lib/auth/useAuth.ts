@@ -10,7 +10,7 @@ interface AuthState {
   error: string;
 }
 
-const publicPages = ['/login', '/signup'];
+const publicPages = ['/login', '/signup', '/', '/privacy'];
 
 export const useAuth = () => {
   const [authState, setAuthState] = useState<AuthState>({
