@@ -2,15 +2,15 @@ import { NextResponse, NextRequest } from "next/server";
 import jwt from "jsonwebtoken";
 import { Logger } from "./lib/logger";
 
-const COMPONENT = "AuthMiddleware";
-const FUNCTION = "middleware";
+const COMPONENT = "AuthProxy";
+const FUNCTION = "proxy";
 const JWT_SECRET = process.env.JWT_SECRET;
 export const runtime = 'nodejs';
 
 // Pre-launch: only these pages are publicly accessible
 const PUBLIC_PAGES = ['/', '/privacy'];
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   // --- Pre-launch page guard ---
