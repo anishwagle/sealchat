@@ -21,6 +21,13 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // --- Public API exemption ---
+  // Allow anyone to submit waitlist requests or hit auth endpoints (login/signup)
+  const PUBLIC_API_PREFIXES = ['/api/waitlist', '/api/auth'];
+  if (PUBLIC_API_PREFIXES.some(prefix => pathname.startsWith(prefix))) {
+    return NextResponse.next();
+  }
+
   // --- API auth (existing logic for /api/protected/*) ---
   Logger.log(COMPONENT, FUNCTION, 'info', 'Checking authentication', { path: pathname });
 
