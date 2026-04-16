@@ -14,15 +14,28 @@ export function NewsletterForm() {
     e.preventDefault();
     setLoading(true);
 
-    // Simulate API call for now
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    try {
+      const res = await fetch("/api/waitlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
 
-    toast.success("You're on the list.", {
-      description: "We'll reach out when your spot is ready.",
-    });
+      const data = await res.json();
 
-    setEmail("");
-    setLoading(false);
+      if (res.ok) {
+        toast.success("You're on the list.", {
+          description: "We'll reach out when your spot is ready.",
+        });
+        setEmail("");
+      } else {
+        toast.error(data.message || "Something went wrong.");
+      }
+    } catch {
+      toast.error("Could not connect. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

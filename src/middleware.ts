@@ -6,8 +6,25 @@ const COMPONENT = "AuthMiddleware";
 const FUNCTION = "middleware";
 const JWT_SECRET = process.env.JWT_SECRET;
 export const runtime = 'nodejs';
+
+// Pre-launch: only these pages are publicly accessible
+const PUBLIC_PAGES = ['/', '/privacy'];
+
 export async function middleware(request: NextRequest) {
-  Logger.log(COMPONENT, FUNCTION, 'info', 'Checking authentication', { path: request.nextUrl.pathname });
+  const pathname = request.nextUrl.pathname;
+
+  // --- Pre-launch page guard ---
+  // Redirect any non-public page route back to the landing page.
+  // API routes and static assets are excluded via the matcher config.
+  if (!pathname.startsWith('/api/')) {
+    if (!PUBLIC_PAGES.includes(pathname)) {
+      return NextResponse.redirect(new URL('/', request.url));
+    }
+    return NextResponse.next();
+  }
+
+  // --- API auth (existing logic for /api/protected/*) ---
+  Logger.log(COMPONENT, FUNCTION, 'info', 'Checking authentication', { path: pathname });
 
   if (!JWT_SECRET) {
     Logger.log(COMPONENT, FUNCTION, 'error', 'JWT_SECRET not set in environment');
@@ -52,5 +69,8 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/api/protected/:path*'],
+  matcher: [
+    // Match all page routes except static assets and Next.js internals
+    '/((?!_next/static|_next/image|favicon.ico|images/).*)',
+  ],
 };
