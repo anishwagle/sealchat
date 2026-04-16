@@ -5,6 +5,7 @@ import Progressbar from "@/components/Progressbar";
 import ConditionalNavbar from "@/components/ConditionalNavbar";
 import { Suspense } from "react";
 import { cn } from "@/lib/utils";
+import { Analytics } from "@vercel/analytics/next";
 
 const jetbrainsMono = JetBrains_Mono({subsets:['latin'],variable:'--font-mono'});
 
@@ -43,6 +44,7 @@ export default async function RootLayout({
         <ConditionalNavbar />
         {children}
         <Toaster />
+        <Analytics />
       </body>
     </html>
   );
