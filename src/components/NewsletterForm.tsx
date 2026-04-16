@@ -57,7 +57,7 @@ export function NewsletterForm() {
         </Button>
       </form>
       <p className="text-xs text-muted-foreground">
-        We'll only use your email to send an invite. No spam, no selling.
+        We&apos;ll only use your email to send an invite. No spam, no selling.
         Read our{" "}
         <Link href="/privacy" className="underline underline-offset-2">
           Privacy Policy

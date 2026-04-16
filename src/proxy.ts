@@ -5,8 +5,6 @@ import { Logger } from "./lib/logger";
 const COMPONENT = "AuthProxy";
 const FUNCTION = "proxy";
 const JWT_SECRET = process.env.JWT_SECRET;
-export const runtime = 'nodejs';
-
 // Pre-launch: only these pages are publicly accessible
 const PUBLIC_PAGES = ['/', '/privacy'];
 

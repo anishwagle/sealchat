@@ -23,7 +23,7 @@ export default function LandingPage() {
         </h1>
         <p className="mt-6 max-w-xl text-center text-lg leading-relaxed text-muted-foreground">
           Social media was supposed to bring us closer. Somewhere along the way,
-          it stopped being about people. We're building a place that puts that right.
+          it stopped being about people. We&apos;re building a place that puts that right.
         </p>
         <div className="mt-10">
           <NewsletterForm />
@@ -44,7 +44,7 @@ export default function LandingPage() {
             the highest bidder.
           </p>
           <p className="text-base leading-relaxed text-muted-foreground">
-            You didn't sign up for that. Nobody did. The promise was simple:
+            You didn&apos;t sign up for that. Nobody did. The promise was simple:
             stay in touch with the people you care about. That promise got buried
             under ads, bots, and engagement tricks.
           </p>
@@ -84,7 +84,7 @@ export default function LandingPage() {
                   companies like Square and Coursera, for KYC verification. Every
                   user proves they are who they say they are before they can send
                   a single message. Businesses on SealChat are officially registered
-                  entities, not faceless accounts. Scammers don't get through the door.
+                  entities, not faceless accounts. Scammers don&apos;t get through the door.
                 </p>
               </div>
             </div>
@@ -103,7 +103,7 @@ export default function LandingPage() {
                   We will never sell your data to advertisers, data brokers, or
                   anyone else. Period. You own your information. You control who
                   sees it. Identity verification is handled entirely by Persona.
-                  We don't store or access your government ID, selfie, or biometric
+                  We don&apos;t store or access your government ID, selfie, or biometric
                   data. It never touches our servers.
                 </p>
               </div>
@@ -121,7 +121,7 @@ export default function LandingPage() {
                 </h3>
                 <p className="text-base leading-relaxed text-muted-foreground">
                   Your feed shows posts from people you follow, in the order
-                  they were shared. That's it. No engagement tricks, no
+                  they were shared. That&apos;s it. No engagement tricks, no
                   recommended rage-bait, no endless scroll designed to steal
                   your afternoon. You open the app, see what your people
                   are up to, and get on with your day.
@@ -199,7 +199,7 @@ export default function LandingPage() {
       <section className="px-6 py-24">
         <div className="max-w-4xl mx-auto">
           <h2 className="text-3xl font-bold tracking-tight text-foreground mb-4">
-            A look at what we're building.
+            A look at what we&apos;re building.
           </h2>
           <p className="text-base text-muted-foreground mb-12">
             These are screenshots from our early development build. The design
@@ -261,7 +261,7 @@ export default function LandingPage() {
             wondering if any of them are bots.
           </p>
           <p className="text-base leading-relaxed text-muted-foreground">
-            That's the whole idea. A clean, quiet space for real people. Not a
+            That&apos;s the whole idea. A clean, quiet space for real people. Not a
             megaphone for influencers. Not a surveillance tool for corporations.
             Just a place where you can be yourself with the people you trust.
           </p>
@@ -272,7 +272,7 @@ export default function LandingPage() {
       <section className="px-6 py-24">
         <div className="max-w-2xl mx-auto">
           <h2 className="text-3xl font-bold tracking-tight text-foreground mb-12">
-            Who's building this.
+            Who&apos;s building this.
           </h2>
           <div className="flex flex-col sm:flex-row gap-8 items-start">
             <div className="flex-shrink-0">
@@ -290,7 +290,7 @@ export default function LandingPage() {
                 <p className="text-sm text-muted-foreground">Founder and CEO</p>
               </div>
               <p className="text-base leading-relaxed text-muted-foreground">
-                I'm a computer engineer who spent six years in the corporate
+                I&apos;m a computer engineer who spent six years in the corporate
                 world before returning to my hometown in Nepal. I now split
                 my time between software engineering and running an automated
                 farm called{" "}
@@ -377,7 +377,7 @@ export default function LandingPage() {
                 >
                   privacy policy
                 </Link>
-                . We made this decision deliberately: we don't want the
+                . We made this decision deliberately: we don&apos;t want the
                 liability of holding your most sensitive documents.
               </p>
             </div>
@@ -412,8 +412,8 @@ export default function LandingPage() {
                 When does the alpha launch?
               </h3>
               <p className="text-base leading-relaxed text-muted-foreground">
-                We don't have an exact date yet. We're focused on getting the
-                core experience right before opening the doors. Once we're
+                We don&apos;t have an exact date yet. We&apos;re focused on getting the
+                core experience right before opening the doors. Once we&apos;re
                 ready, everyone on the waitlist will receive a personal invite
                 link via email.
               </p>
@@ -427,12 +427,12 @@ export default function LandingPage() {
       <section className="px-6 py-24">
         <div className="max-w-xl mx-auto flex flex-col items-center text-center gap-8">
           <h2 className="text-3xl font-bold tracking-tight text-foreground">
-            We're building this carefully.
+            We&apos;re building this carefully.
           </h2>
           <p className="text-base leading-relaxed text-muted-foreground max-w-md">
-            SealChat is in early development. We're inviting people in small
+            SealChat is in early development. We&apos;re inviting people in small
             batches to make sure we get the foundation right. Drop your email
-            below if you'd like to be part of the alpha.
+            below if you&apos;d like to be part of the alpha.
           </p>
           <NewsletterForm />
         </div>

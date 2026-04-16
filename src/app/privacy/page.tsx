@@ -25,7 +25,7 @@ export default function PrivacyPage() {
           <h2 className="text-2xl font-semibold text-foreground">The short version</h2>
           <p className="text-base leading-relaxed text-muted-foreground">
             SealChat is built on a simple idea: your data belongs to you. We
-            don't sell it. We don't share it with advertisers. We don't use it
+            don&apos;t sell it. We don&apos;t share it with advertisers. We don&apos;t use it
             to train models or build profiles for third parties. Our revenue
             comes from your subscription fee, not your personal information.
           </p>
@@ -47,7 +47,7 @@ export default function PrivacyPage() {
         </section>
 
         <section className="space-y-4">
-          <h2 className="text-2xl font-semibold text-foreground">What we don't collect</h2>
+          <h2 className="text-2xl font-semibold text-foreground">What we don&apos;t collect</h2>
           <p className="text-base leading-relaxed text-muted-foreground">
             We do not collect or store any data related to your identity
             verification. That process is handled entirely by{" "}
@@ -70,7 +70,7 @@ export default function PrivacyPage() {
             >
               privacy policy
             </Link>
-            . This information never touches SealChat's servers. We made this
+            . This information never touches SealChat&apos;s servers. We made this
             choice intentionally to minimize risk and protect your most
             sensitive documents.
           </p>
