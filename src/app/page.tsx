@@ -28,6 +28,12 @@ export default function LandingPage() {
         <div className="mt-10">
           <NewsletterForm />
         </div>
+        <p className="mt-6 text-sm text-muted-foreground">
+          Already invited?{" "}
+          <Link href="/login" className="underline underline-offset-2">
+            Sign in
+          </Link>
+        </p>
       </section>
 
       {/* ── The Problem ── */}

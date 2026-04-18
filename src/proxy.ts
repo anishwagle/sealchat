@@ -6,7 +6,10 @@ const COMPONENT = "AuthProxy";
 const FUNCTION = "proxy";
 const JWT_SECRET = process.env.JWT_SECRET;
 // Pre-launch: only these pages are publicly accessible
-const PUBLIC_PAGES = ['/', '/privacy'];
+const PUBLIC_PAGES = ['/', '/privacy', '/login', '/signup'];
+
+// Pages that start with these prefixes are also public
+const PUBLIC_PAGE_PREFIXES = ['/auth/'];
 
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
@@ -15,7 +18,9 @@ export async function proxy(request: NextRequest) {
   // Redirect any non-public page route back to the landing page.
   // API routes and static assets are excluded via the matcher config.
   if (!pathname.startsWith('/api/')) {
-    if (!PUBLIC_PAGES.includes(pathname)) {
+    const isPublicPage = PUBLIC_PAGES.includes(pathname);
+    const isPublicPrefix = PUBLIC_PAGE_PREFIXES.some(prefix => pathname.startsWith(prefix));
+    if (!isPublicPage && !isPublicPrefix) {
       return NextResponse.redirect(new URL('/', request.url));
     }
     return NextResponse.next();

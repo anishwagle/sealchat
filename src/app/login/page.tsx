@@ -1,126 +1,197 @@
 "use client";
-import { useState, FormEvent } from "react";
-import { useRouter } from "next/navigation";
-import { Logger } from "@/lib/logger";
+
+import { useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { supabase } from "@/lib/supabaseClient";
 
-export default function Signup() {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+type AuthState = "idle" | "loading" | "sent" | "error" | "verifying";
+
+export default function LoginPage() {
+  const [email, setEmail] = useState("");
+  const [otp, setOtp] = useState("");
+  const [authState, setAuthState] = useState<AuthState>("idle");
+  const [errorMessage, setErrorMessage] = useState("");
+  const searchParams = useSearchParams();
   const router = useRouter();
+  const callbackError = searchParams.get("error");
 
-  const handleSubmit = async (e: FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
-    setIsLoading(true);
+    setAuthState("loading");
+    setErrorMessage("");
+
     try {
-      const response = await fetch("/api/auth/login", {
+      const res = await fetch("/api/auth/magic-link", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ email: email.trim().toLowerCase() }),
       });
 
-      const data = await response.json();
+      const data = await res.json();
 
-      if (response.ok) {
-        router.push("/");
+      if (res.ok) {
+        setAuthState("sent");
+      } else if (data.error === "not_invited") {
+        setAuthState("error");
+        setErrorMessage(
+          "You are not invited yet or this account does not exist. Join the waitlist on the homepage to request access."
+        );
       } else {
-        setError(data.message || "Login failed");
+        setAuthState("error");
+        setErrorMessage(data.error || "Something went wrong. Try again.");
       }
-    } catch (err) {
-      setError("Something Went Wrong");
-    } finally {
-      setIsLoading(false);
+    } catch {
+      setAuthState("error");
+      setErrorMessage("Could not connect. Please try again.");
+    }
+  };
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthState("verifying");
+    setErrorMessage("");
+
+    const { error } = await supabase.auth.verifyOtp({
+      email: email.trim().toLowerCase(),
+      token: otp.trim(),
+      type: "email",
+    });
+
+    if (error) {
+      setErrorMessage(error.message || "Invalid or expired code.");
+      setAuthState("sent"); // Reset to sent state to allow re-entry
+    } else {
+      router.push("/");
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-      <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-md space-y-6">
+    <main className="min-h-screen flex flex-col items-center justify-center px-6">
+      <div className="w-full max-w-sm space-y-8">
         <div className="text-center">
-          <h2 className="text-3xl font-extrabold text-gray-900 mb-2">Log In</h2>
-          <p className="text-gray-500">Join our community today</p>
+          <h1 className="text-4xl font-extrabold tracking-tight text-foreground font-mono">
+            SealChat
+          </h1>
+          <p className="mt-3 text-sm text-muted-foreground">
+            Enter your email to sign in. You need an invite to continue.
+          </p>
         </div>
-        {error && (
-          <div className="bg-red-50 text-red-500 p-3 rounded-md text-sm">
-            {error}
-          </div>
-        )}
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700 block">
-              Username
-            </label>
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 outline-none"
-              required
-              disabled={isLoading}
-              placeholder="Enter your username"
-            />
-          </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700 block">
-              Password
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 outline-none"
-              required
-              disabled={isLoading}
-              placeholder="Create a password"
-            />
-          </div>
-          <button
-            type="submit"
-            className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white py-3 rounded-lg font-semibold shadow-md hover:from-blue-600 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transform transition-all duration-200 disabled:opacity-50"
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <span className="flex items-center justify-center">
-                <svg
-                  className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
+        {callbackError === "invalid_link" && authState === "idle" && (
+          <p className="text-sm text-destructive">
+            That link was invalid or expired. Request a new one below.
+          </p>
+        )}
+
+        {(authState === "sent" || authState === "verifying") ? (
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <p className="text-sm text-foreground">
+                Check your inbox. We sent a link and code to{" "}
+                <span className="font-medium">{email}</span>.
+              </p>
+              <p className="text-sm text-muted-foreground">
+                It may take a minute to arrive. Check your spam folder if you
+                don&apos;t see it.
+              </p>
+            </div>
+
+            <form onSubmit={handleVerifyOtp} className="space-y-4">
+              <div className="space-y-2">
+                <label
+                  htmlFor="auth-otp"
+                  className="text-sm font-medium text-foreground block"
                 >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  ></circle>
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  ></path>
-                </svg>
-                Processing...
-              </span>
-            ) : (
-              "LogIn"
-            )}
-          </button>
-          <div className="text-center">
-            <Link
-              href="/signup"
-              className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-            >
-              Create New Account
-            </Link>
+                  8-Digit Code
+                </label>
+                <Input
+                  id="auth-otp"
+                  type="text"
+                  maxLength={8}
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                  required
+                  disabled={authState === "verifying"}
+                  placeholder="00000000"
+                  className="h-10 text-sm px-3 tracking-[0.5em] text-center font-mono"
+                />
+              </div>
+
+              {errorMessage && (
+                <p className="text-sm text-destructive text-center">{errorMessage}</p>
+              )}
+
+              <Button
+                type="submit"
+                disabled={authState === "verifying" || otp.length !== 8}
+                className="w-full h-10 text-sm"
+              >
+                {authState === "verifying" ? "Verifying..." : "Verify Code"}
+              </Button>
+            </form>
+
+            <div className="text-center">
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthState("idle");
+                  setEmail("");
+                  setOtp("");
+                  setErrorMessage("");
+                }}
+                className="text-sm text-muted-foreground underline underline-offset-2"
+              >
+                Use a different email
+              </button>
+            </div>
           </div>
-        </form>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <label
+                htmlFor="auth-email"
+                className="text-sm font-medium text-foreground block"
+              >
+                Email
+              </label>
+              <Input
+                id="auth-email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                disabled={authState === "loading"}
+                placeholder="you@example.com"
+                className="h-10 text-sm px-3"
+              />
+            </div>
+
+            {authState === "error" && errorMessage && (
+              <p className="text-sm text-destructive">{errorMessage}</p>
+            )}
+
+            <Button
+              type="submit"
+              disabled={authState === "loading" || !email.trim()}
+              className="w-full h-10 text-sm"
+            >
+              {authState === "loading" ? "Sending..." : "Send sign-in link"}
+            </Button>
+          </form>
+        )}
+
+        <div className="pt-4 border-t border-border">
+          <p className="text-sm text-muted-foreground">
+            No invite yet?{" "}
+            <Link href="/" className="underline underline-offset-2">
+              Join the waitlist
+            </Link>
+          </p>
+        </div>
       </div>
-    </div>
+    </main>
   );
 }
