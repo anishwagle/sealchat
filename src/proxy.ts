@@ -1,86 +1,92 @@
-import { NextResponse, NextRequest } from "next/server";
-import jwt from "jsonwebtoken";
+import { NextResponse, type NextRequest } from "next/server";
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { Logger } from "./lib/logger";
 
 const COMPONENT = "AuthProxy";
 const FUNCTION = "proxy";
-const JWT_SECRET = process.env.JWT_SECRET;
-// Pre-launch: only these pages are publicly accessible
-const PUBLIC_PAGES = ['/', '/privacy', '/login', '/signup'];
 
-// Pages that start with these prefixes are also public
+const PUBLIC_PAGES = ['/', '/privacy', '/login', '/signup'];
 const PUBLIC_PAGE_PREFIXES = ['/auth/'];
+const PUBLIC_API_PREFIXES = ['/api/waitlist', '/api/auth'];
 
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
+  let supabaseResponse = NextResponse.next({
+    request: {
+      headers: request.headers,
+    },
+  });
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
+          cookiesToSet.forEach(({ name, value }) => {
+            request.cookies.set(name, value);
+          });
+          supabaseResponse = NextResponse.next({
+            request,
+          });
+          cookiesToSet.forEach(({ name, value, options }) => {
+            supabaseResponse.cookies.set({ name, value, ...options });
+          });
+        },
+      },
+    }
+  );
+
   // --- Pre-launch page guard ---
-  // Redirect any non-public page route back to the landing page.
-  // API routes and static assets are excluded via the matcher config.
   if (!pathname.startsWith('/api/')) {
     const isPublicPage = PUBLIC_PAGES.includes(pathname);
     const isPublicPrefix = PUBLIC_PAGE_PREFIXES.some(prefix => pathname.startsWith(prefix));
+    
     if (!isPublicPage && !isPublicPrefix) {
-      return NextResponse.redirect(new URL('/', request.url));
+      // If hitting a protected page, enforce session
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+         return NextResponse.redirect(new URL('/', request.url));
+      }
+    } else {
+       // Just pre-fetch to refresh potential expiring session cookies quietly
+       await supabase.auth.getUser();
     }
-    return NextResponse.next();
+    
+    return supabaseResponse;
   }
 
   // --- Public API exemption ---
-  // Allow anyone to submit waitlist requests or hit auth endpoints (login/signup)
-  const PUBLIC_API_PREFIXES = ['/api/waitlist', '/api/auth'];
   if (PUBLIC_API_PREFIXES.some(prefix => pathname.startsWith(prefix))) {
-    return NextResponse.next();
+    return supabaseResponse;
   }
 
-  // --- API auth (existing logic for /api/protected/*) ---
+  // --- API auth (for protected routes) ---
   Logger.log(COMPONENT, FUNCTION, 'info', 'Checking authentication', { path: pathname });
 
-  if (!JWT_SECRET) {
-    Logger.log(COMPONENT, FUNCTION, 'error', 'JWT_SECRET not set in environment');
-    return NextResponse.json(
-      { message: 'Internal server error', code: 'CONFIG_ERROR' },
-      { status: 500 }
-    );
-  }
+  const { data: { user }, error } = await supabase.auth.getUser();
 
-  const cookies = request.headers.get('cookie') || '';
-  const accessToken = cookies
-    .split('; ')
-    .find(row => row.startsWith('accessToken='))
-    ?.split('=')[1];
-
-  if (!accessToken) {
-    Logger.log(COMPONENT, FUNCTION, 'error', 'No access token provided');
+  if (!user || error) {
+    Logger.log(COMPONENT, FUNCTION, 'error', 'Supabase auth failed', { error: error?.message || 'No user found' });
     return NextResponse.json(
-      { message: 'Unauthorized: No token provided', code: 'NO_TOKEN' },
+      { message: 'Unauthorized: Invalid or missing token', code: 'UNAUTHORIZED' },
       { status: 401 }
     );
   }
 
-  try {
-    const decoded = jwt.verify(accessToken, JWT_SECRET) as { userId: string; email: string };
-    // Attach user details to request headers for downstream use
-    const modifiedRequest = NextResponse.next({
-      request: {
-        headers: new Headers(request.headers),
-      },
-    });
-    modifiedRequest.headers.set('x-user-id', decoded.userId);
-    modifiedRequest.headers.set('x-user-email', decoded.email);
-    return modifiedRequest;
-  } catch (error: any) {
-    Logger.log(COMPONENT, FUNCTION, 'error', 'Invalid token', { error: error.message });
-    return NextResponse.json(
-      { message: 'Unauthorized: Invalid token', code: 'INVALID_TOKEN' },
-      { status: 401 }
-    );
-  }
+  // Attach user details to request headers for downstream use natively
+  supabaseResponse.headers.set('x-user-id', user.id);
+  supabaseResponse.headers.set('x-user-email', user.email!);
+
+  return supabaseResponse;
 }
 
 export const config = {
   matcher: [
-    // Match all page routes except static assets and Next.js internals
     '/((?!_next/static|_next/image|favicon.ico|images/).*)',
   ],
 };

@@ -1,12 +1,13 @@
-"use client"
+"use client";
+
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { fetchWithAuth } from './fetchWithAuth';
+import { supabase } from '@/lib/supabaseClient';
 
 interface AuthState {
-  currentUserId:string;
+  currentUserId: string;
   isAuthenticated: boolean;
-  isLoading: boolean; // This will be true until the initial auth check is complete
+  isLoading: boolean;
   error: string;
 }
 
@@ -15,63 +16,64 @@ const publicPages = ['/login', '/signup', '/', '/privacy'];
 export const useAuth = () => {
   const [authState, setAuthState] = useState<AuthState>({
     isAuthenticated: false,
-    currentUserId:'',
-    isLoading: true, // Start with loading true
+    currentUserId: '',
+    isLoading: true,
     error: '',
   });
+
   const router = useRouter();
-  // usePathname and useSearchParams are used to create a dependency
-  // that reruns the check if the user navigates.
   const pathname = usePathname();
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   useEffect(() => {
-    // Don't run auth check on public routes
-    if (publicPages.includes(pathname)) {
-      setAuthState({ isAuthenticated: false, currentUserId: '', isLoading: false, error: '' });
-      return;
-    }
-
-    const controller = new AbortController();
-    const signal = controller.signal;
+    let isMounted = true;
 
     const checkAuth = async () => {
-      try {
-        const response = await fetchWithAuth('/api/auth/verify', { method: 'GET', signal });
-        const data = await response.json();
+      const { data: { session }, error } = await supabase.auth.getSession();
 
-        if (signal.aborted) return;
+      if (!isMounted) return;
 
-        if (data.message === 'Token valid' && data.userId) {
-          setAuthState({ isAuthenticated: true, currentUserId: data.userId, isLoading: false, error: '' });
-        } else {
-          setAuthState({ isAuthenticated: false, currentUserId: '', isLoading: false, error: 'Unauthorized' });
-          if (!publicPages.includes(pathname)) {
-            router.push('/login');
-          }
-        }
-      } catch (error: any) {
-        if (signal.aborted) return;
-        console.error('Verification failed:', error.message);
+      if (error) {
+        console.error('Supabase getSession failed:', error.message);
         setAuthState({ isAuthenticated: false, currentUserId: '', isLoading: false, error: 'Verification failed' });
-        if (signal.aborted) {
-          return;
+        if (!publicPages.includes(pathname)) {
+          router.push('/login');
         }
-        console.error('Verification failed:', error);
-        const errorMessage =
-          error instanceof Error ? error.message : 'Verification failed';
-        setAuthState({ isAuthenticated: false, currentUserId: '', isLoading: false, error: errorMessage });
+        return;
+      }
+
+      if (session?.user) {
+        setAuthState({ isAuthenticated: true, currentUserId: session.user.id, isLoading: false, error: '' });
+      } else {
+        setAuthState({ isAuthenticated: false, currentUserId: '', isLoading: false, error: 'Unauthorized' });
+        if (!publicPages.includes(pathname)) {
+          router.push('/login');
+        }
       }
     };
 
+    // Run initial check
     checkAuth();
 
-    setIsInitialLoad(false);
-    
+    // Subscribe to ongoing events (e.g., magic link login, logout)
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!isMounted) return;
+      if (session?.user) {
+        setAuthState({ isAuthenticated: true, currentUserId: session.user.id, isLoading: false, error: '' });
+      } else {
+        setAuthState({ isAuthenticated: false, currentUserId: '', isLoading: false, error: 'Unauthorized' });
+        if (!publicPages.includes(pathname)) {
+          router.push('/login');
+        }
+      }
+    });
+
     return () => {
-      controller.abort();
+      isMounted = false;
+      subscription.unsubscribe();
     };
-  }, [pathname, router]); // Re-check auth on route change
+  }, [pathname, router]);
 
   return authState;
 };
