@@ -45,33 +45,50 @@ export default function SignupPage() {
   const handleAvatarSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
+      
+      // Validation
+      if (!file.type.startsWith('image/')) {
+        setErrorMessage("Please select a valid image file.");
+        setSubmitState("error");
+        return;
+      }
+
+      if (file.size > 2 * 1024 * 1024) { // 2MB limit
+        setErrorMessage("File is too large. Please select an image under 2MB.");
+        setSubmitState("error");
+        return;
+      }
+
       setAvatarFile(file);
+      setErrorMessage("");
+      setSubmitState("idle");
       const previewUrl = URL.createObjectURL(file);
       setAvatarPreview(previewUrl);
     }
   };
 
-  const uploadAvatar = async (userId: string): Promise<string | null> => {
-    if (!avatarFile) return null;
-    try {
-      const fileExt = avatarFile.name.split('.').pop();
-      const filePath = `${userId}-${Date.now()}.${fileExt}`;
-      
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, avatarFile);
+  const uploadAvatar = async (userId: string): Promise<string> => {
+    if (!avatarFile) throw new Error("No file selected.");
+    
+    const fileExt = avatarFile.name.split('.').pop();
+    const filePath = `${userId}-${Date.now()}.${fileExt}`;
+    
+    const { error: uploadError } = await supabase.storage
+      .from('avatars')
+      .upload(filePath, avatarFile);
 
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(filePath);
-
-      return publicUrl;
-    } catch (error) {
-      console.error("Avatar upload failed:", error);
-      return null;
+    if (uploadError) {
+      if (uploadError.message.includes("quota")) {
+        throw new Error("Storage quota exceeded. Please try a smaller file.");
+      }
+      throw new Error("Failed to upload photo. Please try again.");
     }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('avatars')
+      .getPublicUrl(filePath);
+
+    return publicUrl;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -87,9 +104,6 @@ export default function SignupPage() {
       let finalAvatarUrl = null;
       if (avatarFile) {
         finalAvatarUrl = await uploadAvatar(user.id);
-        if (!finalAvatarUrl) {
-           throw new Error("Avatar upload failed. Check the walkthrough for Storage configuration.");
-        }
       }
 
       // 2. Submit Identity data to API to properly configure Profile

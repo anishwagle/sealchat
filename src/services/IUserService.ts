@@ -5,5 +5,5 @@ export interface IUserService {
     findUserByUsername(username: string): Promise<User | undefined>;
     findUserByEmail(email: string): Promise<User | undefined>;
     findUserByEmailOrUsername(email: string, username: string): Promise<User | undefined>;
-    createUser(email: string, username: string, fullname: string, password?: string): Promise<User>;
+    createUser(userId: string, email: string, username: string, fullname: string): Promise<User>;
 }

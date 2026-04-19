@@ -1,4 +1,3 @@
-import { v4 } from "uuid";
 import { User } from "@/types/user";
 import { IUserService } from "./IUserService";
 import { Logger } from "@/lib/logger";
@@ -86,21 +85,20 @@ export class UserService implements IUserService {
   }
 
   async createUser(
+    userId: string,
     email: string,
     username: string,
     fullname: string,
-    password?: string, // Legacy schema adapter
   ): Promise<User> {
     const FUNCTION = "createUser";
-    const id = v4(); // Note: With native Supabase, ID typically comes from supabase.auth automatically
 
-    Logger.log(COMPONENT, FUNCTION, 'debug', "Creating User mapping:", { id });
+    Logger.log(COMPONENT, FUNCTION, 'debug', "Creating User mapping:", { userId });
 
     const { error } = await supabaseAdmin
       .from('profiles')
       .insert([
         {
-          id,
+          id: userId,
           username: username.toLowerCase(),
           full_name: toTitleCase(fullname),
           email: email.toLowerCase()
@@ -112,7 +110,7 @@ export class UserService implements IUserService {
       throw Error("Failed to Create User in Supabase");
     }
 
-    const newUser = await this.findUserById(id);
+    const newUser = await this.findUserById(userId);
     if (!newUser) throw Error("Failed to Create and Fetch User");
 
     return newUser;

@@ -30,7 +30,7 @@ export async function POST(request: Request) {
     const user = await userService.findUserById(currentUserId);
     if (!user) {
       // Create user record if Supabase Auth user has no matching profile row yet
-      await userService.createUser(currentUserEmail, username, full_name);
+      await userService.createUser(currentUserId, currentUserEmail, username, full_name);
     }
 
     // 2. Create/update the full profile
