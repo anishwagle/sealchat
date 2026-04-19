@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
-import jwt from 'jsonwebtoken';
 import { Logger } from '@/lib/logger';
-import { friendService, profileService, userService } from '@/services/serviceProvider';
+import { friendService, profileService } from '@/services/serviceProvider';
 import { ApiError } from '@/lib/errors';
 import { Profile } from '@/types/profile';
 
@@ -15,8 +14,8 @@ export async function GET(request: Request, context: { params: Promise<{ usernam
 
   try {
     const username = p.username;
-    const user = await userService.findUserByUsername(username);
-    if (!user) {
+    const profileBasic = await profileService.findProfileByUsername(username);
+    if (!profileBasic) {
       Logger.log(COMPONENT, FUNCTION, 'error', 'User not found', { username: username });
       return NextResponse.json({ message: 'User not found', code: 'USER_NOT_FOUND' }, { status: 404 });
     }
@@ -27,10 +26,10 @@ export async function GET(request: Request, context: { params: Promise<{ usernam
         }
     Logger.log(COMPONENT, FUNCTION, 'info', 'Profile fetched', { username: username });
 
-    const profile = await profileService.getProfile(currentUserId,user.id);
-        Logger.log(COMPONENT, FUNCTION, "info", "Profile fetched", {
-          username: user.username,
-        });
+    const profile = await profileService.getProfile(currentUserId, profileBasic.userId);
+    Logger.log(COMPONENT, FUNCTION, "info", "Profile fetched", {
+      username: profileBasic.username,
+    });
          return NextResponse.json({profile}, { status: 200 });
   } catch (error: any) {
     const apiError = new ApiError('Failed to fetch profile', 500, 'INTERNAL_ERROR', { error: error.message });

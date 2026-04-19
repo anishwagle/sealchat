@@ -7,6 +7,9 @@ export interface IProfileService {
     username: string,
     bio: string,
     avatarUrl: string,
+    email: string,
   ): Promise<void>;
   getProfile(currentUserId: string, profileUserId: string): Promise<Profile | null>;
+  findProfileById(id: string): Promise<Profile | null>;
+  findProfileByUsername(username: string): Promise<Profile | null>;
 }

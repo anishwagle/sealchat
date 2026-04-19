@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { profileService, userService } from "@/services/serviceProvider";
+import { profileService } from "@/services/serviceProvider";
 import { Logger } from "@/lib/logger";
 import { ValidationError, ApiError } from "@/lib/errors";
 
@@ -26,20 +26,16 @@ export async function POST(request: Request) {
       throw new ApiError(error.message, 400, "MISSING_FIELDS", error.details);
     }
 
-    // 1. Ensure User Identity exists in the profiles table
-    const user = await userService.findUserById(currentUserId);
-    if (!user) {
-      // Create user record if Supabase Auth user has no matching profile row yet
-      await userService.createUser(currentUserId, currentUserEmail, username, full_name);
-    }
-
-    // 2. Create/update the full profile
+    // 1. Create/update the profile directly
+    // Since we take userId from authenticated headers, this is strictly authorized by Supabase.
+    // If the profile exists, it will be updated; otherwise, a new one is created.
     await profileService.createProfile(
       currentUserId,
       full_name,
       username,
       bio || "",
-      avatar_url || ""
+      avatar_url || "",
+      currentUserEmail
     );
 
     Logger.log(COMPONENT, FUNCTION, "info", "User Profile Created", {

@@ -35,10 +35,11 @@ export class ProfileService implements IProfileService {
     username: string,
     bio: string,
     avatarUrl: string,
+    email: string,
   ): Promise<void> {
     const FUNCTION = "createProfile";
-    if (!userId || !fullName || !username) {
-      throw new Error(`[${COMPONENT}][${FUNCTION}] User ID, Name, and Username are absolutely required`);
+    if (!userId || !fullName || !username || !email) {
+      throw new Error(`[${COMPONENT}][${FUNCTION}] User ID, Name, Username, and Email are absolutely required`);
     }
 
     try {
@@ -49,6 +50,7 @@ export class ProfileService implements IProfileService {
           id: userId,
           full_name: fullName,
           username: username.toLowerCase(),
+          email: email.toLowerCase(),
           bio: bio || null,
           avatar_url: avatarUrl || null,
           updated_at: new Date().toISOString()
@@ -60,6 +62,45 @@ export class ProfileService implements IProfileService {
     } catch (error: any) {
       throw new Error(`[${COMPONENT}][${FUNCTION}] Failed to Upsert Profile: ` + error.message);
     }
+  }
+
+  async findProfileById(id: string): Promise<Profile | null> {
+    const FUNCTION = "findProfileById";
+    const { data, error } = await supabaseAdmin
+      .from('profiles')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error || !data) return null;
+
+    return this.mapToProfile(data);
+  }
+
+  async findProfileByUsername(username: string): Promise<Profile | null> {
+    const FUNCTION = "findProfileByUsername";
+    const { data, error } = await supabaseAdmin
+      .from('profiles')
+      .select('*')
+      .eq('username', username.toLowerCase())
+      .single();
+
+    if (error || !data) return null;
+
+    return this.mapToProfile(data);
+  }
+
+  private mapToProfile(data: any): Profile {
+    return {
+      userId: data.id,
+      username: data.username,
+      fullName: data.full_name,
+      bio: data.bio,
+      avatarUrl: data.avatar_url,
+      joinedAt: data.created_at,
+      // Map other fields as needed or defaults
+      ...data
+    } as Profile;
   }
 }
 

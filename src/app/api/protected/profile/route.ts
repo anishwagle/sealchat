@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { Logger } from '@/lib/logger';
-import { profileService, userService } from '@/services/serviceProvider';
+import { profileService } from '@/services/serviceProvider';
 import { ApiError } from '@/lib/errors';
 
 const COMPONENT = 'api/protected/profile';
@@ -19,22 +19,19 @@ export async function GET(request: Request) {
 
     Logger.log(COMPONENT, FUNCTION, 'info', 'Fetching User profile', { userId: currentUserId });
 
-    // Check if user has a profile
-    const user = await userService.findUserById(currentUserId);
-    if (!user) {
-      Logger.log(COMPONENT, FUNCTION, "error", "User not found", {
+    const profile = await profileService.getProfile(currentUserId, currentUserId);
+    if (!profile) {
+      Logger.log(COMPONENT, FUNCTION, "error", "Profile not found", {
         userId: currentUserId,
       });
       return NextResponse.json(
-        { message: "User not found", code: "USER_NOT_FOUND" },
+        { message: "Profile not found", code: "PROFILE_NOT_FOUND" },
         { status: 404 }
       );
     }
 
-    const profile = await profileService.getProfile(currentUserId, currentUserId);
-
     Logger.log(COMPONENT, FUNCTION, "info", "Profile fetched", {
-      username: user.username,
+      username: profile.username,
     });
 
     return NextResponse.json({ profile }, { status: 200 });
