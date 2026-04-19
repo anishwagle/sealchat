@@ -1,59 +1,54 @@
 import { NextResponse } from 'next/server';
-import jwt from 'jsonwebtoken';
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 import { Logger } from '../../../../lib/logger';
-import { userService } from '../../../../services/serviceProvider';
 import { ApiError } from '../../../../lib/errors';
 
 const COMPONENT = 'api/auth/logout';
 const FUNCTION = 'POST';
-const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET;
 
 export async function POST(request: Request) {
-  Logger.log(COMPONENT, FUNCTION, 'info', 'Processing logout');
-
-  if (!REFRESH_TOKEN_SECRET) {
-    Logger.log(COMPONENT, FUNCTION, 'error', 'REFRESH_TOKEN_SECRET not set in environment');
-    return NextResponse.json(
-      { message: 'Internal server error', code: 'CONFIG_ERROR' },
-      { status: 500 }
-    );
-  }
+  Logger.log(COMPONENT, FUNCTION, 'info', 'Processing Supabase logout');
 
   try {
-    const cookies = request.headers.get('cookie') || '';
-    const refreshToken = cookies
-      .split('; ')
-      .find(row => row.startsWith('refreshToken='))
-      ?.split('=')[1];
-
-    if (refreshToken) {
-      try {
-        const decoded = jwt.verify(refreshToken, REFRESH_TOKEN_SECRET) as { userId: string };
-        await userService.removeRefreshToken(decoded.userId);
-        Logger.log(COMPONENT, FUNCTION, 'info', 'Refresh token removed', { userId: decoded.userId });
-      } catch (error: any) {
-        Logger.log(COMPONENT, FUNCTION, 'warn', 'Invalid refresh token during logout', { error: error.message });
-        // Continue with logout even if token is invalid
-      }
-    }
+    const cookieStore = await cookies();
     
-    Logger.log(COMPONENT, FUNCTION, 'info', 'Logout successful');
-
-    return NextResponse.json(
-      { message: 'Logout successful' },
+    // Instantiate SSR client securely against NextJS Route Context
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
-        status: 200,
-        headers: {
-          'Set-Cookie': [
-            `accessToken=; HttpOnly; Path=/; Max-Age=0`,
-            `refreshToken=; HttpOnly; Path=/; Max-Age=0`,
-          ].join(', '),
+        cookies: {
+          getAll() {
+            return cookieStore.getAll();
+          },
+          setAll(cookiesToSet: { name: string; value: string; options: Record<string, unknown> }[]) {
+            try {
+              cookiesToSet.forEach(({ name, value, options }) => {
+                cookieStore.set(name, value, options);
+              });
+            } catch (error) {
+              // The setAll wrapper safely traps strict edge invocations 
+            }
+          },
         },
       }
     );
+
+    // Native Supabase API handles universally expiring all specific Supabase Session cookies internally bridging the server and client
+    const { error } = await supabase.auth.signOut();
+
+    if (error) {
+      throw error;
+    }
+
+    Logger.log(COMPONENT, FUNCTION, 'info', 'Logout successful');
+
+    return NextResponse.json({ message: 'Logout successful' }, { status: 200 });
+
   } catch (error: any) {
     const apiError = new ApiError('Logout failed', 500, 'LOGOUT_ERROR', { error: error.message });
-    Logger.log(COMPONENT, FUNCTION, 'error', apiError.message, { details: apiError.details, stack: error.stack });
+    Logger.log(COMPONENT, FUNCTION, 'error', apiError.message, { details: apiError.details });
     return NextResponse.json(
       { message: apiError.message, code: apiError.code, details: apiError.details },
       { status: apiError.status }

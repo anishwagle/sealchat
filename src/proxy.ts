@@ -41,46 +41,59 @@ export async function proxy(request: NextRequest) {
     }
   );
 
-  // --- Pre-launch page guard ---
-  if (!pathname.startsWith('/api/')) {
-    const isPublicPage = PUBLIC_PAGES.includes(pathname);
-    const isPublicPrefix = PUBLIC_PAGE_PREFIXES.some(prefix => pathname.startsWith(prefix));
-    
-    if (!isPublicPage && !isPublicPrefix) {
-      // If hitting a protected page, enforce session
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-         return NextResponse.redirect(new URL('/', request.url));
-      }
-    } else {
-       // Just pre-fetch to refresh potential expiring session cookies quietly
-       await supabase.auth.getUser();
-    }
-    
-    return supabaseResponse;
-  }
-
-  // --- Public API exemption ---
+  // --- Public API exemption (check early to avoid unnecessary auth calls) ---
   if (PUBLIC_API_PREFIXES.some(prefix => pathname.startsWith(prefix))) {
     return supabaseResponse;
   }
 
-  // --- API auth (for protected routes) ---
+  // --- Fetch user session (also triggers token refresh if needed) ---
+  const { data: { user } } = await supabase.auth.getUser();
+
+  // --- Page guard ---
+  if (!pathname.startsWith('/api/')) {
+    const isPublicPage = PUBLIC_PAGES.includes(pathname);
+    const isPublicPrefix = PUBLIC_PAGE_PREFIXES.some(prefix => pathname.startsWith(prefix));
+
+    if (!isPublicPage && !isPublicPrefix && !user) {
+      return NextResponse.redirect(new URL('/', request.url));
+    }
+
+    // For authenticated requests to pages, attach user context to request headers
+    if (user) {
+      request.headers.set('x-user-id', user.id);
+      request.headers.set('x-user-email', user.email!);
+
+      const existingCookies = supabaseResponse.cookies.getAll();
+      supabaseResponse = NextResponse.next({ request });
+      existingCookies.forEach(cookie => {
+        supabaseResponse.cookies.set(cookie);
+      });
+    }
+
+    return supabaseResponse;
+  }
+
+  // --- Protected API auth ---
   Logger.log(COMPONENT, FUNCTION, 'info', 'Checking authentication', { path: pathname });
 
-  const { data: { user }, error } = await supabase.auth.getUser();
-
-  if (!user || error) {
-    Logger.log(COMPONENT, FUNCTION, 'error', 'Supabase auth failed', { error: error?.message || 'No user found' });
+  if (!user) {
+    Logger.log(COMPONENT, FUNCTION, 'error', 'Supabase auth failed', { path: pathname });
     return NextResponse.json(
       { message: 'Unauthorized: Invalid or missing token', code: 'UNAUTHORIZED' },
       { status: 401 }
     );
   }
 
-  // Attach user details to request headers for downstream use natively
-  supabaseResponse.headers.set('x-user-id', user.id);
-  supabaseResponse.headers.set('x-user-email', user.email!);
+  // Attach user context to request headers for downstream route handlers
+  request.headers.set('x-user-id', user.id);
+  request.headers.set('x-user-email', user.email!);
+
+  // Re-create response with updated request headers, preserving Supabase cookies
+  const existingCookies = supabaseResponse.cookies.getAll();
+  supabaseResponse = NextResponse.next({ request });
+  existingCookies.forEach(cookie => {
+    supabaseResponse.cookies.set(cookie);
+  });
 
   return supabaseResponse;
 }

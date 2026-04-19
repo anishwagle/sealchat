@@ -1,6 +1,5 @@
 import { User } from "@/types/user";
 import { IFriendService } from "./IFriendService";
-import { users } from "@/lib/mockData";
 import { Logger } from "@/lib/logger";
 import { FriendshipStatus } from "@/types/profile";
 import { notificationService } from "./serviceProvider";
