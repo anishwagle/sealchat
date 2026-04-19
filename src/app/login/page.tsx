@@ -64,7 +64,7 @@ function LoginContent() {
       setErrorMessage(error.message || "Invalid or expired code.");
       setAuthState("sent"); // Reset to sent state to allow re-entry
     } else {
-      router.push("/");
+      router.push("/feed");
     }
   };
 

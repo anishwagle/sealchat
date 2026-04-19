@@ -11,7 +11,7 @@ export default function withAuth<P extends object>(WrappedComponent: React.Compo
 
     useEffect(() => {
       if (!isLoading && !isAuthenticated) {
-        router.push('/login');
+        router.push('/');
       }
     }, [isAuthenticated, isLoading, router]);
 

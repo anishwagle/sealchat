@@ -33,7 +33,7 @@ export default function SignupPage() {
       const { data: { user }, error } = await supabase.auth.getUser();
 
       if (error || !user) {
-        router.push("/login"); // Only authorized users can see this page
+        router.push("/"); // Only authorized users can see this page
       } else {
         setEmail(user.email || "");
         setLoadingContext(false);
@@ -108,7 +108,7 @@ export default function SignupPage() {
 
       if (res.ok) {
         setSubmitState("success");
-        setTimeout(() => router.push("/"), 500);
+        setTimeout(() => router.push("/feed"), 500);
       } else {
         setSubmitState("error");
         setErrorMessage(data.message || "Failed to create profile. Ensure username is unique.");

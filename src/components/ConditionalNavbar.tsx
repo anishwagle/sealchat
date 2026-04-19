@@ -2,18 +2,19 @@
  
  import { usePathname } from "next/navigation";
  import Navbar from "./Navbar";
- import { useAuth } from "@/lib/auth/useAuth";
- 
+
+ // Navbar only renders on authenticated app pages.
+ // Public pages (home, login, signup, privacy) never show the navbar.
+ const APP_PREFIXES = ["/feed", "/profile", "/archive", "/friends", "/notifications", "/posts"];
+
  export default function ConditionalNavbar() {
    const pathname = usePathname();
-   const { isAuthenticated, isLoading } = useAuth();
- 
-   // Define routes where the Navbar should be hidden
-   const hiddenRoutes = ["/login", "/signup"];
- 
-   if (isLoading || !isAuthenticated || hiddenRoutes.includes(pathname)) {
+
+   const isAppPage = APP_PREFIXES.some(prefix => pathname.startsWith(prefix));
+
+   if (!isAppPage) {
      return null;
    }
- 
+
    return <Navbar />;
  }

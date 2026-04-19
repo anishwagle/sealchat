@@ -5,9 +5,13 @@ import { Logger } from "./lib/logger";
 const COMPONENT = "AuthProxy";
 const FUNCTION = "proxy";
 
+// Pages that unauthenticated users can access
 const PUBLIC_PAGES = ['/', '/privacy', '/login', '/signup'];
 const PUBLIC_PAGE_PREFIXES = ['/auth/'];
 const PUBLIC_API_PREFIXES = ['/api/waitlist', '/api/auth'];
+
+// Pages that are part of the authenticated app (show navbar, require auth)
+const APP_PAGE_PREFIXES = ['/feed', '/profile', '/archive', '/friends', '/notifications', '/posts'];
 
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
@@ -41,7 +45,7 @@ export async function proxy(request: NextRequest) {
     }
   );
 
-  // --- Public API exemption (check early to avoid unnecessary auth calls) ---
+  // --- Public API exemption ---
   if (PUBLIC_API_PREFIXES.some(prefix => pathname.startsWith(prefix))) {
     return supabaseResponse;
   }
@@ -49,16 +53,27 @@ export async function proxy(request: NextRequest) {
   // --- Fetch user session (also triggers token refresh if needed) ---
   const { data: { user } } = await supabase.auth.getUser();
 
-  // --- Page guard ---
+  // --- Page routing ---
   if (!pathname.startsWith('/api/')) {
     const isPublicPage = PUBLIC_PAGES.includes(pathname);
     const isPublicPrefix = PUBLIC_PAGE_PREFIXES.some(prefix => pathname.startsWith(prefix));
 
+    // Authenticated user hitting the landing page -> redirect to feed
+    if (pathname === '/' && user) {
+      return NextResponse.redirect(new URL('/feed', request.url));
+    }
+
+    // Authenticated user hitting /login -> redirect to feed
+    if (pathname === '/login' && user) {
+      return NextResponse.redirect(new URL('/feed', request.url));
+    }
+
+    // Protected page without auth -> redirect to landing
     if (!isPublicPage && !isPublicPrefix && !user) {
       return NextResponse.redirect(new URL('/', request.url));
     }
 
-    // For authenticated requests to pages, attach user context to request headers
+    // Attach user context for app pages
     if (user) {
       request.headers.set('x-user-id', user.id);
       request.headers.set('x-user-email', user.email!);
@@ -88,7 +103,6 @@ export async function proxy(request: NextRequest) {
   request.headers.set('x-user-id', user.id);
   request.headers.set('x-user-email', user.email!);
 
-  // Re-create response with updated request headers, preserving Supabase cookies
   const existingCookies = supabaseResponse.cookies.getAll();
   supabaseResponse = NextResponse.next({ request });
   existingCookies.forEach(cookie => {

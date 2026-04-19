@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useRef, useEffect, SetStateAction } from "react";
 import NotificationComponent from "./Notification";
 import { fetchWithAuth } from "@/lib/auth/fetchWithAuth";
+import { supabase } from "@/lib/supabaseClient";
 import { User } from "@/types/user";
 
 export default function Navbar() {
@@ -65,7 +66,7 @@ export default function Navbar() {
       <div className="px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center gap-8">
-            <Link href="/" className="text-2xl font-semibold text-blue-600">
+            <Link href="/feed" className="text-2xl font-semibold text-blue-600">
               SealChat
             </Link>
 
@@ -241,11 +242,12 @@ export default function Navbar() {
                     className="block px-4 py-2 text-sm text-red-600 hover:bg-gray-100 hover:text-red-700 cursor-pointer"
                     onClick={async () => {
                       try {
+                        await supabase.auth.signOut();
                         await fetch("/api/auth/logout", { method: "POST" });
-                        router.push("/login");
+                        router.push("/");
                       } catch (error: any) {
                         console.error("Logout failed:", error.message);
-                        router.push("/login");
+                        router.push("/");
                       }
                     }}
                   >

@@ -36,7 +36,7 @@ export const useAuth = () => {
         console.error('Supabase getSession failed:', error.message);
         setAuthState({ isAuthenticated: false, currentUserId: '', isLoading: false, error: 'Verification failed' });
         if (!publicPages.includes(pathname)) {
-          router.push('/login');
+          router.push('/');
         }
         return;
       }
@@ -46,7 +46,7 @@ export const useAuth = () => {
       } else {
         setAuthState({ isAuthenticated: false, currentUserId: '', isLoading: false, error: 'Unauthorized' });
         if (!publicPages.includes(pathname)) {
-          router.push('/login');
+          router.push('/');
         }
       }
     };
@@ -64,7 +64,7 @@ export const useAuth = () => {
       } else {
         setAuthState({ isAuthenticated: false, currentUserId: '', isLoading: false, error: 'Unauthorized' });
         if (!publicPages.includes(pathname)) {
-          router.push('/login');
+          router.push('/');
         }
       }
     });

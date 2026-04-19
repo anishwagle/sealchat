@@ -12,7 +12,7 @@ export const fetchWithAuth = async (url: string, options: RequestInit = {}): Pro
 
   if (response.status === 401) {
     if (typeof window !== 'undefined') {
-      window.location.href = '/login'; 
+      window.location.href = '/';
     }
   }
 
