@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import jwt from "jsonwebtoken";
+
 import { Logger } from "@/lib/logger";
 import { postService } from "@/services/serviceProvider";
 import { ApiError } from "@/lib/errors";
 import { Post } from "@/types/post";
-import { friendService } from "@/services/friendService";
+import { friendService } from "@/services/serviceProvider";
 
 const COMPONENT = "api/protected/posts/user/[userId]";
 const FUNCTION = "GET";

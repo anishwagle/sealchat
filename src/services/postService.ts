@@ -1,500 +1,198 @@
 import { Logger } from "@/lib/logger";
 import { Post, PostType } from "../types/post";
 import { IPostService } from "./IPostService";
-import { v4 } from "uuid";
-import { QueryResult } from "mysql2";
-import {} from "./INotificationService";
-import { notificationService } from "./serviceProvider";
-import {
-  convertMentionsIntoLinks,
-  escapeHtml,
-  getEmbedSection,
-  getLinksFromString,
-  getMentionAndIdForString,
-} from "@/utils/stringParser";
-import executeQuery from "../db";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { mediaService } from "./MediaService";
 
 const COMPONENT = "PostService";
+
 export class PostService implements IPostService {
-  async getPostById(
-    postId: string,
-    currentUserId: string
-  ): Promise<Post | null> {
-    const FUNCTION = "getPostById";
-    Logger.log(COMPONENT, FUNCTION, "debug", "Fetching post by id", {
-      postId,
-      currentUserId,
-    });
-
-    const results = await executeQuery(
-      `SELECT 
-    p.id,
-    p.user_id,
-    u.username,
-    u.full_name,
-    p.original_content,
-    p.type,
-    p.content,
-    p.duration_days,
-    p.expires_at,
-    p.is_archived,
-    p.created_at,
-    p.shared_post_id,
-    -- Pre-aggregated comment count
-    COALESCE(c.comment_count, 0) AS comment_count,
-    -- Pre-aggregated like count
-    COALESCE(s.share_count, 0) AS share_count,
-    COALESCE(l.like_count, 0) AS like_count,
-    -- Check if current user liked the post
-    CASE WHEN ul.user_id IS NULL THEN FALSE ELSE TRUE END AS is_liked_by_current_user
-    FROM posts p
-    JOIN users u ON p.user_id = u.id
-    -- Aggregate comments
-    LEFT JOIN (
-        SELECT post_id, COUNT(*) AS comment_count
-        FROM comments
-        GROUP BY post_id
-    ) c ON p.id = c.post_id
-    -- Aggregate likes
-    LEFT JOIN (
-        SELECT post_id, COUNT(*) AS like_count
-        FROM likes
-        GROUP BY post_id
-    ) l ON p.id = l.post_id
-     -- Aggregate shares
-    LEFT JOIN (
-        SELECT shared_post_id, COUNT(*) AS share_count
-        FROM posts
-        WHERE shared_post_id IS NOT NULL
-        GROUP BY shared_post_id
-    ) s ON p.id = s.shared_post_id
-    -- Check if current user liked this post
-    LEFT JOIN (
-        SELECT post_id, user_id
-        FROM likes
-        WHERE user_id = ?  -- pass current user ID here
-    ) ul ON p.id = ul.post_id
-    WHERE p.id = ? AND p.is_archived = FALSE;        -- pass target post ID here`,
-      [currentUserId, postId]
-    );
-
-    const post = (results as any[])[0];
-    Logger.log(COMPONENT, FUNCTION, "debug", " post by id fetched", post);
-    if (currentUserId != post.user_id) {
-      // Check if users are friends
-      const friendResults = await executeQuery(
-        "SELECT id FROM friends WHERE (user_id_1 = ? AND user_id_2 = ?) OR (user_id_1 = ? AND user_id_2 = ?)",
-        [currentUserId, post.user_id, post.user_id, currentUserId]
-      );
-      const isFriend = (friendResults as any[]).length > 0;
-
-      if (!isFriend) {
-        Logger.log(COMPONENT, FUNCTION, "debug", "Users are not friends", {
-          userId: post.user_id,
-          currentUserId,
-        });
-        return null; // Return empty array if not friends
-      }
-    }
-
-    return {
-      id: post.id,
-      userId: post.user_id,
-      username: post.username,
-      fullName: post.full_name,
-      originalContent: post.original_content,
-      type: post.type,
-      content: post.content,
-      durationDays: post.duration_days,
-      expiresAt: post.expires_at ? new Date(post.expires_at) : null,
-      isArchived: post.is_archived,
-      createdAt: new Date(post.created_at),
-      commentCount: post.comment_count,
-      likeCount: post.like_count,
-      isLikedByCurrentUser: post.is_liked_by_current_user,
-      sharedPostId:post.shared_post_id,
-      shareCount:post.share_count
-    };
-  }
   async createPost(
     userId: string,
     content: string,
     type: PostType,
     durationDays?: number,
-    sharedPostId?:string
+    sharedPostId?: string,
+    mediaIds?: string[]
   ): Promise<void> {
     const FUNCTION = "createPost";
-    Logger.log(COMPONENT, FUNCTION, "debug", "creating new post", {
-      userId,
-      content,
-      type,
-    });
-    if (!userId || !content || !type) {
-      throw new Error("User ID, content, and type are required");
-    }
-    if (content.length > 1000) {
-      throw new Error("Content must be 1000 characters or less");
-    }
-    if (
-      type === "public_opinion" &&
-      (!durationDays || durationDays < 1 || durationDays > 7)
-    ) {
-      throw new Error("Public opinions require duration between 1 and 7 days");
+    Logger.log(COMPONENT, FUNCTION, "debug", "Creating new post", { userId, type });
+
+    let expiresAt = null;
+    if (type === "public_opinion" && durationDays) {
+      expiresAt = new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000).toISOString();
     }
 
-    // Store original content and initialize embed section
-    let processedContent = escapeHtml(content);
-    const embedSection:string|null = sharedPostId?null: getEmbedSection(content);
-    processedContent = getLinksFromString(processedContent);
-    processedContent = await convertMentionsIntoLinks(
-      processedContent,
-      userId,
-      type
-    );
+    const { data: post, error } = await supabaseAdmin
+      .from("posts")
+      .insert({
+        user_id: userId,
+        content: content,
+        type: type,
+        duration_days: durationDays || null,
+        expires_at: expiresAt,
+        shared_post_id: sharedPostId || null,
+        is_draft: false,
+      })
+      .select("id")
+      .single();
 
-    // Combine processed content with embeds
-    const finalContent = `
-      <div class="post-content">${processedContent}</div>
-      ${embedSection ? `<div class="post-embeds">${embedSection}</div>` : ""}
-      `;
-
-    try {
-      let expiresAt =
-        type === "public_opinion"
-          ? new Date(Date.now() + durationDays! * 24 * 60 * 60 * 1000)
-          : null;
-      const postId = v4();
-      if(sharedPostId){
-        const post =await this.getPostById(sharedPostId,userId);
-        if(post){
-          type=post.type;
-          durationDays=post.durationDays;
-          expiresAt=post.expiresAt || null;
-          await notificationService.createNotification(
-            post?.userId,
-            "post_like",
-            userId,
-            post.id
-      );
-        }
-        
-      }
-      await executeQuery(
-        "INSERT INTO posts (id,user_id, type, content,original_content,shared_post_id, duration_days, expires_at, is_archived) VALUES (?,?,?,?, ?, ?, ?, ?, ?)",
-        [
-          postId,
-          userId,
-          type,
-          finalContent,
-          content,
-          sharedPostId||null,
-          durationDays || null,
-          expiresAt,
-          false,
-        ]
-      );
-      const { mentions, usernameToId } = await getMentionAndIdForString(
-        processedContent
-      );
-      for (const mention of mentions) {
-        const username = mention[1];
-        const userIdMentioned = usernameToId[username];
-        if (!userIdMentioned) continue; // no user, skip
-        if (userIdMentioned !== userId) {
-          await notificationService.createNotification(
-            userIdMentioned,
-            "post_mention",
-            userId,
-            postId
-          );
-        }
-      }
-      Logger.log(COMPONENT, FUNCTION, "info", "New Post Created");
-    } catch (error: any) {
+    if (error) {
+      Logger.log(COMPONENT, FUNCTION, "error", "Failed to create post", { error });
       throw new Error("Failed to create post: " + error.message);
     }
+
+    if (mediaIds && mediaIds.length > 0) {
+      await mediaService.linkMediaToPost(post.id, mediaIds);
+    }
+
+    Logger.log(COMPONENT, FUNCTION, "info", "Post published successfully", { postId: post.id });
   }
-  async getPostsByIds(
-  postIds: string[],   // array of shared_post_id
-  currentUserId: string
-): Promise<Post[]> {
-  const FUNCTION = "getPostsByIds";
 
-  if (!postIds || postIds.length === 0) return [];
+  async saveDraft(
+    userId: string,
+    content: string,
+    type: PostType,
+    mediaIds?: string[]
+  ): Promise<string> {
+    const FUNCTION = "saveDraft";
+    Logger.log(COMPONENT, FUNCTION, "debug", "Saving post draft", { userId });
 
-  // Use placeholders for IN clause
-  const placeholders = postIds.map(() => '?').join(',');
+    const { data: post, error } = await supabaseAdmin
+      .from("posts")
+      .insert({
+        user_id: userId,
+        content: content,
+        type: type,
+        is_draft: true,
+      })
+      .select("id")
+      .single();
 
-  const query = `
-    SELECT 
-      p.id,
-      p.user_id,
-      u.username,
-      u.full_name,
-      p.original_content,
-      p.type,
-      p.content,
-      p.duration_days,
-      p.expires_at,
-      p.is_archived,
-      p.created_at,
-      p.shared_post_id,
-      -- Pre-aggregated comment count
-      COALESCE(c.comment_count, 0) AS comment_count,
-      -- Pre-aggregated like count
-      COALESCE(l.like_count, 0) AS like_count,
-      COALESCE(s.share_count, 0) AS share_count,
-      -- Check if current user liked the post
-      CASE WHEN ul.user_id IS NULL THEN FALSE ELSE TRUE END AS is_liked_by_current_user
-    FROM posts p
-    JOIN users u ON p.user_id = u.id
-    LEFT JOIN (
-      SELECT post_id, COUNT(*) AS comment_count
-      FROM comments
-      GROUP BY post_id
-    ) c ON p.id = c.post_id
-    LEFT JOIN (
-      SELECT post_id, COUNT(*) AS like_count
-      FROM likes
-      GROUP BY post_id
-    ) l ON p.id = l.post_id
-    LEFT JOIN (
-      SELECT post_id, user_id
-      FROM likes
-      WHERE user_id = ?
-    ) ul ON p.id = ul.post_id
-     -- Aggregate shares
-    LEFT JOIN (
-        SELECT shared_post_id, COUNT(*) AS share_count
-        FROM posts
-        WHERE shared_post_id IS NOT NULL
-        GROUP BY shared_post_id
-    ) s ON p.id = s.shared_post_id
-    WHERE p.id IN (${placeholders}) AND p.is_archived = FALSE
-      AND (p.expires_at IS NULL OR p.expires_at > NOW())
-  `;
+    if (error) {
+      Logger.log(COMPONENT, FUNCTION, "error", "Failed to save draft", { error });
+      throw new Error("Failed to save draft: " + error.message);
+    }
 
-  const params = [currentUserId, ...postIds];
+    if (mediaIds && mediaIds.length > 0) {
+      await mediaService.linkMediaToPost(post.id, mediaIds);
+    }
 
-  try {
-    const results = await executeQuery(query, params);
-    return (results as any[]).map((post) => ({
-      id: post.id,
-      userId: post.user_id,
-      username: post.username,
-      fullName: post.full_name,
-      originalContent: post.original_content,
-      type: post.type,
-      content: post.content,
-      durationDays: post.duration_days,
-      expiresAt: post.expires_at ? new Date(post.expires_at) : null,
-      isArchived: post.is_archived,
-      createdAt: new Date(post.created_at),
-      commentCount: post.comment_count,
-      likeCount: post.like_count,
-      isLikedByCurrentUser: post.is_liked_by_current_user,
-      sharedPostId: post.shared_post_id,
-      shareCount:post.share_count
-    }));
-  } catch (error: any) {
-    throw new Error("Failed to fetch shared posts: " + error.message);
+    return post.id;
   }
-}
+
+  async getPostById(postId: string, currentUserId: string): Promise<Post | null> {
+    const FUNCTION = "getPostById";
+    
+    const { data: post, error } = await supabaseAdmin
+      .from("posts")
+      .select(`
+        *,
+        profiles (username, full_name),
+        post_media (id, storage_path, url, media_type),
+        likes:likes(count),
+        comments:comments(count),
+        shares:posts!shared_post_id(count)
+      `)
+      .eq("id", postId)
+      .single();
+
+    if (error || !post) {
+      Logger.log(COMPONENT, FUNCTION, "debug", "Post not found or inaccessible", { postId });
+      return null;
+    }
+
+    const isOwner = post.user_id === currentUserId;
+    if (post.is_draft && !isOwner) return null;
+
+    const [hydratedPost] = await this.hydrateEngagement([post], currentUserId);
+    return hydratedPost;
+  }
+
+  async getPostsByIds(postIds: string[], currentUserId: string): Promise<Post[]> {
+    if (!postIds.length) return [];
+    
+    const { data, error } = await supabaseAdmin
+      .from("posts")
+      .select(`
+        *,
+        profiles (username, full_name),
+        post_media (id, storage_path, url, media_type),
+        likes:likes(count),
+        comments:comments(count),
+        shares:posts!shared_post_id(count)
+      `)
+      .in("id", postIds)
+      .eq("is_archived", false)
+      .eq("is_draft", false);
+
+    if (error) return [];
+    return this.hydrateEngagement(data, currentUserId);
+  }
+
   async getUserPaginatedPosts(
     userId: string,
     cursorCreatedAt?: string,
-    direction = "older",
+    direction: "older" | "newer" = "older",
     limit: number = 20
   ): Promise<Post[]> {
-    const FUNCTION = "getUserPosts";
-    Logger.log(COMPONENT, FUNCTION, "debug", "get user's post", {
-      userId,
-    });
-    if (!userId) {
-      throw new Error("User ID is required");
-    }
+    let query = supabaseAdmin
+      .from("posts")
+      .select(`
+        *,
+        profiles (username, full_name),
+        post_media (id, storage_path, url, media_type),
+        likes:likes(count),
+        comments:comments(count),
+        shares:posts!shared_post_id(count)
+      `)
+      .eq("user_id", userId)
+      .eq("is_archived", false)
+      .eq("is_draft", false)
+      .order("created_at", { ascending: direction === "newer" })
+      .limit(limit);
 
-    let query = `SELECT 
-    p.id,
-    p.user_id,
-    u.username,
-    u.full_name,
-    p.original_content,
-    p.type,
-    p.content,
-    p.duration_days,
-    p.expires_at,
-    p.is_archived,
-    p.created_at,
-    p.shared_post_id,
-    -- Pre-aggregated comment count
-    COALESCE(c.comment_count, 0) AS comment_count,
-    -- Pre-aggregated like count
-    COALESCE(l.like_count, 0) AS like_count,
-    COALESCE(s.share_count, 0) AS share_count,
-    -- Check if current user liked the post
-    CASE WHEN ul.user_id IS NULL THEN FALSE ELSE TRUE END AS is_liked_by_current_user
-    FROM posts p
-    JOIN users u ON p.user_id = u.id
-    -- Aggregate comments
-    LEFT JOIN (
-        SELECT post_id, COUNT(*) AS comment_count
-        FROM comments
-        GROUP BY post_id
-    ) c ON p.id = c.post_id
-    -- Aggregate likes
-    LEFT JOIN (
-        SELECT post_id, COUNT(*) AS like_count
-        FROM likes
-        GROUP BY post_id
-    ) l ON p.id = l.post_id
-     -- Aggregate shares
-    LEFT JOIN (
-        SELECT shared_post_id, COUNT(*) AS share_count
-        FROM posts
-        WHERE shared_post_id IS NOT NULL
-        GROUP BY shared_post_id
-    ) s ON p.id = s.shared_post_id
-    -- Check if current user liked this post
-    LEFT JOIN (
-        SELECT post_id, user_id
-        FROM likes
-        WHERE user_id = ?  -- pass current user ID here
-    ) ul ON p.id = ul.post_id
-       WHERE p.user_id = ? AND p.is_archived = false
-       AND (p.expires_at IS NULL OR p.expires_at > NOW())`;
-    const params = [userId, userId];
     if (cursorCreatedAt) {
-      query +=
-        direction === "older"
-          ? ` AND p.created_at < STR_TO_DATE(?, '%Y-%m-%d %H:%i:%s') `
-          : ` AND p.created_at > STR_TO_DATE(?, '%Y-%m-%d %H:%i:%s') `;
-      params.push(cursorCreatedAt);
+      if (direction === "older") query = query.lt("created_at", cursorCreatedAt);
+      else query = query.gt("created_at", cursorCreatedAt);
     }
 
-    query += ` ORDER BY p.created_at DESC LIMIT ? `;
-    params.push(`${limit}`);
-
-    try {
-      const queryResult = await executeQuery(query, params);
-      const posts: Post[] = (queryResult as any[]).map((post) => ({
-        id: post.id,
-        userId: post.user_id,
-        username: post.username,
-        fullName: post.full_name,
-        originalContent: post.original_content,
-        type: post.type,
-        content: post.content,
-        durationDays: post.duration_days,
-        expiresAt: post.expires_at ? new Date(post.expires_at) : null,
-        isArchived: post.is_archived,
-        createdAt: new Date(post.created_at),
-        commentCount: post.comment_count,
-        likeCount: post.like_count,
-        isLikedByCurrentUser: post.is_liked_by_current_user,
-        sharedPostId:post.shared_post_id,
-        shareCount:post.share_count
-      }));
-      return posts;
-    } catch (error: any) {
-      throw new Error("Failed to fetch user posts: " + error.message);
-    }
+    const { data, error } = await query;
+    if (error) return [];
+    return this.hydrateEngagement(data, userId);
   }
-async getArchivedPost(
+
+  async getPublicOpinions(
     userId: string,
+    currentUserId: string,
     cursorCreatedAt?: string,
+    direction: "older" | "newer" = "older",
     limit: number = 20
   ): Promise<Post[]> {
-    const FUNCTION = "getArchivedPost";
-    Logger.log(COMPONENT, FUNCTION, "debug", "get ArchivedPost", {
-      userId,
-    });
-    if (!userId) {
-      throw new Error("User ID is required");
-    }
-
-    let query = `SELECT 
-    p.id,
-    p.user_id,
-    u.username,
-    u.full_name,
-    p.original_content,
-    p.type,
-    p.content,
-    p.duration_days,
-    p.expires_at,
-    p.is_archived,
-    p.created_at,
-    p.shared_post_id,
-    -- Pre-aggregated comment count
-    COALESCE(c.comment_count, 0) AS comment_count,
-    -- Pre-aggregated like count
-    COALESCE(l.like_count, 0) AS like_count,
-    COALESCE(s.share_count, 0) AS share_count,
-    -- Check if current user liked the post
-    CASE WHEN ul.user_id IS NULL THEN FALSE ELSE TRUE END AS is_liked_by_current_user
-    FROM posts p
-    JOIN users u ON p.user_id = u.id
-    -- Aggregate comments
-    LEFT JOIN (
-        SELECT post_id, COUNT(*) AS comment_count
-        FROM comments
-        GROUP BY post_id
-    ) c ON p.id = c.post_id
-    -- Aggregate likes
-    LEFT JOIN (
-        SELECT post_id, COUNT(*) AS like_count
-        FROM likes
-        GROUP BY post_id
-    ) l ON p.id = l.post_id
-     -- Aggregate shares
-    LEFT JOIN (
-        SELECT shared_post_id, COUNT(*) AS share_count
-        FROM posts
-        WHERE shared_post_id IS NOT NULL
-        GROUP BY shared_post_id
-    ) s ON p.id = s.shared_post_id
-    -- Check if current user liked this post
-    LEFT JOIN (
-        SELECT post_id, user_id
-        FROM likes
-        WHERE user_id = ?  -- pass current user ID here
-    ) ul ON p.id = ul.post_id
-       WHERE p.user_id = ? AND p.is_archived = true`;
-    const params = [userId, userId];
-    if (cursorCreatedAt) {
-      query +=` AND p.created_at < STR_TO_DATE(?, '%Y-%m-%d %H:%i:%s') `;
-      params.push(cursorCreatedAt);
-    }
-
-    query += ` ORDER BY p.created_at DESC LIMIT ? `;
-    params.push(`${limit}`);
-
-    try {
-      const queryResult = await executeQuery(query, params);
-      const posts: Post[] = (queryResult as any[]).map((post) => ({
-        id: post.id,
-        userId: post.user_id,
-        username: post.username,
-        fullName: post.full_name,
-        originalContent: post.original_content,
-        type: post.type,
-        content: post.content,
-        durationDays: post.duration_days,
-        expiresAt: post.expires_at ? new Date(post.expires_at) : null,
-        isArchived: post.is_archived,
-        createdAt: new Date(post.created_at),
-        commentCount: post.comment_count,
-        likeCount: post.like_count,
-        isLikedByCurrentUser: post.is_liked_by_current_user,
-        sharedPostId:post.shared_post_id,
-        shareCount:post.share_count
-      }));
-      return posts;
-    } catch (error: any) {
-      throw new Error("Failed to fetch user posts: " + error.message);
-    }
+    return this.fetchPostsByFilter(
+      { type: "public_opinion", user_id: userId, is_archived: false, is_draft: false },
+      currentUserId,
+      cursorCreatedAt,
+      direction,
+      limit
+    );
   }
+
+  async getAllPublicOpinions(
+    currentUserId: string,
+    cursorCreatedAt?: string,
+    direction: "older" | "newer" = "older",
+    limit: number = 20
+  ): Promise<Post[]> {
+    return this.fetchPostsByFilter(
+      { type: "public_opinion", is_archived: false, is_draft: false },
+      currentUserId,
+      cursorCreatedAt,
+      direction,
+      limit
+    );
+  }
+
   async getFriendPosts(
     userId: string,
     currentUserId: string,
@@ -502,594 +200,204 @@ async getArchivedPost(
     direction: "older" | "newer" = "older",
     limit: number = 20
   ): Promise<Post[]> {
-    const FUNCTION = "getFriendPosts";
-    if (!userId || !currentUserId) {
-      throw new Error("User ID and current user ID are required");
-    }
-
-    try {
-      let query = `
-      SELECT 
-        p.id,
-        p.user_id,
-        u.username,
-        u.full_name,
-        p.original_content,
-        p.type,
-        p.content,
-        p.duration_days,
-        p.expires_at,
-        p.is_archived,
-        p.created_at,
-        p.shared_post_id,
-        COALESCE(c.comment_count, 0) AS comment_count,
-        COALESCE(l.like_count, 0) AS like_count,
-        COALESCE(s.share_count, 0) AS share_count,
-        CASE WHEN ul.user_id IS NULL THEN FALSE ELSE TRUE END AS is_liked_by_current_user
-      FROM posts p
-      JOIN users u ON p.user_id = u.id
-      LEFT JOIN (
-        SELECT post_id, COUNT(*) AS comment_count
-        FROM comments
-        GROUP BY post_id
-      ) c ON p.id = c.post_id
-      LEFT JOIN (
-        SELECT post_id, COUNT(*) AS like_count
-        FROM likes
-        GROUP BY post_id
-      ) l ON p.id = l.post_id
-      LEFT JOIN (
-        SELECT post_id, user_id
-        FROM likes
-        WHERE user_id = ?
-      ) ul ON p.id = ul.post_id
-       -- Aggregate shares
-      LEFT JOIN (
-          SELECT shared_post_id, COUNT(*) AS share_count
-          FROM posts
-          WHERE shared_post_id IS NOT NULL
-          GROUP BY shared_post_id
-      ) s ON p.id = s.shared_post_id
-      WHERE p.user_id = ? 
-        AND p.is_archived = false
-    `;
-
-      const params = [currentUserId, userId];
-
-      if (cursorCreatedAt) {
-        if (direction === "older") {
-          query += ` AND p.created_at < STR_TO_DATE(?, '%Y-%m-%d %H:%i:%s') `;
-        } else {
-          query += ` AND p.created_at > STR_TO_DATE(?, '%Y-%m-%d %H:%i:%s') `;
-        }
-        params.push(cursorCreatedAt);
-      }
-
-      query += ` ORDER BY p.created_at DESC LIMIT ? `;
-      params.push(limit.toString());
-
-      const results = await executeQuery(query, params);
-
-      Logger.log(COMPONENT, FUNCTION, "debug", "Post Fetched Successfully", {
-        userId,
-      });
-
-      return (results as any[]).map((post) => ({
-        id: post.id,
-        userId: post.user_id,
-        username: post.username,
-        fullName: post.full_name,
-        originalContent: post.original_content,
-        type: post.type,
-        content: post.content,
-        durationDays: post.duration_days,
-        expiresAt: post.expires_at ? new Date(post.expires_at) : null,
-        isArchived: post.is_archived,
-        createdAt: new Date(post.created_at),
-        commentCount: post.comment_count,
-        likeCount: post.like_count,
-        isLikedByCurrentUser: post.is_liked_by_current_user,
-        sharedPostId:post.shared_post_id,
-        shareCount:post.share_count
-      }));
-    } catch (error: any) {
-      throw new Error("Failed to fetch friend posts: " + error.message);
-    }
-  }
-
-  async getPublicOpinions(
-    userId: string,
-    currentUserId: string,
-    cursorCreatedAt?: string,
-    direction = "older",
-    limit: number = 20
-  ): Promise<Post[]> {
-    const FUNCTION = "getPublicOpinions";
-    try {
-      let query = "";
-      let params: string[] = [];
-      if (currentUserId != userId) {
-        query = `SELECT 
-            p.id,
-            p.user_id,
-            u.username,
-            p.original_content,
-            p.type,
-            p.content,
-            p.duration_days,
-            p.expires_at,
-            p.is_archived,
-            p.created_at,
-            p.shared_post_id,
-            -- Pre-aggregated comment count
-            COALESCE(c.comment_count, 0) AS comment_count,
-            -- Pre-aggregated like count
-            COALESCE(l.like_count, 0) AS like_count,
-            COALESCE(s.share_count, 0) AS share_count,
-            -- Check if current user liked the post
-            CASE WHEN ul.user_id IS NULL THEN FALSE ELSE TRUE END AS is_liked_by_current_user
-            FROM posts p
-            JOIN users u ON p.user_id = u.id
-            -- Aggregate comments
-            LEFT JOIN (
-                SELECT post_id, COUNT(*) AS comment_count
-                FROM comments
-                GROUP BY post_id
-            ) c ON p.id = c.post_id
-            -- Aggregate likes
-            LEFT JOIN (
-                SELECT post_id, COUNT(*) AS like_count
-                FROM likes
-                GROUP BY post_id
-            ) l ON p.id = l.post_id
-             -- Aggregate shares
-            LEFT JOIN (
-                SELECT shared_post_id, COUNT(*) AS share_count
-                FROM posts
-                WHERE shared_post_id IS NOT NULL
-                GROUP BY shared_post_id
-            ) s ON p.id = s.shared_post_id
-            -- Check if current user liked this post
-            LEFT JOIN (
-                SELECT post_id, user_id
-                FROM likes
-                WHERE user_id = ?  -- pass current user ID here
-            ) ul ON p.id = ul.post_id
-                WHERE p.user_id = ? AND p.type = 'public_opinion' AND p.is_archived = false
-                AND (p.expires_at IS NULL OR p.expires_at > NOW())`;
-        params = [currentUserId, userId];
-      } else {
-        query = `SELECT 
-    p.id,
-    p.user_id,
-    u.username,
-    u.full_name,
-    p.original_content,
-    p.type,
-    p.content,
-    p.duration_days,
-    p.expires_at,
-    p.is_archived,
-    p.created_at,
-    p.shared_post_id,
-    -- Pre-aggregated comment count
-    COALESCE(c.comment_count, 0) AS comment_count,
-    -- Pre-aggregated like count
-    COALESCE(l.like_count, 0) AS like_count,
-    COALESCE(s.share_count, 0) AS share_count,
-    -- Check if current user liked the post
-    CASE WHEN ul.user_id IS NULL THEN FALSE ELSE TRUE END AS is_liked_by_current_user
-    FROM posts p
-    JOIN users u ON p.user_id = u.id
-    -- Aggregate comments
-    LEFT JOIN (
-        SELECT post_id, COUNT(*) AS comment_count
-        FROM comments
-        GROUP BY post_id
-    ) c ON p.id = c.post_id
-    -- Aggregate likes
-    LEFT JOIN (
-        SELECT post_id, COUNT(*) AS like_count
-        FROM likes
-        GROUP BY post_id
-    ) l ON p.id = l.post_id
-     -- Aggregate shares
-    LEFT JOIN (
-        SELECT shared_post_id, COUNT(*) AS share_count
-        FROM posts
-        WHERE shared_post_id IS NOT NULL
-        GROUP BY shared_post_id
-    ) s ON p.id = s.shared_post_id
-    -- Check if current user liked this post
-    LEFT JOIN (
-        SELECT post_id, user_id
-        FROM likes
-        WHERE user_id = ?  -- pass current user ID here
-    ) ul ON p.id = ul.post_id
-         WHERE p.type = 'public_opinion' AND p.is_archived = false AND (p.expires_at > NOW() OR p.expires_at IS NULL)
-           AND (
-             EXISTS (
-               SELECT 1 FROM friends f
-               WHERE (f.user_id_1 = p.user_id AND f.user_id_2 = ?) OR (f.user_id_1 = ? AND f.user_id_2 = p.user_id)
-             ) OR EXISTS (
-               SELECT 1 FROM follows fo
-               WHERE fo.followed_id = p.user_id AND fo.follower_id = ?
-             )
-           )`;
-        params = [currentUserId, currentUserId, currentUserId, currentUserId];
-      }
-
-      if (cursorCreatedAt) {
-        query +=
-          direction === "older"
-            ? ` AND p.created_at < STR_TO_DATE(?, '%Y-%m-%d %H:%i:%s') `
-            : ` AND p.created_at > STR_TO_DATE(?, '%Y-%m-%d %H:%i:%s') `;
-        params.push(cursorCreatedAt);
-      }
-
-      query += ` ORDER BY p.created_at DESC LIMIT ? `;
-      params.push(`${limit}`);
-      const results = await executeQuery(query, params);
-      return (results as any[]).map((post) => ({
-        id: post.id,
-        userId: post.user_id,
-        username: post.username,
-        fullName: post.full_name,
-        originalContent: post.original_content,
-        type: post.type,
-        content: post.content,
-        durationDays: post.duration_days,
-        expiresAt: post.expires_at ? new Date(post.expires_at) : null,
-        isArchived: post.is_archived,
-        createdAt: new Date(post.created_at),
-        commentCount: post.comment_count,
-        likeCount: post.like_count,
-        isLikedByCurrentUser: post.is_liked_by_current_user,
-        sharedPostId:post.shared_post_id,
-        shareCount:post.share_count
-      }));
-    } catch (error: any) {
-      throw new Error("Failed to fetch public opinions: " + error.message);
-    }
+    return this.fetchPostsByFilter(
+      { type: "friend_post", user_id: userId, is_archived: false, is_draft: false },
+      currentUserId,
+      cursorCreatedAt,
+      direction,
+      limit
+    );
   }
 
   async getPrivatePosts(currentUserId: string): Promise<Post[]> {
-    const FUNCTION = "getPrivatePosts";
-    if (!currentUserId) {
-      throw new Error("Current user ID is required");
-    }
+    const { data, error } = await supabaseAdmin
+      .from("posts")
+      .select(`
+        *,
+        profiles (username, full_name),
+        post_media (id, storage_path, url, media_type),
+        likes:likes(count),
+        comments:comments(count),
+        shares:posts!shared_post_id(count)
+      `)
+      .eq("user_id", currentUserId)
+      .eq("is_draft", true)
+      .order("created_at", { ascending: false });
 
-    try {
-      const results = await executeQuery(
-        `SELECT 
-    p.id,
-    p.user_id,
-    u.username,
-    u.full_name,
-    p.original_content,
-    p.type,
-    p.content,
-    p.duration_days,
-    p.expires_at,
-    p.is_archived,
-    p.created_at,
-    p.shared_post_id,
-    -- Pre-aggregated comment count
-    COALESCE(c.comment_count, 0) AS comment_count,
-    -- Pre-aggregated like count
-    COALESCE(l.like_count, 0) AS like_count,
-    COALESCE(s.share_count, 0) AS share_count,
-    -- Check if current user liked the post
-    CASE WHEN ul.user_id IS NULL THEN FALSE ELSE TRUE END AS is_liked_by_current_user
-    FROM posts p
-    JOIN users u ON p.user_id = u.id
-    -- Aggregate comments
-    LEFT JOIN (
-        SELECT post_id, COUNT(*) AS comment_count
-        FROM comments
-        GROUP BY post_id
-    ) c ON p.id = c.post_id
-    -- Aggregate likes
-    LEFT JOIN (
-        SELECT post_id, COUNT(*) AS like_count
-        FROM likes
-        GROUP BY post_id
-    ) l ON p.id = l.post_id
-     -- Aggregate shares
-    LEFT JOIN (
-        SELECT shared_post_id, COUNT(*) AS share_count
-        FROM posts
-        WHERE shared_post_id IS NOT NULL
-        GROUP BY shared_post_id
-    ) s ON p.id = s.shared_post_id
-    -- Check if current user liked this post
-    LEFT JOIN (
-        SELECT post_id, user_id
-        FROM likes
-        WHERE user_id = ?  -- pass current user ID here
-    ) ul ON p.id = ul.post_id
-         JOIN friends f ON (f.user_id_1 = p.user_id AND f.user_id_2 = ?) OR (f.user_id_1 = ? AND f.user_id_2 = p.user_id)
-         WHERE p.type = 'friend_post' AND p.is_archived = false`,
-        [currentUserId, currentUserId, currentUserId]
-      );
-      Logger.log(COMPONENT, FUNCTION, "debug", "Post Fetched Successfully", {
-        currentUserId,
-      });
-      return (results as any[]).map((post) => ({
-        id: post.id,
-        userId: post.user_id,
-        username: post.username,
-        fullName: post.full_name,
-        type: post.type,
-        content: post.content,
-        originalContent: post.original_content,
-        durationDays: post.duration_days,
-        expiresAt: post.expires_at ? new Date(post.expires_at) : null,
-        isArchived: post.is_archived,
-        createdAt: new Date(post.created_at),
-        commentCount: post.comment_count,
-        likeCount: post.like_count,
-        isLikedByCurrentUser: post.is_liked_by_current_user,
-        sharedPostId:post.shared_post_id,
-        shareCount:post.share_count
-      }));
-    } catch (error: any) {
-      throw new Error("Failed to fetch private posts: " + error.message);
-    }
+    if (error) return [];
+    return this.hydrateEngagement(data, currentUserId);
   }
 
-  async getAllPublicOpinions(
+  async getUserFeed(
     currentUserId: string,
     cursorCreatedAt?: string,
-    direction = "older",
+    direction: "older" | "newer" = "older",
     limit: number = 20
   ): Promise<Post[]> {
-    try {
-      const FUNCTION = "getAllPublicOpinions";
-      let query = `SELECT 
-    p.id,
-    p.user_id,
-    u.username,
-    u.full_name,
-    p.original_content,
-    p.type,
-    p.content,
-    p.duration_days,
-    p.expires_at,
-    p.is_archived,
-    p.created_at,
-    p.shared_post_id,
-    -- Pre-aggregated comment count
-    COALESCE(c.comment_count, 0) AS comment_count,
-    -- Pre-aggregated like count
-    COALESCE(l.like_count, 0) AS like_count,
-    COALESCE(s.share_count, 0) AS share_count,
-    -- Check if current user liked the post
-    CASE WHEN ul.user_id IS NULL THEN FALSE ELSE TRUE END AS is_liked_by_current_user
-    FROM posts p
-    JOIN users u ON p.user_id = u.id
-    -- Aggregate comments
-    LEFT JOIN (
-        SELECT post_id, COUNT(*) AS comment_count
-        FROM comments
-        GROUP BY post_id
-    ) c ON p.id = c.post_id
-    -- Aggregate likes
-    LEFT JOIN (
-        SELECT post_id, COUNT(*) AS like_count
-        FROM likes
-        GROUP BY post_id
-    ) l ON p.id = l.post_id
-     -- Aggregate shares
-    LEFT JOIN (
-        SELECT shared_post_id, COUNT(*) AS share_count
-        FROM posts
-        WHERE shared_post_id IS NOT NULL
-        GROUP BY shared_post_id
-    ) s ON p.id = s.shared_post_id
-    -- Check if current user liked this post
-    LEFT JOIN (
-        SELECT post_id, user_id
-        FROM likes
-        WHERE user_id = ?  -- pass current user ID here
-    ) ul ON p.id = ul.post_id
-         WHERE p.type = 'public_opinion' AND p.is_archived = false
-         AND (p.expires_at IS NULL OR p.expires_at > NOW())
-         `;
-      const params = [currentUserId];
+    const FUNCTION = "getUserFeed";
+    Logger.log(COMPONENT, FUNCTION, "debug", "Fetching optimized user feed via RPC", { currentUserId });
 
-      if (cursorCreatedAt) {
-        query +=
-          direction === "older"
-            ? ` AND p.created_at < STR_TO_DATE(?, '%Y-%m-%d %H:%i:%s') `
-            : ` AND p.created_at > STR_TO_DATE(?, '%Y-%m-%d %H:%i:%s') `;
-        params.push(cursorCreatedAt);
-      }
+    // Use the RPC for the Feed logic
+    const { data, error } = await supabaseAdmin.rpc("get_user_feed", {
+      p_user_id: currentUserId,
+      p_limit: limit,
+      p_cursor: (cursorCreatedAt && !isNaN(Date.parse(cursorCreatedAt))) ? cursorCreatedAt : null
+    });
 
-      query += ` ORDER BY p.created_at DESC LIMIT ? `;
-      params.push(`${limit}`);
-      const results = await executeQuery(query, params);
-      return (results as any[]).map((post) => ({
-        id: post.id,
-        userId: post.user_id,
-        username: post.username,
-        fullName: post.full_name,
-        type: post.type,
-        content: post.content,
-        originalContent: post.original_content,
-        durationDays: post.duration_days,
-        expiresAt: post.expires_at ? new Date(post.expires_at) : null,
-        isArchived: post.is_archived,
-        createdAt: new Date(post.created_at),
-        commentCount: post.comment_count,
-        likeCount: post.like_count,
-        isLikedByCurrentUser: post.is_liked_by_current_user,
-        sharedPostId:post.shared_post_id,
-        shareCount:post.share_count
-      }));
-    } catch (error: any) {
-      throw new Error("Failed to fetch all public opinions: " + error.message);
-    }
-  }
-async getUserFeed(
-  currentUserId: string,
-  cursorCreatedAt?: string,
-  direction: "older" | "newer" = "older",
-  limit: number = 20
-): Promise<Post[]> {
-  const FUNCTION = "getUserFeed";
-  if (!currentUserId) throw new Error("Current user ID is required");
-  Logger.log(COMPONENT, FUNCTION, "debug", "Fetching Users Feed",{currentUserId,cursorCreatedAt,direction,limit});
-  try {
-    let query = `
-      SELECT 
-    p.id,
-    p.user_id,
-    u.username,
-    u.full_name,
-    p.original_content,
-    p.type,
-    p.content,
-    p.duration_days,
-    p.expires_at,
-    p.is_archived,
-    p.created_at,
-    p.shared_post_id,
-    -- Pre-aggregated comment count
-    COALESCE(c.comment_count, 0) AS comment_count,
-    -- Pre-aggregated like count
-    COALESCE(l.like_count, 0) AS like_count,
-    COALESCE(s.share_count, 0) AS share_count,
-    -- Check if current user liked the post
-    CASE WHEN ul.user_id IS NULL THEN FALSE ELSE TRUE END AS is_liked_by_current_user
-    FROM posts p
-    JOIN users u ON p.user_id = u.id
-    -- Aggregate comments
-    LEFT JOIN (
-        SELECT post_id, COUNT(*) AS comment_count
-        FROM comments
-        GROUP BY post_id
-    ) c ON p.id = c.post_id
-    -- Aggregate likes
-    LEFT JOIN (
-        SELECT post_id, COUNT(*) AS like_count
-        FROM likes
-        GROUP BY post_id
-    ) l ON p.id = l.post_id
-     -- Aggregate shares
-    LEFT JOIN (
-        SELECT shared_post_id, COUNT(*) AS share_count
-        FROM posts
-        WHERE shared_post_id IS NOT NULL
-        GROUP BY shared_post_id
-    ) s ON p.id = s.shared_post_id
-    -- Check if current user liked this post
-    LEFT JOIN (
-        SELECT post_id, user_id
-        FROM likes
-        WHERE user_id = ?  -- pass current user ID here
-    ) ul ON p.id = ul.post_id
-      WHERE p.is_archived = false
-        AND (p.expires_at IS NULL OR p.expires_at > NOW())
-        AND (
-          -- Own posts
-          p.user_id = ?
-          OR
-          -- Friend posts
-          (
-            p.type = 'friend_post'
-            AND EXISTS (
-              SELECT 1 FROM friends f
-              WHERE (f.user_id_1 = p.user_id AND f.user_id_2 = ?)
-                 OR (f.user_id_1 = ? AND f.user_id_2 = p.user_id)
-            )
-          )
-          OR
-          -- Public opinions
-          (
-            p.type = 'public_opinion'
-            AND (
-              p.user_id = ?
-              OR EXISTS (
-                SELECT 1 FROM friends f
-                WHERE (f.user_id_1 = p.user_id AND f.user_id_2 = ?)
-                   OR (f.user_id_1 = ? AND f.user_id_2 = p.user_id)
-              )
-              OR EXISTS (
-                SELECT 1 FROM follows fo
-                WHERE fo.followed_id = p.user_id AND fo.follower_id = ?
-              )
-            )
-          )
-        )
-    `;
-
-    const params: string[] = [
-      currentUserId, // liked posts check
-      currentUserId, // own posts
-      currentUserId, // friend posts (f.user_id_2 = ?)
-      currentUserId, // friend posts (f.user_id_1 = ?)
-      currentUserId, // own public opinions
-      currentUserId, // public opinions via friends (f.user_id_2 = ?)
-      currentUserId, // public opinions via friends (f.user_id_1 = ?)
-      currentUserId  // public opinions via follows (fo.follower_id = ?)
-    ];
-
-    if (cursorCreatedAt) {
-      query +=
-        direction === "older"
-          ? ` AND p.created_at < STR_TO_DATE(?, '%Y-%m-%d %H:%i:%s') `
-          : ` AND p.created_at > STR_TO_DATE(?, '%Y-%m-%d %H:%i:%s') `;
-      params.push(cursorCreatedAt);
+    if (error || !data) {
+      Logger.log(COMPONENT, FUNCTION, "error", "Failed to fetch feed via RPC", { error });
+      return [];
     }
 
-    query += ` ORDER BY p.created_at DESC LIMIT ? `;
-    params.push(limit.toString());
+    // Now we hydrate the profiles, media, and counts for these post IDs
+    const postIds = data.map((p: any) => p.id);
+    if (!postIds.length) return [];
 
-    const results = await executeQuery(query, params);
+    const { data: hydratedPosts, error: hydrationError } = await supabaseAdmin
+      .from("posts")
+      .select(`
+        *,
+        profiles (username, full_name),
+        post_media (id, storage_path, url, media_type),
+        likes:likes(count),
+        comments:comments(count),
+        shares:posts!shared_post_id(count)
+      `)
+      .in("id", postIds);
 
-    return (results as any[]).map((post) => ({
-      id: post.id,
-      userId: post.user_id,
-      username: post.username,
-      fullName: post.full_name,
-      originalContent: post.original_content,
-      type: post.type,
-      content: post.content,
-      durationDays: post.duration_days,
-      expiresAt: post.expires_at ? new Date(post.expires_at) : null,
-      isArchived: post.is_archived,
-      createdAt: new Date(post.created_at),
-      commentCount: post.comment_count,
-      likeCount: post.like_count,
-      isLikedByCurrentUser: post.is_liked_by_current_user,
-      sharedPostId:post.shared_post_id,
-      shareCount:post.share_count
-    }));
-  } catch (error: any) {
-    throw new Error("Failed to fetch user feed: " + error.message);
+    if (hydrationError) return [];
+
+    // Since in query results might be unordered, we re-order based on the initial RPC result
+    const sortedPosts = postIds.map((id: string) => hydratedPosts.find(p => p.id === id)).filter(Boolean);
+    return this.hydrateEngagement(sortedPosts, currentUserId);
   }
-}
+
+  async getArchivedPost(
+    currentUserId: string,
+    cursorCreatedAt?: string,
+    limit: number = 20
+  ): Promise<Post[]> {
+    const { data, error } = await supabaseAdmin
+      .from("posts")
+      .select(`
+        *,
+        profiles (username, full_name),
+        post_media (id, storage_path, url, media_type),
+        likes:likes(count),
+        comments:comments(count),
+        shares:posts!shared_post_id(count)
+      `)
+      .eq("user_id", currentUserId)
+      .eq("is_archived", true)
+      .order("created_at", { ascending: false })
+      .limit(limit);
+
+    if (error) return [];
+    return this.hydrateEngagement(data, currentUserId);
+  }
+
   async deletePost(userId: string, postId: string): Promise<void> {
     const FUNCTION = "deletePost";
-    if (!userId || !postId) {
-      throw new Error("User ID and Post ID are required");
+    const { data: media } = await supabaseAdmin
+      .from("post_media")
+      .select("storage_path")
+      .eq("post_id", postId);
+
+    const { error } = await supabaseAdmin
+      .from("posts")
+      .delete()
+      .match({ id: postId, user_id: userId });
+
+    if (error) {
+      Logger.log(COMPONENT, FUNCTION, "error", "Failed to delete post", { error });
+      throw new Error("Failed to delete post: " + error.message);
     }
-    try {
-      const result = await executeQuery(
-        "DELETE FROM posts WHERE id = ? AND user_id = ?",
-        [postId, userId]
-      );
-      if ((result as any).affectedRows === 0) {
-        throw new Error(
-          `[${COMPONENT}][${FUNCTION}]:Post not found or not owned by user`
-        );
-      }
-    } catch (error: any) {
-      throw new Error(
-        `[${COMPONENT}][${FUNCTION}]:Failed to delete Post: ` + error.message
-      );
+
+    if (media && media.length > 0) {
+      await mediaService.deleteMediaFromStorage(media.map(m => m.storage_path));
     }
   }
+
+  // --- Helper Methods ---
+
+  private async hydrateEngagement(rows: any[], currentUserId: string): Promise<Post[]> {
+    if (!rows.length) return [];
+    
+    const postIds = rows.map(r => r.id);
+    
+    // Call the RPC to get engagement status for all these posts in one go
+    const { data: statusData, error } = await supabaseAdmin.rpc("get_engagement_status", {
+      p_user_id: currentUserId,
+      p_post_ids: postIds
+    });
+
+    const likedPostIds = new Set((statusData || []).filter((s: any) => s.is_liked).map((s: any) => s.post_id));
+
+    return rows.map(row => {
+      const post = this.mapRowToPost(row, currentUserId);
+      post.isLikedByCurrentUser = likedPostIds.has(post.id);
+      return post;
+    });
+  }
+
+  private async fetchPostsByFilter(
+    filter: any,
+    currentUserId: string,
+    cursorCreatedAt?: string,
+    direction: "older" | "newer" = "older",
+    limit: number = 20
+  ): Promise<Post[]> {
+    let query = supabaseAdmin
+      .from("posts")
+      .select(`
+        *,
+        profiles (username, full_name),
+        post_media (id, storage_path, url, media_type),
+        likes:likes(count),
+        comments:comments(count),
+        shares:posts!shared_post_id(count)
+      `)
+      .match(filter)
+      .order("created_at", { ascending: direction === "newer" })
+      .limit(limit);
+
+    if (cursorCreatedAt) {
+      if (direction === "older") query = query.lt("created_at", cursorCreatedAt);
+      else query = query.gt("created_at", cursorCreatedAt);
+    }
+
+    const { data, error } = await query;
+    if (error) return [];
+    return this.hydrateEngagement(data, currentUserId);
+  }
+
+  private mapRowToPost(row: any, currentUserId: string): Post {
+    return {
+      id: row.id,
+      userId: row.user_id,
+      username: row.profiles?.username || "Unknown",
+      fullName: row.profiles?.full_name || "Unknown",
+      type: row.type,
+      content: row.content,
+      originalContent: row.content,
+      durationDays: row.duration_days,
+      expiresAt: row.expires_at ? new Date(row.expires_at) : null,
+      isArchived: row.is_archived,
+      isDraft: row.is_draft,
+      createdAt: new Date(row.created_at),
+      likeCount: row.likes?.[0]?.count || 0,
+      commentCount: row.comments?.[0]?.count || 0,
+      shareCount: row.shares?.[0]?.count || 0,
+      sharedPostId: row.shared_post_id,
+      isLikedByCurrentUser: false, // Populated by hydrateEngagement for bulk, or overwritten by single query
+      media: (row.post_media || []).map((m: any) => ({
+        id: m.id,
+        storagePath: m.storage_path,
+        url: m.url,
+        mediaType: m.media_type,
+      })),
+    };
+  }
 }
+
 export const postService = new PostService();

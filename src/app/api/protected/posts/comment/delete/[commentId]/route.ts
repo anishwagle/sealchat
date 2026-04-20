@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import jwt from "jsonwebtoken";
+
 import { Logger } from "@/lib/logger";
 import { ApiError } from "@/lib/errors";
 import { engagementService } from "@/services/serviceProvider";

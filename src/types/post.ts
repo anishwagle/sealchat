@@ -9,6 +9,13 @@ export interface Like {
   fullName: string;
 }
 
+export interface PostMedia {
+  id: string;
+  storagePath: string;
+  url: string;
+  mediaType: string;
+}
+
 export interface Post {
   id: string;
   userId: string;
@@ -20,11 +27,13 @@ export interface Post {
   durationDays?: number;
   expiresAt?: Date | null;
   isArchived: boolean;
+  isDraft: boolean;
   createdAt: Date;
-  likeCount:number;
-  commentCount:number;
-  sharedPostId:string|null;
-  sharedPost?:Post;
-  shareCount:number;
-  isLikedByCurrentUser:boolean;
+  likeCount: number;
+  commentCount: number;
+  sharedPostId: string | null;
+  shareCount: number;
+  isLikedByCurrentUser: boolean;
+  sharedPost?: Post;
+  media: PostMedia[];
 }

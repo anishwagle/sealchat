@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import jwt from "jsonwebtoken";
+
 import { Logger } from "@/lib/logger";
 import { postService } from "@/services/serviceProvider";
 import { ApiError } from "@/lib/errors";
@@ -13,19 +13,24 @@ export async function POST(request: Request) {
   try {
     const userId = request.headers.get("x-user-id");
     if (!userId) {
-      Logger.log(COMPONENT, FUNCTION, "error", "Current Users not found");
-      return NextResponse.json(
-        { message: "Current Users not found", code: "USERS_NOT_FOUND" },
-        { status: 404 }
-      );
+      return NextResponse.json({ message: "Unauthorized", code: "UNAUTHORIZED" }, { status: 401 });
     }
-    const { content, type, durationDays,sharedPostId } = (await request.json()) as {
+
+    const { content, type, durationDays, sharedPostId, mediaIds, isDraft } = (await request.json()) as {
       content: string;
       type: "friend_post" | "public_opinion";
       durationDays?: number;
-      sharedPostId?:string;
+      sharedPostId?: string;
+      mediaIds?: string[];
+      isDraft?: boolean;
     };
-    await postService.createPost(userId, content, type, durationDays,sharedPostId);
+
+    if (isDraft) {
+      const draftId = await postService.saveDraft(userId, content, type, mediaIds);
+      return NextResponse.json({ message: "Draft Saved", draftId }, { status: 200 });
+    }
+
+    await postService.createPost(userId, content, type, durationDays, sharedPostId, mediaIds);
     Logger.log(COMPONENT, FUNCTION, "info", "Post Created Successfully");
     return NextResponse.json(
       { message: "Post Created Successfully" },

@@ -6,13 +6,20 @@ export interface IPostService {
     content: string,
     type: PostType,
     durationDays?: number,
-    sharedPostId?:string
+    sharedPostId?: string,
+    mediaIds?: string[]
   ): Promise<void>;
+  saveDraft(
+    userId: string,
+    content: string,
+    type: PostType,
+    mediaIds?: string[]
+  ): Promise<string>;
   getPostById(postId: string, currentUserId: string): Promise<Post | null>;
   getPostsByIds(
-  postIds: string[],   // array of shared_post_id
-  currentUserId: string
-): Promise<Post[]>;
+    postIds: string[],
+    currentUserId: string
+  ): Promise<Post[]>;
   getUserPaginatedPosts(
     userId: string,
     cursorCreatedAt?: string,

@@ -1,46 +1,45 @@
 import { Logger } from "@/lib/logger";
-import executeQuery from "../db";
-import { Like, PostType } from "../types/post";
+import { Like } from "../types/post";
 import { Comment } from "@/types/comment";
-import { v4 } from "uuid";
-import { QueryResult } from "mysql2";
-import {} from "./INotificationService";
-import { notificationService } from "./serviceProvider";
-import {
-  convertMentionsIntoLinks,
-  escapeHtml,
-  getEmbedSection,
-  getLinksFromString,
-  getMentionAndIdForString,
-} from "@/utils/stringParser";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { IEngagementService } from "./IEngagementService";
 
 const COMPONENT = "EngagementService";
+
 export class EngagementService implements IEngagementService {
   async getPostLikeList(postId: string): Promise<Like[]> {
     const FUNCTION = "getPostLikeList";
-    Logger.log(COMPONENT, FUNCTION, "debug", "get post like list", {
-      postId,
-    });
-    const queryResult = await executeQuery(
-      `SELECT l.*,u.username,u.full_name FROM likes l
-      JOIN users u ON u.id=l.user_id
-       WHERE post_id=? `,
-      [postId]
-    );
-    const result = queryResult as any[];
-    Logger.log(COMPONENT, FUNCTION, "debug", "Get Post Like Status", {
-      result,
-    });
-    return (result as any[]).map((x) => ({
+    Logger.log(COMPONENT, FUNCTION, "debug", "Fetching post like list", { postId });
+
+    const { data, error } = await supabaseAdmin
+      .from("likes")
+      .select(`
+        id,
+        user_id,
+        post_id,
+        created_at,
+        profiles (
+          username,
+          full_name
+        )
+      `)
+      .eq("post_id", postId);
+
+    if (error) {
+      Logger.log(COMPONENT, FUNCTION, "error", "Failed to fetch post likes", { error });
+      return [];
+    }
+
+    return (data || []).map((x: any) => ({
       id: x.id,
       userId: x.user_id,
       postId: x.post_id,
-      username: x.username,
-      fullName:x.full_name,
-      createdAt: x.created_at,
+      username: x.profiles?.username || "Unknown",
+      fullName: x.profiles?.full_name || "Unknown",
+      createdAt: new Date(x.created_at),
     }));
   }
+
   async createComment(
     userId: string,
     content: string,
@@ -48,194 +47,48 @@ export class EngagementService implements IEngagementService {
     parentCommentId?: string | null
   ): Promise<Comment> {
     const FUNCTION = "createComment";
-    Logger.log(COMPONENT, FUNCTION, "debug", "creating new Comment", {
-      userId,
-      content,
-      postId,
-    });
+    Logger.log(COMPONENT, FUNCTION, "debug", "Creating new comment", { userId, postId });
+
     if (!userId || !content || !postId) {
       throw new Error("User ID, content, and postId are required");
     }
-    if (content.length > 1000) {
-      throw new Error("Content must be 1000 characters or less");
+
+    const { data: comment, error } = await supabaseAdmin
+      .from("comments")
+      .insert({
+        user_id: userId,
+        post_id: postId,
+        content: content, // RAW TEXT
+        parent_comment_id: parentCommentId || null,
+      })
+      .select(`
+        *,
+        profiles (
+          username,
+          full_name
+        )
+      `)
+      .single();
+
+    if (error) {
+      Logger.log(COMPONENT, FUNCTION, "error", "Failed to create comment", { error });
+      throw new Error("Failed to create comment: " + error.message);
     }
 
-    const queryResult = await executeQuery(
-      `SELECT id,type,user_id
-         FROM posts
-         WHERE id = ?`,
-      [postId]
-    );
-
-    const post = (queryResult as any[])[0];
-    Logger.log(COMPONENT, FUNCTION, "debug", "Fetched the post", {
-      post,
-    });
-
-    let processedContent = escapeHtml(content);
-    processedContent = getLinksFromString(processedContent);
-    processedContent = await convertMentionsIntoLinks(
-      processedContent,
-      userId,
-      post.type
-    );
-
-    // Combine processed content with embeds
-    const finalContent = `
-      <div class="post-content">${processedContent}</div>
-      `;
-
-    try {
-      const commentId = v4();
-      await executeQuery(
-        "INSERT INTO comments (id,user_id, post_id, content,original_content, parent_comment_id) VALUES (?,?,?, ?, ?, ?)",
-        [
-          commentId,
-          userId,
-          postId,
-          finalContent,
-          content,
-          parentCommentId || null,
-        ]
-      );
-      const { mentions, usernameToId } = await getMentionAndIdForString(
-        processedContent
-      );
-      for (const mention of mentions) {
-        const username = mention[1];
-        const userIdMentioned = usernameToId[username];
-        if (!userIdMentioned) continue; // no user, skip
-        if (userIdMentioned !== userId) {
-          await notificationService.createNotification(
-            userIdMentioned,
-            "comment_mention",
-            userId,
-            postId,
-            commentId
-          );
-        }
-      }
-      const commentResult = await executeQuery(
-        `SELECT c.*, u.username,u.full_name
-         FROM comments c
-          JOIN users u on c.user_id = u.id
-         WHERE c.id = ? `,
-        [commentId]
-      );
-
-      const comment = (commentResult as any[])[0];
-
-      if (post.user_id != userId) {
-        await notificationService.createNotification(
-          post.user_id,
-          "comment",
-          userId,
-          postId,
-          commentId
-        );
-      }
-
-      Logger.log(COMPONENT, FUNCTION, "debug", "Fetched the comment", {
-        comment,
-      });
-      Logger.log(COMPONENT, FUNCTION, "info", "New Comment Created");
-      return {
-        id: commentId,
-        content: finalContent,
-        originalContent: content,
-        userId: userId,
-        postId: post.Id,
-        createdAt: comment.created_at,
-        username: comment.username,
-        fullName:comment.full_name
-      };
-    } catch (error: any) {
-      throw new Error("Failed to create Comment: " + error.message);
-    }
-  }
-
-  async getCommentReplies(
-    currentUserId: string,
-    commentId: string,
-    cursorCreatedAt?: string | null,
-    limit: number = 10
-  ): Promise<Comment[]> {
-    const FUNCTION = "getPublicOpinionComment";
-    try {
-      let query = `SELECT 
-    c.id,
-    c.user_id,
-    c.post_id,
-    u.username,
-    u.full_name,
-    c.parent_comment_id,
-    c.content,
-    c.original_content,
-    c.created_at,
-    COALESCE(cm.reply_count, 0) AS reply_count,
-    -- Pre-aggregated like count
-    COALESCE(l.like_count, 0) AS like_count,
-    -- Check if current user liked the post
-    CASE WHEN ul.user_id IS NULL THEN FALSE ELSE TRUE END AS is_liked_by_current_user
-FROM comments c
-JOIN users u ON c.user_id = u.id
-LEFT JOIN (
-    SELECT parent_comment_id, COUNT(*) AS reply_count
-    FROM comments
-    WHERE parent_comment_id IS NOT NULL
-    GROUP BY parent_comment_id
-) cm ON c.id = cm.parent_comment_id
- -- Aggregate likes
-    LEFT JOIN (
-        SELECT comment_id, COUNT(*) AS like_count
-        FROM comment_likes
-        GROUP BY comment_id
-    ) l ON c.id = l.comment_id
-    -- Check if current user liked this post
-    LEFT JOIN (
-        SELECT comment_id, user_id
-        FROM comment_likes
-        WHERE user_id = ?  -- pass current user ID here
-    ) ul ON c.id = ul.comment_id
-WHERE c.parent_comment_id = ?`;
-      const params: string[] = [currentUserId, commentId];
-      if (cursorCreatedAt) {
-        query += ` AND c.created_at < STR_TO_DATE(?, '%Y-%m-%d %H:%i:%s')`;
-        params.push(cursorCreatedAt);
-      }
-
-      query += ` ORDER BY c.created_at DESC LIMIT ? `;
-      params.push(`${limit}`);
-      const results = await executeQuery(query, params);
-
-      Logger.log(
-        COMPONENT,
-        FUNCTION,
-        "debug",
-        "Comments Fetched for feed Successfully",
-        {
-          commentId,
-          results,
-        }
-      );
-
-      return (results as any[]).map((comment) => ({
-        id: comment.id,
-        userId: comment.user_id,
-        username: comment.username,
-        fullName: comment.full_name,
-        originalContent: comment.original_content,
-        content: comment.content,
-        parentCommentId: comment.parent_comment_id,
-        postId: comment.post_id,
-        createdAt: new Date(comment.created_at),
-        replyCount: comment.reply_count,
-        likeCount: comment.like_count,
-        isLikedByCurrentUser: comment.is_liked_by_current_user,
-      }));
-    } catch (error: any) {
-      throw new Error("Failed to fetch public opinions: " + error.message);
-    }
+    return {
+      id: comment.id,
+      content: comment.content,
+      originalContent: comment.content,
+      userId: comment.user_id,
+      postId: comment.post_id,
+      createdAt: new Date(comment.created_at),
+      username: comment.profiles?.username || "Unknown",
+      fullName: comment.profiles?.full_name || "Unknown",
+      parentCommentId: comment.parent_comment_id,
+      replyCount: 0,
+      likeCount: 0,
+      isLikedByCurrentUser: false,
+    };
   }
 
   async getPostComment(
@@ -244,257 +97,148 @@ WHERE c.parent_comment_id = ?`;
     cursorCreatedAt?: string | null,
     limit: number = 10
   ): Promise<Comment[]> {
-    const FUNCTION = "getFriendPostComment";
-    if (!postId || !currentUserId) {
-      throw new Error("Post ID and current user ID are required");
+    const FUNCTION = "getPostComment";
+    Logger.log(COMPONENT, FUNCTION, "debug", "Fetching post comments", { postId });
+
+    let query = supabaseAdmin
+      .from("comments")
+      .select(`
+        *,
+        profiles (username, full_name),
+        comment_likes (user_id),
+        replies:comments(count),
+        likes:comment_likes(count)
+      `)
+      .eq("post_id", postId)
+      .is("parent_comment_id", null)
+      .order("created_at", { ascending: false })
+      .limit(limit);
+
+    if (cursorCreatedAt) {
+      query = query.lt("created_at", cursorCreatedAt);
     }
 
-    try {
-      let query = `SELECT 
-      c.id,
-      c.user_id,
-      u.username,
-      u.full_name,
-      c.post_id,
-      c.parent_comment_id,
-      c.content,
-      c.original_content,
-      c.created_at,
-      COALESCE(r.reply_count, 0) AS reply_count,
-      -- Pre-aggregated like count
-    COALESCE(l.like_count, 0) AS like_count,
-    -- Check if current user liked the post
-    CASE WHEN ul.user_id IS NULL THEN FALSE ELSE TRUE END AS is_liked_by_current_user
-   FROM comments c
-   JOIN users u ON c.user_id = u.id
-   LEFT JOIN (
-       SELECT parent_comment_id, COUNT(*) AS reply_count
-       FROM comments
-       WHERE parent_comment_id IS NOT NULL
-       GROUP BY parent_comment_id
-   ) r ON c.id = r.parent_comment_id
-    -- Aggregate likes
-    LEFT JOIN (
-        SELECT comment_id, COUNT(*) AS like_count
-        FROM comment_likes
-        GROUP BY comment_id
-    ) l ON c.id = l.comment_id
-    -- Check if current user liked this post
-    LEFT JOIN (
-        SELECT comment_id, user_id
-        FROM comment_likes
-        WHERE user_id = ?  -- pass current user ID here
-    ) ul ON c.id = ul.comment_id
-   WHERE c.post_id = ? AND c.parent_comment_id IS NULL
-   `;
-      const params = [currentUserId, postId];
-      if (cursorCreatedAt) {
-        query += ` AND c.created_at < STR_TO_DATE(?, '%Y-%m-%d %H:%i:%s')`;
-        params.push(cursorCreatedAt);
-      }
+    const { data, error } = await query;
 
-      query += ` ORDER BY c.created_at DESC LIMIT ? `;
-      params.push(`${limit}`);
-      const results = await executeQuery(query, params);
-
-      Logger.log(
-        COMPONENT,
-        FUNCTION,
-        "debug",
-        "Comments Fetched for feed Successfully",
-        {
-          postId,
-        }
-      );
-
-      return (results as any[]).map((comment) => ({
-        id: comment.id,
-        userId: comment.user_id,
-        username: comment.username,
-        fullName: comment.full_name,
-        originalContent: comment.original_content,
-        content: comment.content,
-        parentCommentId: comment.parent_comment_id,
-        postId: comment.post_id,
-        createdAt: new Date(comment.created_at),
-        replyCount: comment.reply_count,
-        likeCount: comment.like_count,
-        isLikedByCurrentUser: comment.is_liked_by_current_user,
-      }));
-    } catch (error: any) {
-      throw new Error("Failed to fetch Comment: " + error.message);
+    if (error) {
+      Logger.log(COMPONENT, FUNCTION, "error", "Failed to fetch comments", { error });
+      return [];
     }
+
+    return (data || []).map((c: any) => ({
+      id: c.id,
+      userId: c.user_id,
+      username: c.profiles?.username || "Unknown",
+      fullName: c.profiles?.full_name || "Unknown",
+      originalContent: c.content,
+      content: c.content,
+      parentCommentId: c.parent_comment_id,
+      postId: c.post_id,
+      createdAt: new Date(c.created_at),
+      replyCount: c.replies?.[0]?.count || 0,
+      likeCount: c.likes?.[0]?.count || 0,
+      isLikedByCurrentUser: (c.comment_likes || []).some((l: any) => l.user_id === currentUserId),
+    }));
+  }
+
+  async getCommentReplies(
+    currentUserId: string,
+    commentId: string,
+    cursorCreatedAt?: string | null,
+    limit: number = 10
+  ): Promise<Comment[]> {
+    const FUNCTION = "getCommentReplies";
+    Logger.log(COMPONENT, FUNCTION, "debug", "Fetching comment replies", { commentId });
+
+    let query = supabaseAdmin
+      .from("comments")
+      .select(`
+        *,
+        profiles (username, full_name),
+        comment_likes (user_id),
+        replies:comments(count),
+        likes:comment_likes(count)
+      `)
+      .eq("parent_comment_id", commentId)
+      .order("created_at", { ascending: false })
+      .limit(limit);
+
+    if (cursorCreatedAt) {
+      query = query.lt("created_at", cursorCreatedAt);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      Logger.log(COMPONENT, FUNCTION, "error", "Failed to fetch replies", { error });
+      return [];
+    }
+
+    return (data || []).map((c: any) => ({
+      id: c.id,
+      userId: c.user_id,
+      username: c.profiles?.username || "Unknown",
+      fullName: c.profiles?.full_name || "Unknown",
+      originalContent: c.content,
+      content: c.content,
+      parentCommentId: c.parent_comment_id,
+      postId: c.post_id,
+      createdAt: new Date(c.created_at),
+      replyCount: c.replies?.[0]?.count || 0,
+      likeCount: c.likes?.[0]?.count || 0,
+      isLikedByCurrentUser: (c.comment_likes || []).some((l: any) => l.user_id === currentUserId),
+    }));
   }
 
   async deleteComment(userId: string, commentId: string): Promise<void> {
     const FUNCTION = "deleteComment";
-    if (!userId || !commentId) {
-      throw new Error("User ID and Comment ID are required");
-    }
-    try {
-      const result = await executeQuery(
-        `
-  DELETE c FROM comments c
-  JOIN posts p ON c.post_id = p.id
-  WHERE c.id = ?
-    AND (
-      c.user_id = ? 
-      OR (p.user_id = ? AND p.type = 'friend_post')
-    )
-  `,
-        [commentId, userId, userId]
-      );
-      if ((result as any).affectedRows === 0) {
-        throw new Error(
-          `[${COMPONENT}][${FUNCTION}]:Comment not found or not owned by user`
-        );
-      }
-    } catch (error: any) {
-      throw new Error(
-        `[${COMPONENT}][${FUNCTION}]:Failed to delete Comment: ` + error.message
-      );
-    }
-  }
-  async getPostLikeStatus(userId: string, postId: string): Promise<boolean> {
-    const FUNCTION = "getPostLikeStatus";
-    Logger.log(COMPONENT, FUNCTION, "debug", "get post like status", {
-      userId,
-      postId,
-    });
-    const queryResult = await executeQuery(
-      "SELECT * FROM likes WHERE user_id=? AND post_id=?",
-      [userId, postId]
-    );
-    const result = (queryResult as any[])[0];
-    Logger.log(COMPONENT, FUNCTION, "debug", "Get Post Like Status", {
-      result,
-      found: !!result,
-    });
-    return !!result;
-  }
-  async getCommentLikeStatus(
-    userId: string,
-    commentId: string
-  ): Promise<boolean> {
-    const FUNCTION = "getCommentLikeStatus";
-    Logger.log(COMPONENT, FUNCTION, "debug", "get comment like status", {
-      userId,
-      commentId,
-    });
-    const queryResult = await executeQuery(
-      "SELECT * FROM comment_likes WHERE user_id=? AND comment_id=?",
-      [userId, commentId]
-    );
-    const result = (queryResult as any[])[0];
-    Logger.log(COMPONENT, FUNCTION, "debug", "Get Comment Like Status", {
-      result,
-      found: !!result,
-    });
-    return !!result;
-  }
-  async toggleCommentLike(userId: string, commentId: string): Promise<void> {
-    const FUNCTION = "togglePostLike";
-    Logger.log(COMPONENT, FUNCTION, "debug", "toggle comment like status", {
-      userId,
-      commentId,
-    });
-    const result = await this.getCommentLikeStatus(userId, commentId);
-    const queryResult = await executeQuery(
-      `SELECT *
-         FROM comments
-         WHERE id = ?`,
-      [commentId]
-    );
+    Logger.log(COMPONENT, FUNCTION, "debug", "Deleting comment", { userId, commentId });
 
-    const comment = (queryResult as any[])[0];
-    Logger.log(COMPONENT, FUNCTION, "debug", "Fetched the comment", {
-      comment,
-    });
-    if (result) {
-      const notifications =
-        await notificationService.getNotificationByUserIdAndType(
-          comment.user_id,
-          "comment_like",
-          userId,
-          comment.post_id,
-          comment.id
-        );
-      notifications.forEach(async (x) => {
-        await notificationService.deleteNotification(x.id, x.userId);
-      });
-      Logger.log(COMPONENT, FUNCTION, "debug", "Comment dis-liked");
-      await executeQuery(
-        "DELETE FROM comment_likes WHERE comment_id=? AND user_id=?",
-        [commentId, userId]
-      );
-    } else {
-      Logger.log(COMPONENT, FUNCTION, "debug", "Comment Liked");
-      await executeQuery(
-        "INSERT INTO comment_likes (user_id,comment_id) VALUES(?,?)",
-        [userId, commentId]
-      );
-      if (comment.user_id != userId) {
-        await notificationService.createNotification(
-          comment.user_id,
-          "comment_like",
-          userId,
-          comment.post_id,
-          comment.id
-        );
-      }
+    // RLS handles permission, but we'll include userId check in query for safety
+    const { error } = await supabaseAdmin
+      .from("comments")
+      .delete()
+      .match({ id: commentId, user_id: userId });
+
+    if (error) {
+      Logger.log(COMPONENT, FUNCTION, "error", "Failed to delete comment", { error });
+      throw new Error("Failed to delete comment: " + error.message);
     }
-    Logger.log(COMPONENT, FUNCTION, "debug", "Like status toggled");
   }
+
   async togglePostLike(userId: string, postId: string): Promise<void> {
     const FUNCTION = "togglePostLike";
-    Logger.log(COMPONENT, FUNCTION, "debug", "toggle post like status", {
-      userId,
-      postId,
-    });
-    const result = await this.getPostLikeStatus(userId, postId);
-    const queryResult = await executeQuery(
-      `SELECT id,type,user_id
-         FROM posts
-         WHERE id = ?`,
-      [postId]
-    );
+    Logger.log(COMPONENT, FUNCTION, "debug", "Toggling post like", { userId, postId });
 
-    const post = (queryResult as any[])[0];
-    Logger.log(COMPONENT, FUNCTION, "debug", "Fetched the post", {
-      post,
-    });
-    if (result) {
-      const notifications =
-        await notificationService.getNotificationByUserIdAndType(
-          post.user_id,
-          "post_like",
-          userId,
-          post.id
-        );
-      notifications.forEach(async (x) => {
-        await notificationService.deleteNotification(x.id, x.userId);
-      });
-      Logger.log(COMPONENT, FUNCTION, "debug", "Post dis-liked");
-      await executeQuery("DELETE FROM likes WHERE post_id=? AND user_id=?", [
-        postId,
-        userId,
-      ]);
+    const { data: existingLike } = await supabaseAdmin
+      .from("likes")
+      .select("id")
+      .match({ user_id: userId, post_id: postId })
+      .single();
+
+    if (existingLike) {
+      await supabaseAdmin.from("likes").delete().match({ user_id: userId, post_id: postId });
     } else {
-      Logger.log(COMPONENT, FUNCTION, "debug", "Post Liked");
-      await executeQuery("INSERT INTO likes (user_id,post_id) VALUES(?,?)", [
-        userId,
-        postId,
-      ]);
-      if (post.user_id != userId) {
-        await notificationService.createNotification(
-          post.user_id,
-          "post_like",
-          userId,
-          postId
-        );
-      }
+      await supabaseAdmin.from("likes").insert({ user_id: userId, post_id: postId });
     }
-    Logger.log(COMPONENT, FUNCTION, "debug", "Like status toggled");
+  }
+
+  async toggleCommentLike(userId: string, commentId: string): Promise<void> {
+    const FUNCTION = "toggleCommentLike";
+    Logger.log(COMPONENT, FUNCTION, "debug", "Toggling comment like", { userId, commentId });
+
+    const { data: existingLike } = await supabaseAdmin
+      .from("comment_likes")
+      .select("id")
+      .match({ user_id: userId, comment_id: commentId })
+      .single();
+
+    if (existingLike) {
+      await supabaseAdmin.from("comment_likes").delete().match({ user_id: userId, comment_id: commentId });
+    } else {
+      await supabaseAdmin.from("comment_likes").insert({ user_id: userId, comment_id: commentId });
+    }
   }
 }
+
 export const engagementService = new EngagementService();
