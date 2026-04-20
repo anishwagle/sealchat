@@ -2,7 +2,7 @@ import { Profile, FriendshipStatus } from "@/types/profile";
 import { IFriendService } from "./IFriendService";
 import { Logger } from "@/lib/logger";
 import { notificationService } from "./serviceProvider";
-import { supabaseAdmin } from "@/lib/supabase/admin";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 const COMPONENT = "FriendService";
 
@@ -27,14 +27,13 @@ export class FriendService implements IFriendService {
 
   async sendFriendRequest(senderId: string, receiverId: string): Promise<void> {
     const FUNCTION = "sendFriendRequest";
-    
+
     const { error } = await supabaseAdmin
       .from("friend_requests")
       .insert({ sender_id: senderId, receiver_id: receiverId });
 
     if (error) throw new Error(`[${COMPONENT}][${FUNCTION}] Failed: ${error.message}`);
 
-    await notificationService.createNotification(receiverId, "friend_request", senderId);
   }
 
   async acceptFriendRequest(userId1: string, userId2: string): Promise<void> {
@@ -54,8 +53,6 @@ export class FriendService implements IFriendService {
       .from("friend_requests")
       .delete()
       .or(`and(sender_id.eq.${userId1},receiver_id.eq.${userId2}),and(sender_id.eq.${userId2},receiver_id.eq.${userId1})`);
-
-    await notificationService.createNotification(userId2, "friend_accept", userId1);
   }
 
   async cancelFriendRequest(senderId: string, receiverId: string): Promise<void> {
@@ -79,7 +76,7 @@ export class FriendService implements IFriendService {
 
   async toggleProfileLike(userId1: string, userId2: string): Promise<void> {
     const isFollowing = await this.getProfileLikeStatus(userId1, userId2);
-    
+
     if (isFollowing) {
       await supabaseAdmin.from("follows").delete().match({ follower_id: userId1, followed_id: userId2 });
       // Delete notification logic usually handled by service/trigger
@@ -107,7 +104,7 @@ export class FriendService implements IFriendService {
 
   async getFriendShipStatus(userId1: string, userId2: string): Promise<FriendshipStatus> {
     const [id1, id2] = [userId1, userId2].sort();
-    
+
     const { data: friendship } = await supabaseAdmin
       .from("friends")
       .select("id")

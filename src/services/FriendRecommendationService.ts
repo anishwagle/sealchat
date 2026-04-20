@@ -1,6 +1,6 @@
 import { Profile } from "@/types/profile";
 import { IFriendRecommendationService } from "./IFriendRecommendationService";
-import { supabaseAdmin } from "@/lib/supabase/admin";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { Logger } from "@/lib/logger";
 
 const COMPONENT = "FriendRecommendationService";
