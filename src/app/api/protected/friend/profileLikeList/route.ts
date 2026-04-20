@@ -17,32 +17,20 @@ export async function GET(request: Request) {
         { status: 404 }
       );
     }
-    const users = await friendService.getCurrentProfileLikeList(currentUserId);
-    if (!users) {
-      Logger.log(COMPONENT, FUNCTION, "error", "No Profile Like found");
-      return NextResponse.json(
-        { message: "No Profile Like found", code: "PROFILE_LIKE_NOT_FOUND" },
-        { status: 404 }
-      );
-    }
-    const response: Profile[] = await Promise.all(
-              users.map(async (user) => ({
-                userId: user.id,
-                username: user.username,
-                fullName: user.fullName,
-                joinedAt: `${user.createdAt?.toDateString()}`,
-                friendshipStatus: await friendService.getFriendShipStatus(
-                  currentUserId,
-                  user.id
-                ),
-                profileLikeCount: await friendService.getProfileLikeCount(user.id),
-                profileLikeStatus: await friendService.getProfileLikeStatus(
-                  currentUserId,
-                  user.id
-                ),
-              }))
-            );
-            return NextResponse.json({follows:response}, { status: 200 });
+    const profiles = await friendService.getCurrentProfileLikeList(currentUserId);
+    
+    // Enrichment
+    const enrichedFollows = await Promise.all(
+      profiles.map(async (profile) => ({
+        ...profile,
+        friendshipStatus: await friendService.getFriendShipStatus(currentUserId, profile.userId),
+        profileLikeCount: await friendService.getProfileLikeCount(profile.userId),
+        profileLikeStatus: true as const, // Since they are in the like list for this user
+      }))
+    );
+
+    Logger.log(COMPONENT, FUNCTION, "info", "Profile follow list fetched", { count: enrichedFollows.length });
+    return NextResponse.json({ follows: enrichedFollows }, { status: 200 });
   } catch (error: any) {
     const apiError = new ApiError(
       "Failed to Fetch profile Like list",

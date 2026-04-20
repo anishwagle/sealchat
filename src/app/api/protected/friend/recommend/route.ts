@@ -20,37 +20,20 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const recommendations = await friendRecommendationService.recommendFriends(
-      currentUserId
-    );
-    if (!recommendations) {
-      Logger.log(COMPONENT, FUNCTION, "error", "No User Recommendation found");
-      return NextResponse.json(
-        {
-          message: "No Recommendation found",
-          code: "RECOMMENDATION_NOT_FOUND",
-        },
-        { status: 404 }
-      );
-    }
-    const response: Profile[] = await Promise.all(
-      recommendations.map(async (user) => ({
-        userId: user.id,
-        username: user.username,
-        fullName: user.fullName,
-        joinedAt: `${user.createdAt?.toDateString()}`,
-        friendshipStatus: await friendService.getFriendShipStatus(
-          currentUserId,
-          user.id
-        ),
-        profileLikeCount: await friendService.getProfileLikeCount(user.id),
-        profileLikeStatus: await friendService.getProfileLikeStatus(
-          currentUserId,
-          user.id
-        ),
+    const recommendations = await friendRecommendationService.recommendFriends(currentUserId);
+    
+    // Enrich with status and counts
+    const enrichedRecommendations = await Promise.all(
+      recommendations.map(async (profile) => ({
+        ...profile,
+        friendshipStatus: await friendService.getFriendShipStatus(currentUserId, profile.userId),
+        profileLikeCount: await friendService.getProfileLikeCount(profile.userId),
+        profileLikeStatus: await friendService.getProfileLikeStatus(currentUserId, profile.userId),
       }))
     );
-    return NextResponse.json({recommendations:response}, { status: 200 });
+
+    Logger.log(COMPONENT, FUNCTION, "info", "Friend recommendations fetched", { count: enrichedRecommendations.length });
+    return NextResponse.json({ recommendations: enrichedRecommendations }, { status: 200 });
   } catch (error) {
     Logger.log(
       COMPONENT,

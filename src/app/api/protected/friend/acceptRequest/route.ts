@@ -1,41 +1,25 @@
 import { NextResponse } from "next/server";
-import jwt from "jsonwebtoken";
 import { Logger } from "@/lib/logger";
-import { friendService, notificationService } from "@/services/serviceProvider";
+import { friendService } from "@/services/serviceProvider";
 import { ApiError } from "@/lib/errors";
 
 const COMPONENT = "api/protected/friend/acceptRequest";
 const FUNCTION = "POST";
 
 export async function POST(request: Request) {
-  Logger.log(COMPONENT, FUNCTION, "info", "Accept Friend request from user");
+  Logger.log(COMPONENT, FUNCTION, "info", "Accepting friend request");
 
   try {
     const userId1 = request.headers.get("x-user-id");
     const { userId2 } = await request.json();
+
     if (!userId1) {
-      Logger.log(COMPONENT, FUNCTION, "error", "Current Users not found");
-      return NextResponse.json(
-        { message: "Current Users not found", code: "USERS_NOT_FOUND" },
-        { status: 404 }
-      );
+      return NextResponse.json({ message: "Unauthorized", code: "UNAUTHORIZED" }, { status: 401 });
     }
+
     await friendService.acceptFriendRequest(userId1, userId2);
-    const notifications = await notificationService.getNotificationByUserIdAndType(
-          userId1,
-          "friend_request_sent",
-          userId2
-        );
-    notifications.forEach(async x=>{
-      await notificationService.deleteNotification(x.id,x.userId);
-    });
-    await notificationService.createNotification(
-      userId2,
-      "friend_request_accept",
-      userId1
-    );
     
-    Logger.log(COMPONENT, FUNCTION, "info", "Friend Request Accepted");
+    Logger.log(COMPONENT, FUNCTION, "info", "Friend Request Accepted", { userId1, userId2 });
     return NextResponse.json(
       { message: "Friend Request Accepted" },
       { status: 200 }

@@ -1,6 +1,6 @@
-import { User } from "@/types/user";
+import { Profile } from "@/types/profile";
 
 export interface IFriendRecommendationService {
-  recommendFriends(currentUserId: string): Promise<User[]>;
-  recommendProfile(currentUserId: string): Promise<User[]>;
+  recommendFriends(currentUserId: string): Promise<Profile[]>;
+  recommendProfile(currentUserId: string): Promise<Profile[]>;
 }

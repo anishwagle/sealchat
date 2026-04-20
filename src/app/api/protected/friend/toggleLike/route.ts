@@ -6,21 +6,20 @@ import { NextResponse } from "next/server";
 const COMPONENT = "api/protected/friend/toggleLike";
 const FUNCTION = "POST";
 export async function POST(request: Request) {
-  Logger.log(COMPONENT, FUNCTION, "info", "Toggle profile like for User");
+  Logger.log(COMPONENT, FUNCTION, "info", "Toggling profile follow");
   try {
     const userId1 = request.headers.get("x-user-id");
     const { userId2 } = await request.json();
+
     if (!userId1) {
-      Logger.log(COMPONENT, FUNCTION, "error", "Current User not found");
-      return NextResponse.json(
-        { message: "Current User not Found", code: "USER_NOT_FOUND" },
-        { status: 404 }
-      );
+      return NextResponse.json({ message: "Unauthorized", code: "UNAUTHORIZED" }, { status: 401 });
     }
+
     await friendService.toggleProfileLike(userId1, userId2);
-    Logger.log(COMPONENT, FUNCTION, "info", "profile like toggled Successful");
+
+    Logger.log(COMPONENT, FUNCTION, "info", "Profile follow toggled successfully", { userId1, userId2 });
     return NextResponse.json(
-      { message: "Like Toggled Successful" },
+      { message: "Follow status toggled successfully" },
       { status: 200 }
     );
   } catch (error: any) {

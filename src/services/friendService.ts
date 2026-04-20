@@ -1,309 +1,212 @@
-import { User } from "@/types/user";
+import { Profile, FriendshipStatus } from "@/types/profile";
 import { IFriendService } from "./IFriendService";
 import { Logger } from "@/lib/logger";
-import { FriendshipStatus } from "@/types/profile";
 import { notificationService } from "./serviceProvider";
-import executeQuery from "@/db";
+import { supabaseAdmin } from "@/lib/supabase/admin";
+
 const COMPONENT = "FriendService";
+
 export class FriendService implements IFriendService {
-  async getCurrentProfileLikeList(userId: string): Promise<User[]> {
-    const FUNCTION = "getCurrentProfileLikeList";
-    Logger.log(COMPONENT, FUNCTION, "debug", "get User's Like Count", {
-      userId,
-    });
-    const queryResult = await executeQuery(
-      `SELECT f.*,u.email,u.username,u.full_name FROM follows f
-        JOIN users u on f.follower_id = u.id
-       WHERE f.followed_id=?`,
-      [userId]
-    );
+  async findFriends(searchQuery: string): Promise<Profile[]> {
+    const FUNCTION = "findFriends";
+    Logger.log(COMPONENT, FUNCTION, "debug", "Searching for friends", { searchQuery });
 
-    return (queryResult as any[]).map((user) => ({
-      id: user.id,
-      username: user.username,
-      fullName: user.full_name,
-      email: user.email,
-      password: "",
-    }));
-  }
-  async checkFriendship(userId1: string, userId2: string): Promise<boolean> {
-  const query = `
-    SELECT EXISTS(
-      SELECT 1 FROM friends
-      WHERE (user_id_1 = ? AND user_id_2 = ?)
-         OR (user_id_1 = ? AND user_id_2 = ?)
-    ) AS areFriends
-  `;
-  const result = await executeQuery(query, [userId1, userId2, userId2, userId1]);
-  return !!(result as any)[0].areFriends;
-}
-  async getFriendCount(userId: string): Promise<number> {
-  const query = `
-    SELECT COUNT(*) AS friendCount
-    FROM friends
-    WHERE user_id_1 = ? OR user_id_2 = ?
-  `;
-  const result = await executeQuery(query, [userId, userId]);
-  return (result as any)[0].friendCount;
-}
-  async toggleProfileLike(userId1: string, userId2: string): Promise<void> {
-    const FUNCTION = "toggleProfileLike";
-    Logger.log(COMPONENT, FUNCTION, "debug", "toggle profile like status", {
-      userId1,
-      userId2,
-    });
-    const result = await this.getProfileLikeStatus(userId1, userId2);
-    if (result) {
-      const notifications =
-        await notificationService.getNotificationByUserIdAndType(
-          userId2,
-          "profile_like",
-          userId1
-        );
-      notifications.forEach(async (x) => {
-        await notificationService.deleteNotification(x.id, x.userId);
-      });
-      Logger.log(COMPONENT, FUNCTION, "debug", "Profile dis-liked");
-      await executeQuery(
-        "DELETE FROM follows WHERE follower_id=? AND followed_id=?",
-        [userId1, userId2]
-      );
-    } else {
-      
-      Logger.log(COMPONENT, FUNCTION, "debug", "Profile Liked");
-      await executeQuery(
-        "INSERT INTO follows (follower_id,followed_id) VALUES(?,?)",
-        [userId1, userId2]
-      );
-      await notificationService.createNotification(
-        userId2,
-        "profile_like",
-        userId1
-      );
+    const { data, error } = await supabaseAdmin
+      .from("profiles")
+      .select("*")
+      .or(`username.ilike.%${searchQuery}%,full_name.ilike.%${searchQuery}%`)
+      .limit(20);
+
+    if (error) {
+      Logger.log(COMPONENT, FUNCTION, "error", "Failed to search friends", { error });
+      return [];
     }
-    Logger.log(COMPONENT, FUNCTION, "debug", "Like status toggled");
-  }
-  async getProfileLikeCount(userId: string): Promise<number> {
-  const query = `
-    SELECT COUNT(*) AS likeCount
-    FROM follows
-    WHERE followed_id = ?
-  `;
-  const result = await executeQuery(query, [userId]);
-  return (result as any)[0].likeCount;
-}
-  async unfriendRequest(userId1: string, userId2: string): Promise<void> {
-    const FUNCTION = "unfriendRequest";
-    Logger.log(COMPONENT, FUNCTION, "debug", "unFriend a friend", {
-      userId1,
-      userId2,
-    });
-    await executeQuery(
-      "DELETE FROM friends WHERE (user_id_1=? AND user_id_2=?) OR user_id_1=? AND user_id_2=?",
-      [userId1, userId2, userId2, userId1]
-    );
-    Logger.log(COMPONENT, FUNCTION, "debug", "unfriend done");
-  }
-  async getProfileLikeStatus(followerId: string, followedId: string): Promise<boolean> {
-  const query = `
-    SELECT EXISTS(
-      SELECT 1 FROM follows 
-      WHERE follower_id = ? AND followed_id = ?
-    ) AS isLiked
-  `;
-  const result = await executeQuery(query, [followerId, followedId]);
-  return !!(result as any)[0].isLiked;
-}
-  async getFriendShipStatus(userId1: string, userId2: string): Promise<FriendshipStatus> {
-  const query = `
-    SELECT CASE
-      WHEN EXISTS (
-        SELECT 1 FROM friends 
-        WHERE (user_id_1 = ? AND user_id_2 = ?)
-           OR (user_id_1 = ? AND user_id_2 = ?)
-      ) THEN 'accepted'
-      WHEN EXISTS (
-        SELECT 1 FROM friend_requests 
-        WHERE sender_id = ? AND receiver_id = ?
-      ) THEN 'sent'
-      WHEN EXISTS (
-        SELECT 1 FROM friend_requests 
-        WHERE sender_id = ? AND receiver_id = ?
-      ) THEN 'received'
-      ELSE 'none'
-    END AS status
-  `;
-  
-  const result = await executeQuery(query, [
-    userId1, userId2, userId2, userId1,
-    userId1, userId2,
-    userId2, userId1,
-  ]);
-  
-  return (result as any)[0].status as FriendshipStatus;
-}
-  async sendFriendRequest(
-    sender_id: string,
-    receiver_id: string
-  ): Promise<void> {
-    const FUNCTION = "sendFriendRequest";
-    Logger.log(COMPONENT, FUNCTION, "debug", "send Friend Request", {
-      sender_id,
-      receiver_id,
-    });
-    const queryResult = await executeQuery(
-      "INSERT INTO friend_requests (sender_id,receiver_id) VALUES (?,?)",
-      [sender_id, receiver_id]
-    );
-    Logger.log(COMPONENT, FUNCTION, "debug", "Friend request sent", {
-      queryResult,
-    });
-  }
-  async cancelFriendRequest(
-    sender_id: string,
-    receiver_id: string
-  ): Promise<void> {
-    const FUNCTION = "cancelFriendRequest";
-    Logger.log(COMPONENT, FUNCTION, "debug", "cancel Friend Request", {
-      sender_id,
-      receiver_id,
-    });
 
-    await executeQuery(
-      "DELETE FROM friend_requests WHERE (sender_id=? AND receiver_id=?) OR (sender_id=? AND receiver_id=?)",
-      [sender_id, receiver_id, receiver_id, sender_id]
-    );
-    Logger.log(
-      COMPONENT,
-      FUNCTION,
-      "debug",
-      "Record deleted from Friend request table",
-      {
-        sender_id,
-        receiver_id,
-      }
-    );
+    return data.map(this.mapRowToProfile);
   }
+
+  async sendFriendRequest(senderId: string, receiverId: string): Promise<void> {
+    const FUNCTION = "sendFriendRequest";
+    
+    const { error } = await supabaseAdmin
+      .from("friend_requests")
+      .insert({ sender_id: senderId, receiver_id: receiverId });
+
+    if (error) throw new Error(`[${COMPONENT}][${FUNCTION}] Failed: ${error.message}`);
+
+    await notificationService.createNotification(receiverId, "friend_request", senderId);
+  }
+
   async acceptFriendRequest(userId1: string, userId2: string): Promise<void> {
     const FUNCTION = "acceptFriendRequest";
-    Logger.log(COMPONENT, FUNCTION, "debug", "accept Friend Request", {
-      userId1,
-      userId2,
-    });
 
-    const queryResult = await executeQuery(
-      "INSERT INTO friends (user_id_1,user_id_2) VALUES (?,?)",
-      [userId1, userId2]
-    );
-    Logger.log(COMPONENT, FUNCTION, "debug", "Friend request accepted", {
-      requestId: (queryResult as any).insertId,
-    });
+    // Standardize order: user_id_1 < user_id_2 for uniqueness consistency
+    const [id1, id2] = [userId1, userId2].sort();
 
-    await executeQuery(
-      "DELETE FROM friend_requests WHERE sender_id=? AND receiver_id=?",
-      [userId2, userId1]
-    );
-    Logger.log(
-      COMPONENT,
-      FUNCTION,
-      "debug",
-      "Record deleted from Friend request table",
-      {
-        userId1,
-        userId2,
-      }
-    );
+    const { error: insertError } = await supabaseAdmin
+      .from("friends")
+      .insert({ user_id_1: id1, user_id_2: id2 });
+
+    if (insertError) throw new Error(`[${COMPONENT}][${FUNCTION}] Insert Failed: ${insertError.message}`);
+
+    // Cleanup requests both ways to be safe
+    await supabaseAdmin
+      .from("friend_requests")
+      .delete()
+      .or(`and(sender_id.eq.${userId1},receiver_id.eq.${userId2}),and(sender_id.eq.${userId2},receiver_id.eq.${userId1})`);
+
+    await notificationService.createNotification(userId2, "friend_accept", userId1);
   }
 
-  async getCurrentFriend(userId: string): Promise<User[]> {
-    const FUNCTION = "getCurrentFriend";
-    Logger.log(COMPONENT, FUNCTION, "debug", "Get current friend of user", {
-      userId,
-    });
-    const queryResult = await executeQuery(
-      `SELECT u.id,u.username,u.email,u.full_name
-       FROM users u
-       JOIN friends f ON u.id = f.user_id_2
-       WHERE f.user_id_1 = ?
-       UNION
-       SELECT u.id,u.username,u.email,u.full_name
-       FROM users u
-       JOIN friends f ON u.id = f.user_id_1
-       WHERE f.user_id_2 = ?`,
-      [userId, userId]
-    );
-    const result: User[] = (queryResult as any[]).map((user) => ({
-      id: user.id,
-      username: user.username,
-      email: user.email,
-      fullName: user.full_name,
-      password: "",
-    }));
-    Logger.log(COMPONENT, FUNCTION, "debug", "Friend search complete", {
-      found: !!result,
-      users: result,
-    });
+  async cancelFriendRequest(senderId: string, receiverId: string): Promise<void> {
+    const { error } = await supabaseAdmin
+      .from("friend_requests")
+      .delete()
+      .or(`and(sender_id.eq.${senderId},receiver_id.eq.${receiverId}),and(sender_id.eq.${receiverId},receiver_id.eq.${senderId})`);
 
-    return result;
+    if (error) throw new Error(error.message);
   }
-  async findFriends(searchQuery: string): Promise<User[]> {
-    const FUNCTION = "findFriends";
-    Logger.log(COMPONENT, FUNCTION, "debug", "Search friend based on query", {
-      searchQuery,
-    });
-    const queryResult = await executeQuery(
-      "SELECT id,username,password,email,full_name FROM users WHERE username LIKE ? OR email LIKE ?",
-      [`%${searchQuery}%`, `%${searchQuery}%`]
-    );
-    const result: User[] = (queryResult as any[]).map((user) => ({
-      id: user.id,
-      username: user.username,
-      email: user.email,
-      fullName:user.full_name,
-      password: "",
-    }));
-    Logger.log(COMPONENT, FUNCTION, "debug", "Friend search complete", {
-      found: !!result,
-      users: result,
-    });
 
-    return result;
+  async unfriendRequest(userId1: string, userId2: string): Promise<void> {
+    const [id1, id2] = [userId1, userId2].sort();
+    const { error } = await supabaseAdmin
+      .from("friends")
+      .delete()
+      .match({ user_id_1: id1, user_id_2: id2 });
+
+    if (error) throw new Error(error.message);
   }
-  async getSentRequestList(userId: string): Promise<User[]> {
-    const FUNCTION = "getPendingRequestList";
-    Logger.log(COMPONENT, FUNCTION, "debug", "get User's Pending Request List", {
-      userId,
-    });
-    const queryResult = await executeQuery(
-      `SELECT u.* FROM users u JOIN friend_requests fr ON u.id = fr.receiver_id WHERE fr.sender_id = ?`,
-      [userId]
-    );
 
-    return (queryResult as any[]).map((user) => ({
-      id: user.id,
-      username: user.username,
-      fullName: user.full_name,
-      email: user.email,
-      password: "",
-    }));
+  async toggleProfileLike(userId1: string, userId2: string): Promise<void> {
+    const isFollowing = await this.getProfileLikeStatus(userId1, userId2);
+    
+    if (isFollowing) {
+      await supabaseAdmin.from("follows").delete().match({ follower_id: userId1, followed_id: userId2 });
+      // Delete notification logic usually handled by service/trigger
+    } else {
+      await supabaseAdmin.from("follows").insert({ follower_id: userId1, followed_id: userId2 });
+      await notificationService.createNotification(userId2, "profile_like", userId1);
+    }
   }
-  async getPendingRequestList(userId: string): Promise<User[]> {
-    const FUNCTION = "getPendingRequestList";
-    Logger.log(COMPONENT, FUNCTION, "debug", "get User's Pending Request List", {
-      userId,
-    });
-    const queryResult = await executeQuery(
-      `SELECT u.* FROM users u JOIN friend_requests fr ON u.id = fr.sender_id WHERE fr.receiver_id = ?`,
-      [userId]
-    );
 
-    return (queryResult as any[]).map((user) => ({
-      id: user.id,
-      username: user.username,
-      fullName: user.full_name,
-      email: user.email,
-      password: "",
-    }));
+  async getProfileLikeCount(userId: string): Promise<number> {
+    const { count, error } = await supabaseAdmin
+      .from("follows")
+      .select("*", { count: "exact", head: true })
+      .eq("followed_id", userId);
+    return count || 0;
+  }
+
+  async getFriendCount(userId: string): Promise<number> {
+    const { count, error } = await supabaseAdmin
+      .from("friends")
+      .select("*", { count: "exact", head: true })
+      .or(`user_id_1.eq.${userId},user_id_2.eq.${userId}`);
+    return count || 0;
+  }
+
+  async getFriendShipStatus(userId1: string, userId2: string): Promise<FriendshipStatus> {
+    const [id1, id2] = [userId1, userId2].sort();
+    
+    const { data: friendship } = await supabaseAdmin
+      .from("friends")
+      .select("id")
+      .match({ user_id_1: id1, user_id_2: id2 })
+      .single();
+
+    if (friendship) return "accepted";
+
+    const { data: sentTask } = await supabaseAdmin
+      .from("friend_requests")
+      .select("id")
+      .match({ sender_id: userId1, receiver_id: userId2 })
+      .single();
+
+    if (sentTask) return "sent";
+
+    const { data: receivedTask } = await supabaseAdmin
+      .from("friend_requests")
+      .select("id")
+      .match({ sender_id: userId2, receiver_id: userId1 })
+      .single();
+
+    if (receivedTask) return "received";
+
+    return "none";
+  }
+
+  async getCurrentFriend(userId: string): Promise<Profile[]> {
+    const { data, error } = await supabaseAdmin
+      .from("friends")
+      .select(`
+        user_id_1,
+        user_id_2,
+        profiles!user_id_1(*),
+        target_profile:profiles!user_id_2(*)
+      `)
+      .or(`user_id_1.eq.${userId},user_id_2.eq.${userId}`);
+
+    if (error || !data) return [];
+
+    return data.map((row: any) => {
+      const friendData = row.user_id_1 === userId ? row.target_profile : row.profiles;
+      return this.mapRowToProfile(friendData);
+    });
+  }
+
+  async getCurrentProfileLikeList(userId: string): Promise<Profile[]> {
+    const { data, error } = await supabaseAdmin
+      .from("follows")
+      .select("profiles!follower_id(*)")
+      .eq("followed_id", userId);
+
+    if (error || !data) return [];
+    return data.map((row: any) => this.mapRowToProfile(row.profiles));
+  }
+
+  async getPendingRequestList(userId: string): Promise<Profile[]> {
+    const { data, error } = await supabaseAdmin
+      .from("friend_requests")
+      .select("profiles!sender_id(*)")
+      .eq("receiver_id", userId);
+
+    if (error || !data) return [];
+    return data.map((row: any) => this.mapRowToProfile(row.profiles));
+  }
+
+  async getSentRequestList(userId: string): Promise<Profile[]> {
+    const { data, error } = await supabaseAdmin
+      .from("friend_requests")
+      .select("profiles!receiver_id(*)")
+      .eq("sender_id", userId);
+
+    if (error || !data) return [];
+    return data.map((row: any) => this.mapRowToProfile(row.profiles));
+  }
+
+  async checkFriendship(userId1: string, userId2: string): Promise<boolean> {
+    const status = await this.getFriendShipStatus(userId1, userId2);
+    return status === "accepted";
+  }
+
+  async getProfileLikeStatus(followerId: string, followedId: string): Promise<boolean> {
+    const { data, error } = await supabaseAdmin
+      .from("follows")
+      .select("id")
+      .match({ follower_id: followerId, followed_id: followedId })
+      .single();
+    return !!data;
+  }
+
+  private mapRowToProfile(row: any): Profile {
+    return {
+      userId: row.id,
+      username: row.username,
+      fullName: row.full_name,
+      bio: row.bio,
+      avatarUrl: row.avatar_url,
+      joinedAt: row.created_at,
+    } as Profile;
   }
 }
 

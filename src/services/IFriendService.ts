@@ -1,7 +1,7 @@
-import { FriendshipStatus } from "@/types/profile";
-import { User } from "@/types/user";
+import { FriendshipStatus, Profile } from "@/types/profile";
+
 export interface IFriendService {
-  findFriends(searchQuery: string): Promise<User[]>;
+  findFriends(searchQuery: string): Promise<Profile[]>;
   sendFriendRequest(sender_id: string, receiver_id: string): Promise<void>;
   acceptFriendRequest(userId1: string, userId2: string): Promise<void>;
   cancelFriendRequest(userId1: string, userId2: string): Promise<void>;
@@ -13,10 +13,10 @@ export interface IFriendService {
     sender_id: string,
     receiver_id: string
   ): Promise<FriendshipStatus>;
-  getCurrentFriend(userId: string): Promise<User[]>;
-  getCurrentProfileLikeList(userId: string): Promise<User[]>;
-  getPendingRequestList(userId: string): Promise<User[]>;
-  getSentRequestList(userId: string): Promise<User[]>;
+  getCurrentFriend(userId: string): Promise<Profile[]>;
+  getCurrentProfileLikeList(userId: string): Promise<Profile[]>;
+  getPendingRequestList(userId: string): Promise<Profile[]>;
+  getSentRequestList(userId: string): Promise<Profile[]>;
   checkFriendship(userId1: string, userId2: string): Promise<boolean>;
   getProfileLikeStatus(userId1: string, userId2: string): Promise<boolean>;
 }
