@@ -1,8 +1,8 @@
 "use client"
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import SideBar from "@/components/layout/SideBar";
 import withAuth from "@/lib/auth/withAuth";
+import FeedNavigation from "@/components/layout/FeedNavigation";
 
 function DashboardLayout({
   children,
@@ -37,13 +37,18 @@ function DashboardLayout({
   }
 
   return (
-    <main className="pt-16">
-      <div className="px-4 sm:px-6 lg:px-8 py-6">
-        <div className="flex flex-col lg:flex-row gap-6">
-          <SideBar />
-          <div className="lg:flex-1 space-y-5">{children}</div>
+    <main className="pt-16 pb-20 md:pb-0 bg-background min-h-screen">
+      <div className="flex flex-col items-center">
+        {/* Centered feed container with max-width */}
+        <div className="w-full max-w-2xl px-4 sm:px-6 lg:px-8 py-6">
+          <div className="space-y-5">
+            {children}
+          </div>
         </div>
       </div>
+      
+      {/* Navigation - bottom tabs on mobile, hidden on desktop for now */}
+      <FeedNavigation />
     </main>
   );
 }
