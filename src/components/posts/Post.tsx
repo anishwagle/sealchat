@@ -10,6 +10,14 @@ import { fetchWithAuth } from "@/lib/auth/fetchWithAuth";
 import Link from "next/link";
 import CreateShareModal from "./CreateShareModal";
 import CommentModal from "../modals/CommentModal";
+import { 
+  HiOutlineEllipsisHorizontal, 
+  HiOutlineHeart, 
+  HiOutlineChatBubbleLeft, 
+  HiOutlineArrowUpTray,
+  HiOutlineTrash
+} from "react-icons/hi2";
+import { LiaHeartSolid } from "react-icons/lia";
 interface PostComponentProps extends Post {
   onPostDeleted?: (postId: string) => void;
   mentionTextAreaRef?: React.RefObject<HTMLTextAreaElement|null>;
@@ -128,40 +136,40 @@ export default function PostComponent({ onPostDeleted, mentionTextAreaRef, ...po
 
   return (
     <>
-      <div className="bg-white rounded-lg border border-gray-100 p-5 relative">
+      <div className="bg-background rounded-lg border border-border p-6 relative hover:shadow-md transition-shadow duration-200">
         {/* Header Section */}
-        <div className="flex justify-between items-start">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-50 to-blue-100 flex items-center justify-center text-blue-600 font-semibold ring-1 ring-blue-100">
+        <div className="flex justify-between items-start gap-4">
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            <div className="w-11 h-11 rounded-full bg-muted flex items-center justify-center text-foreground font-semibold ring-1 ring-border shrink-0">
               {post.username[0].toUpperCase()}
             </div>
-            <div>
+            <div className="flex-1 min-w-0">
               <Link
                 href={`/profile/${post.username}`}
-                className="font-medium text-gray-700"
+                className="font-medium text-foreground hover:underline block"
               >
                 {post.fullName}
               </Link>
-              <p className="text-xs text-gray-400 flex items-center gap-1.5">
-                <span className="text-sm text-gray-500">@{post.username}</span>
-                <span className="text-gray-300">•</span>
+              <p className="text-xs text-muted-foreground flex items-center gap-1.5 flex-wrap">
+                <span className="text-sm">@{post.username}</span>
+                <span>•</span>
                 <span
-                  className={`${
+                  className={`font-medium ${
                     post.type === "friend_post"
-                      ? "text-emerald-500"
-                      : "text-blue-500"
+                      ? "text-emerald-600"
+                      : "text-blue-600"
                   }`}
                 >
                   {post.type === "friend_post"
-                    ? "Friends Only"
-                    : "Public Opinion"}
+                    ? "Friends"
+                    : "Public"}
                 </span>
-                <span className="text-gray-300">•</span>
+                <span>•</span>
                 <span>{getTimeSince(new Date(post.createdAt))}</span>
                 {post.expiresAt && (
                   <>
-                    <span className="text-gray-300">•</span>
-                    <span className="text-amber-500">
+                    <span>•</span>
+                    <span className="text-amber-600 font-medium">
                       {getTimeUntil(new Date(post.expiresAt))}
                     </span>
                   </>
@@ -174,40 +182,29 @@ export default function PostComponent({ onPostDeleted, mentionTextAreaRef, ...po
           <div className="relative" ref={dropdownRef}>
             <button
               onClick={() => setShowOptions(!showOptions)}
-              className="p-1.5 hover:bg-gray-50 rounded-full transition-colors duration-200"
+              className="p-2 hover:bg-muted rounded-lg transition-colors duration-200 text-muted-foreground hover:text-foreground"
             >
-              <svg
-                className="w-4 h-4 text-gray-400"
-                fill="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
-              </svg>
+              <HiOutlineEllipsisHorizontal className="w-5 h-5" />
             </button>
 
             {showOptions && (
-              <div className="absolute right-0 mt-1 w-48 bg-white rounded-md shadow-[0_3px_10px_-3px_rgba(0,0,0,0.1)] py-1 z-10 ring-1 ring-gray-100">
-                { currentUserId == post.userId?(
+              <div className="absolute right-0 mt-2 w-48 bg-background rounded-lg shadow-lg border border-border py-2 z-10">
+                {currentUserId == post.userId && (
                   <>
-                {/* <button className="w-full text-left px-4 py-1.5 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-700">
-                  Edit Post
-                </button>
-                <button className="w-full text-left px-4 py-1.5 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-700">
-                  Change Privacy
-                </button>
-                <div className="h-[1px] bg-gray-100 my-1"></div> */}
-                <button
-                  onClick={() => {
-                    setShowDeleteConfirm(true);
-                    setShowOptions(false);
-                  }}
-                  className="w-full text-left px-4 py-1.5 text-sm text-red-500 hover:bg-gray-50 hover:text-red-600"
-                >
-                  Delete Post
-                </button>
-                <div className="h-[1px] bg-gray-100 my-1"></div> </>):null
-}
-                <button className="w-full text-left px-4 py-1.5 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-700">
+                    <button
+                      onClick={() => {
+                        setShowDeleteConfirm(true);
+                        setShowOptions(false);
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors duration-200 flex items-center gap-2"
+                    >
+                      <HiOutlineTrash className="w-4 h-4" />
+                      Delete Post
+                    </button>
+                    <div className="h-px bg-border my-1"></div>
+                  </>
+                )}
+                <button className="w-full text-left px-4 py-2 text-sm text-muted-foreground hover:bg-muted transition-colors duration-200">
                   Report Post
                 </button>
               </div>
@@ -216,24 +213,26 @@ export default function PostComponent({ onPostDeleted, mentionTextAreaRef, ...po
         </div>
 
         {/* Content Section */}
-        <RenderedContent htmlContent={post.content} className="mt-3.5 text-gray-600 prose max-w-none prose-sm prose-p:leading-relaxed prose-a:text-blue-500 prose-a:no-underline hover:prose-a:underline" />
+        <RenderedContent htmlContent={post.content} className="mt-4 text-foreground prose max-w-none prose-sm prose-p:leading-relaxed prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline" />
 
         {post.sharedPost && (
+          <div className="mt-4">
             <PostComponent {...post.sharedPost} onPostDeleted={onPostDeleted} />
-      
+          </div>
         )}
+
         {/* Interaction Section */}
-        <div className="mt-4 pt-4 border-t border-gray-50">
+        <div className="mt-5 pt-4 border-t border-border">
           {likeCount > 0 && (
             <button
               onClick={() => setShowLikesModal(true)}
-              className="text-sm text-gray-600 hover:text-gray-800 mb-3 transition-colors duration-200 group flex items-center gap-1"
+              className="text-xs text-muted-foreground hover:text-foreground mb-4 transition-colors duration-200 group flex items-center gap-2"
             >
-              <span className="flex -space-x-2 mr-1.5">
+              <span className="flex -space-x-1">
                 {localLikes.slice(0, 3).map((like, index) => (
                   <div
                     key={index}
-                    className="w-5 h-5 rounded-full bg-gradient-to-r from-blue-50 to-blue-100 flex items-center justify-center text-blue-600 text-xs font-medium ring-2 ring-white"
+                    className="w-5 h-5 rounded-full bg-muted flex items-center justify-center text-foreground text-xs font-medium ring-2 ring-background"
                   >
                     {like.username[0].toUpperCase()}
                   </div>
@@ -244,73 +243,42 @@ export default function PostComponent({ onPostDeleted, mentionTextAreaRef, ...po
               </span>
             </button>
           )}
-          <div className="flex gap-6 text-sm">
+          
+          <div className="flex gap-4 text-sm">
             <button
               onClick={handleLike}
               disabled={isLiking}
-              className={`flex items-center gap-1.5 transition-colors duration-200 ${
+              className={`flex items-center gap-1.5 font-medium transition-colors duration-200 ${
                 isLikedByCurrentUser
-                  ? "text-blue-500"
-                  : "text-gray-500 hover:text-blue-500"
-              }`}
+                  ? "text-red-600"
+                  : "text-muted-foreground hover:text-red-600"
+              } disabled:opacity-50`}
             >
-              <svg
-                className={`w-4 h-4 ${isLiking ? "animate-pulse" : ""}`}
-                fill={isLikedByCurrentUser ? "currentColor" : "none"}
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="1.5"
-                  d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                />
-              </svg>
-              <span>{likeCount} Like</span>
+              {isLikedByCurrentUser ? (
+                <LiaHeartSolid className={`w-5 h-5 ${isLiking ? "animate-pulse" : ""}`} />
+              ) : (
+                <HiOutlineHeart className={`w-5 h-5 ${isLiking ? "animate-pulse" : ""}`} />
+              )}
+              <span>{likeCount}</span>
             </button>
+
             <button
               onClick={handleCommentClick}
-              className="flex items-center gap-1.5 text-gray-500 hover:text-blue-500 transition-colors duration-200"
+              className="flex items-center gap-1.5 font-medium text-muted-foreground hover:text-blue-600 transition-colors duration-200"
             >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="1.5"
-                  d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-                />
-              </svg>
-              <span>
-                Comment{" "}
-                {post.commentCount}
-              </span>
+              <HiOutlineChatBubbleLeft className="w-5 h-5" />
+              <span>{post.commentCount}</span>
             </button>
-            {post.type === "public_opinion" && !post.sharedPost ? (
-            <button
-              onClick={handleShare}
-              className="flex items-center gap-1.5 text-gray-500 hover:text-blue-500 transition-colors duration-200"
-            >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+
+            {post.type === "public_opinion" && !post.sharedPost && (
+              <button
+                onClick={handleShare}
+                className="flex items-center gap-1.5 font-medium text-muted-foreground hover:text-green-600 transition-colors duration-200"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="1.5"
-                  d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8m-4-6l-4-4-4 4m4-4v12"
-                ></path>
-              </svg>
-              <span>Share {post.shareCount}</span>
-            </button>):null}
+                <HiOutlineArrowUpTray className="w-5 h-5" />
+                <span>{post.shareCount}</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -332,25 +300,24 @@ export default function PostComponent({ onPostDeleted, mentionTextAreaRef, ...po
         post={post.sharedPost || post}
       />
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-sm w-full">
-            <h3 className="text-lg font-semibold mb-4">Delete Post</h3>
-            <p className="text-gray-600 mb-6">
-              Are you sure you want to delete this post? This action cannot be
-              undone.
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-background rounded-lg border border-border p-6 max-w-sm w-full shadow-xl">
+            <h3 className="text-lg font-semibold text-foreground mb-3">Delete Post</h3>
+            <p className="text-muted-foreground mb-6 text-sm">
+              Are you sure you want to delete this post? This action cannot be undone.
             </p>
-            <div className="flex justify-end gap-3 mt-6">
+            <div className="flex justify-end gap-3">
               <button
                 onClick={() => setShowDeleteConfirm(false)}
                 disabled={isDeleting}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-300 transition-all duration-200 disabled:opacity-50"
+                className="px-4 py-2 text-sm font-medium text-foreground bg-muted rounded-lg hover:bg-muted/80 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancel
               </button>
               <button
                 onClick={handleDeletePost}
                 disabled={isDeleting}
-                className="px-4 py-2 text-sm font-medium text-white bg-red-500 rounded-lg hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-all duration-200 disabled:bg-red-300 disabled:cursor-not-allowed"
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors duration-200 disabled:bg-red-400 disabled:cursor-not-allowed"
               >
                 {isDeleting ? 'Deleting...' : 'Delete'}
               </button>

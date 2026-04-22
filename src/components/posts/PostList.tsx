@@ -2,10 +2,12 @@
 import { Post } from "@/types/post";
 import { useState, useEffect } from "react";
 import PostComponent from "./Post";
+import PostSkeleton from "./PostSkeleton";
 import InfiniteScroll from "react-infinite-scroll-component";
 import { fetchWithAuth } from "@/lib/auth/fetchWithAuth";
 import { formatToMySQLDate } from "@/utils/dateConveter";
-import Loading from "../Loading";
+import Link from "next/link";
+import { HiOutlineSparkles } from "react-icons/hi2";
 
 interface PostListProps {
   userId?: string;
@@ -124,53 +126,64 @@ export default function PostList({ userId, isPublic, isProfile }: PostListProps)
     return () => clearInterval(interval);
   }, [lastKnownCreatedAt, userId, isPublic, isProfile]);
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      {/* New Posts Notification */}
       {newPostsCount > 0 && (
-        <div
+        <button
           onClick={() => fetchPosts('newer')}
-          className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-blue-500 text-white p-4 rounded-lg cursor-pointer shadow-md hover:bg-blue-600 z-50"
+          className="w-full fixed top-24 left-1/2 transform -translate-x-1/2 max-w-2xl mx-auto px-4 z-40"
         >
-          See {newPostsCount} new post{newPostsCount > 1 ? 's' : ''}
+          <div className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg shadow-lg transition-colors duration-200 flex items-center justify-center gap-2 font-medium">
+            <HiOutlineSparkles className="w-5 h-5" />
+            See {newPostsCount} new post{newPostsCount > 1 ? 's' : ''}
+          </div>
+        </button>
+      )}
+
+      {/* Loading State - Initial Load */}
+      {loading && posts.length === 0 ? (
+        <div className="space-y-6">
+          {[1, 2, 3].map((i) => (
+            <PostSkeleton key={i} />
+          ))}
+        </div>
+      ) : posts.length > 0 ? (
+        <InfiniteScroll
+          dataLength={posts.length}
+          next={() => fetchPosts('older', nextCursor)}
+          hasMore={hasMore}
+          className="space-y-6"
+          loader={<PostSkeleton key="loader" />}
+          endMessage={
+            <div className="text-center py-12 text-muted-foreground">
+              <p className="text-sm">No more posts to load.</p>
+            </div>
+          }
+        >
+          {posts.map((post) => (
+            <PostComponent key={post.id} {...post} onPostDeleted={handlePostDeleted} />
+          ))}
+        </InfiniteScroll>
+      ) : (
+        <div className="flex flex-col items-center justify-center text-center py-20 px-6">
+          <div className="mb-4">
+            <HiOutlineSparkles className="w-12 h-12 text-muted-foreground mx-auto opacity-50" />
+          </div>
+          <h2 className="text-xl font-semibold text-foreground mb-2">
+            Nothing to see here (yet)!
+          </h2>
+          <p className="text-muted-foreground max-w-md text-sm mb-6">
+            Your feed is empty. Start by adding friends or exploring the{" "}
+            <span className="font-medium">Public</span> tab to see what others are sharing.
+          </p>
         </div>
       )}
-      {fetching ? (
-            <Loading message="Loading post..." fullScreen={false}/>
-          ) : posts.length > 0 ? (
-            <InfiniteScroll
-        dataLength={posts.length}
-        next={() => fetchPosts('older', nextCursor)}
-        hasMore={hasMore}
-        className="space-y-4"
-        loader={
-          <Loading message="Loading post..." fullScreen={false}/>
-        }
-        endMessage={
-          posts.length > 0 ? (
-            <p className="text-center text-gray-500">No more posts to load.</p>
-          ) : null
-        }
-      >
-        {posts.map((post) => (
-          <PostComponent key={post.id} {...post} onPostDeleted={handlePostDeleted} />
-        ))}
-      </InfiniteScroll>
-          ) : (
-            <div className="flex flex-col items-center justify-center text-center py-16 px-6">
-  <h2 className="text-2xl font-semibold text-gray-800 mb-2">
-    Nothing to see here &#40;yet&#41;!
-  </h2>
-  <p
-    className="text-gray-600 max-w-md">
-        Your feed is currently empty. Add friends or interact with profiles to see their posts, or view the <strong>Public</strong> tab for some fresh content.
-  </p>
 
-  
-</div>
-          )}
-      
-
+      {/* Error State */}
       {error && (
-        <div className="text-center text-red-500">{error}</div>
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-center">
+          <p className="text-red-700 text-sm font-medium">{error}</p>
+        </div>
       )}
     </div>
   );
