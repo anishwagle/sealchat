@@ -297,9 +297,8 @@ export default function LandingPage() {
               </div>
               <p className="text-base leading-relaxed text-muted-foreground">
                 I&apos;m a computer engineer who spent six years in the corporate
-                world before returning to my hometown in Nepal. I now split
-                my time between software engineering and running an automated
-                farm called{" "}
+                world before returning to my hometown in Nepal. I now split my
+                time between software engineering and{" "}
                 <Link
                   href="https://www.prayogsala.com"
                   target="_blank"
@@ -308,7 +307,9 @@ export default function LandingPage() {
                 >
                   Prayogsala
                 </Link>
-                . SealChat is built by{" "}
+                , my laboratory &mdash; one experiment at a time, filmed as it
+                happens, including the parts that do not work. SealChat is built
+                by{" "}
                 <Link
                   href="https://www.wagleus.com"
                   target="_blank"
@@ -323,7 +324,7 @@ export default function LandingPage() {
               <p className="text-sm text-muted-foreground">
                 You can follow the development journey on my{" "}
                 <Link
-                  href="https://www.youtube.com/@AnishWagle"
+                  href="https://www.youtube.com/@PrayogsalaLabs"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="underline underline-offset-2"
