@@ -148,7 +148,7 @@ export default function LandingPage() {
                 <p className="text-base leading-relaxed text-muted-foreground">
                   Free platforms need to make money somehow, and the answer is
                   always your attention and your data. SealChat charges a small
-                  monthly fee. That fee pays for servers, security, and the
+                  yearly fee. That fee pays for servers, security, and the
                   identity verification process. It also means every user has
                   skin in the game, which keeps the community serious and accountable.
                 </p>
@@ -174,7 +174,7 @@ export default function LandingPage() {
           <div className="grid sm:grid-cols-2 gap-6">
             <div className="border border-border rounded-xl p-8 bg-background space-y-4">
               <p className="text-sm font-medium uppercase tracking-wider text-muted-foreground">Individual</p>
-              <p className="text-4xl font-bold text-foreground">$5<span className="text-lg font-normal text-muted-foreground">/mo</span></p>
+              <p className="text-4xl font-bold text-foreground">$20<span className="text-lg font-normal text-muted-foreground">/year</span></p>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li>KYC-verified identity</li>
                 <li>1 GB storage included</li>
@@ -184,19 +184,21 @@ export default function LandingPage() {
             </div>
 
             <div className="border border-border rounded-xl p-8 bg-background space-y-4">
-              <p className="text-sm font-medium uppercase tracking-wider text-muted-foreground">Family</p>
-              <p className="text-4xl font-bold text-foreground">$15<span className="text-lg font-normal text-muted-foreground">/mo</span></p>
+              <p className="text-sm font-medium uppercase tracking-wider text-muted-foreground">Family members</p>
+              <p className="text-4xl font-bold text-foreground">+$8<span className="text-lg font-normal text-muted-foreground">/year each</span></p>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li>Up to 5 verified members</li>
+                <li>Add up to 6 verified members in total</li>
                 <li>1 GB storage per member</li>
-                <li>All individual features included</li>
-                <li>Managed from a single account</li>
+                <li>A family of five is $52 a year</li>
+                <li>Managed and paid from a single account</li>
               </ul>
             </div>
           </div>
 
           <p className="text-sm text-muted-foreground mt-6">
-            Need more space? Upgrade to 100 GB of storage for $10/year.
+            Need more space? Upgrade to 100 GB of storage for $10/year. Added
+            members cost us a verification and some storage, close to nothing
+            else, so that is what we charge for them.
           </p>
         </div>
       </section>
@@ -351,10 +353,14 @@ export default function LandingPage() {
                 How much does SealChat cost?
               </h3>
               <p className="text-base leading-relaxed text-muted-foreground">
-                $5 per month for individuals. $15 per month for a family of up
-                to five. You can add 100 GB of storage for $10 per year. These
-                prices may adjust slightly once we finalize our infrastructure
-                costs, but we're committed to keeping SealChat affordable.
+                $20 a year for one verified person, and $8 a year for each
+                family member you add, up to six people in total. A family of
+                five is $52 a year, which is about a dollar a month each. There
+                is no monthly plan: billing once a year means we lose far less
+                of your money to card fees. You can add 100 GB of storage for
+                $10 per year. These prices may adjust slightly once we finalize
+                our infrastructure costs, but we&apos;re committed to keeping
+                SealChat affordable.
               </p>
             </div>
 
